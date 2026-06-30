@@ -1,0 +1,331 @@
+// Perfecto Cleaning Services — Database Schema (Version 1.0)
+// Designed for V1.0 scope, with forward-compatible enums/relations for V1.5–V3.0.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+enum Role {
+  CUSTOMER
+  ADMIN
+  // Future: CLEANER, COMMERCIAL
+}
+
+enum Frequency {
+  ONE_TIME
+  WEEKLY
+  BIWEEKLY
+  MONTHLY
+}
+
+enum BookingStatus {
+  PENDING_PAYMENT
+  CONFIRMED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum PaymentType {
+  DEPOSIT
+  BALANCE
+  REFUND
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  REFUNDED
+}
+
+enum ApplicationStatus {
+  SUBMITTED
+  UNDER_REVIEW
+  ACCEPTED
+  REJECTED
+}
+
+// ---------------------------------------------------------------------------
+// Users & Auth (phone-first; email verification optional)
+// ---------------------------------------------------------------------------
+
+model User {
+  id          String   @id @default(cuid())
+  // Phone is the PRIMARY identifier (E.164). Verified via OTP before account creation.
+  phone       String   @unique
+  email       String?  @unique
+  firstName   String?
+  lastName    String?
+  role        Role     @default(CUSTOMER)
+  firebaseUid String?  @unique
+
+  // Phone verification is required to create an account.
+  phoneVerifiedAt DateTime?
+  // Email verification is OPTIONAL — account works without it; UI shows a caution.
+  emailVerifiedAt DateTime?
+
+  bookings     Booking[]
+  quotes       Quote[]
+  agreements   Agreement[]
+  addresses    Address[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([role])
+}
+
+// Saved addresses (single address used per booking in V1.0; relation enables reuse later).
+model Address {
+  id         String  @id @default(cuid())
+  userId     String
+  user       User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  line1      String
+  line2      String?
+  city       String
+  state      String?
+  postalCode String
+  isDefault  Boolean @default(false)
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+// ---------------------------------------------------------------------------
+// Service catalog (admin-managed)
+// ---------------------------------------------------------------------------
+
+model Service {
+  id          String  @id @default(cuid())
+  slug        String  @unique
+  name        String
+  description String
+  // Base price in cents to avoid floating point issues.
+  basePrice   Int
+  imageUrl    String?
+  isActive    Boolean @default(true)
+  isPopular   Boolean @default(false)
+  sortOrder   Int     @default(0)
+
+  quotes   Quote[]
+  bookings Booking[]
+  addOns   AddOnOnService[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model AddOn {
+  id       String  @id @default(cuid())
+  name     String
+  // Price in cents.
+  price    Int
+  isActive Boolean @default(true)
+
+  services   AddOnOnService[]
+  quoteItems QuoteAddOn[]
+}
+
+// Which add-ons are available for which services.
+model AddOnOnService {
+  serviceId String
+  addOnId   String
+  service   Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  addOn     AddOn   @relation(fields: [addOnId], references: [id], onDelete: Cascade)
+
+  @@id([serviceId, addOnId])
+}
+
+// ---------------------------------------------------------------------------
+// Quote calculator
+// ---------------------------------------------------------------------------
+
+model Quote {
+  id           String    @id @default(cuid())
+  // Guests may generate a quote without an account.
+  userId       String?
+  user         User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  serviceId    String
+  service      Service   @relation(fields: [serviceId], references: [id])
+  bedrooms     Int       @default(1)
+  bathrooms    Int       @default(1)
+  propertySize Int? // square feet (optional)
+  hasPets      Boolean   @default(false)
+  frequency    Frequency @default(ONE_TIME)
+
+  addOns         QuoteAddOn[]
+  // Computed estimate in cents + JSON breakdown for transparency.
+  estimatedTotal Int
+  breakdown      Json?
+
+  booking Booking?
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model QuoteAddOn {
+  quoteId String
+  addOnId String
+  quote   Quote @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  addOn   AddOn @relation(fields: [addOnId], references: [id])
+
+  @@id([quoteId, addOnId])
+}
+
+// ---------------------------------------------------------------------------
+// Bookings
+// ---------------------------------------------------------------------------
+
+model Booking {
+  id        String  @id @default(cuid())
+  userId    String
+  user      User    @relation(fields: [userId], references: [id])
+  serviceId String
+  service   Service @relation(fields: [serviceId], references: [id])
+  quoteId   String? @unique
+  quote     Quote?  @relation(fields: [quoteId], references: [id])
+
+  scheduledDate DateTime
+  arrivalWindow String // e.g. "8:00 AM - 11:00 AM"
+  status        BookingStatus @default(PENDING_PAYMENT)
+
+  // Property snapshot (kept on the booking even if the saved address changes later)
+  addressLine         String
+  city                String
+  postalCode          String
+  bedrooms            Int
+  bathrooms           Int
+  propertySize        Int?
+  hasPets             Boolean @default(false)
+  petNotes            String?
+  accessInfo          String?
+  specialInstructions String?
+
+  // Money in cents
+  totalAmount   Int
+  depositAmount Int // 50% of total
+  balanceAmount Int
+
+  photos    PropertyPhoto[]
+  payments  Payment[]
+  invoice   Invoice?
+  agreement Agreement?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@index([scheduledDate])
+}
+
+model PropertyPhoto {
+  id         String   @id @default(cuid())
+  bookingId  String
+  booking    Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  s3Key      String
+  url        String
+  uploadedAt DateTime @default(now())
+
+  @@index([bookingId])
+}
+
+// ---------------------------------------------------------------------------
+// Payments & Invoices
+// ---------------------------------------------------------------------------
+
+model Payment {
+  id                String        @id @default(cuid())
+  bookingId         String
+  booking           Booking       @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  provider          String        @default("stripe")
+  providerPaymentId String? // Stripe PaymentIntent / Checkout Session id
+  type              PaymentType   @default(DEPOSIT)
+  amount            Int // cents
+  status            PaymentStatus @default(PENDING)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([bookingId])
+  @@index([providerPaymentId])
+}
+
+model Invoice {
+  id         String   @id @default(cuid())
+  bookingId  String   @unique
+  booking    Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  number     String   @unique
+  pdfUrl     String?
+  amountDue  Int
+  amountPaid Int      @default(0)
+  issuedAt   DateTime @default(now())
+}
+
+// ---------------------------------------------------------------------------
+// Electronic agreements (immutable once signed)
+// ---------------------------------------------------------------------------
+
+model Agreement {
+  id                  String  @id @default(cuid())
+  userId              String
+  user                User    @relation(fields: [userId], references: [id])
+  bookingId           String  @unique
+  booking             Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  acceptedTerms       Boolean @default(false)
+  acceptedCancellation Boolean @default(false)
+  acceptedLiability   Boolean @default(false)
+  signatureName       String
+  ipAddress           String?
+  signedAt            DateTime @default(now())
+
+  @@index([userId])
+}
+
+// ---------------------------------------------------------------------------
+// Recruitment
+// ---------------------------------------------------------------------------
+
+model JobApplication {
+  id        String            @id @default(cuid())
+  fullName  String
+  email     String
+  phone     String
+  position  String
+  resumeS3Key String?
+  resumeUrl String?
+  coverNote String?
+  status    ApplicationStatus @default(SUBMITTED)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+}
+
+// ---------------------------------------------------------------------------
+// Promotions (display only in V1.0; logic expands in later versions)
+// ---------------------------------------------------------------------------
+
+model Promotion {
+  id          String   @id @default(cuid())
+  title       String
+  description String
+  imageUrl    String?
+  isActive    Boolean  @default(true)
+
+  createdAt DateTime @default(now())
+}

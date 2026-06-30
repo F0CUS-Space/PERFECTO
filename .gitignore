@@ -1,0 +1,39 @@
+# dependencies
+/node_modules
+/.pnp
+.pnp.js
+
+# next.js
+/.next/
+/out/
+next-env.d.ts
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+nodecheck.txt
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# env files (NEVER commit secrets)
+.env
+.env*.local
+.env.production
+
+# prisma
+/prisma/*.db
+
+# typescript
+*.tsbuildinfo
+
+# vercel (unused, just in case)
+.vercel
+
+# docker / local volumes
+/postgres-data

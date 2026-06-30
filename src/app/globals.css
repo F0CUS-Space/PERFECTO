@@ -1,0 +1,159 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Surfaces — white / soft lavender-white haze */
+    --background: 220 33% 98%; /* #F5F7FB haze */
+    --foreground: 222 47% 11%; /* near-navy ink */
+
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+
+    /* Primary — Perfecto navy */
+    --primary: 209 75% 17%; /* #0B2A4A */
+    --primary-foreground: 0 0% 100%;
+
+    /* Secondary — soft blue tint surface */
+    --secondary: 214 32% 95%;
+    --secondary-foreground: 209 75% 17%;
+
+    --muted: 214 32% 95%;
+    --muted-foreground: 215 16% 47%;
+
+    /* Accent — emerald green */
+    --accent: 160 84% 39%; /* #10B981 */
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 214 25% 90%;
+    --input: 214 25% 90%;
+    --ring: 217 91% 60%; /* brand blue focus ring */
+
+    --radius: 0.9rem;
+  }
+
+  .dark {
+    --background: 222 47% 8%;
+    --foreground: 210 40% 98%;
+
+    --card: 222 47% 11%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 222 47% 11%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 210 40% 98%;
+    --primary-foreground: 209 75% 17%;
+
+    --secondary: 217 33% 17%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 217 33% 17%;
+    --muted-foreground: 215 20% 65%;
+
+    --accent: 160 84% 39%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 63% 31%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 217 33% 20%;
+    --input: 217 33% 20%;
+    --ring: 217 91% 60%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+  }
+}
+
+@layer utilities {
+  .text-gradient-brand {
+    @apply bg-gradient-to-r from-brand-navy via-brand-blue to-brand-green bg-clip-text text-transparent;
+  }
+
+  /* Soft, on-brand "mesh" gradient used behind hero sections. Layered radial
+     pools of blue / green / mint over a light haze for a premium, airy feel. */
+  .bg-brand-mesh {
+    background-color: #f5f9ff;
+    background-image:
+      radial-gradient(38rem 32rem at 12% -8%, rgba(37, 99, 235, 0.16), transparent 60%),
+      radial-gradient(34rem 30rem at 92% 0%, rgba(16, 185, 129, 0.16), transparent 58%),
+      radial-gradient(30rem 28rem at 78% 108%, rgba(94, 234, 212, 0.18), transparent 60%),
+      radial-gradient(26rem 26rem at 22% 120%, rgba(11, 42, 74, 0.08), transparent 60%);
+  }
+
+  /* Subtle dotted texture overlay for depth. */
+  .bg-dot-grid {
+    background-image: radial-gradient(rgba(11, 42, 74, 0.06) 1px, transparent 1px);
+    background-size: 22px 22px;
+  }
+
+  /* Frosted glass card. */
+  .glass {
+    background: rgba(255, 255, 255, 0.65);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+  }
+
+  /* Animated brand gradient text (shifts blue <-> green). */
+  .text-gradient-animated {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(
+      90deg,
+      #0b2a4a,
+      #2563eb,
+      #10b981,
+      #2563eb,
+      #0b2a4a
+    );
+    background-size: 220% 100%;
+    @apply animate-gradient-x;
+  }
+
+  /* Scroll reveal: starts hidden + lifted, animates in when .is-visible added. */
+  .reveal {
+    opacity: 0;
+    transform: translateY(22px);
+    transition:
+      opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1),
+      transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+    will-change: opacity, transform;
+  }
+  .reveal.is-visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* Perspective container for 3D tilt children. */
+  .perspective {
+    perspective: 1000px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+  .animate-float,
+  .animate-float-slow,
+  .animate-blob,
+  .animate-shimmer,
+  .animate-gradient-x {
+    animation: none !important;
+  }
+}
