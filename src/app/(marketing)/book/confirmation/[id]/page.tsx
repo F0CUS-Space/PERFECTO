@@ -13,6 +13,8 @@ import {
 import { PageHero } from "@/components/shared/page-hero";
 import { Section } from "@/components/shared/section";
 import { PayDepositButton } from "@/features/payments/components/pay-deposit-button";
+import { DepositConfirmationSync } from "@/features/payments/components/deposit-confirmation-sync";
+import { syncBookingDepositIfPaid } from "@/features/payments/services/confirm-deposit";
 import { isStripeConfigured } from "@/lib/stripe-ready";
 import { formatCurrency } from "@/lib/utils";
 import { prisma } from "@/lib/prisma";
@@ -44,7 +46,7 @@ export default async function BookingConfirmationPage({ params, searchParams }: 
     notFound();
   }
 
-  const booking = await prisma.booking.findFirst({
+  let booking = await prisma.booking.findFirst({
     where: { id, userId: user.id },
     include: {
       service: true,
@@ -58,10 +60,30 @@ export default async function BookingConfirmationPage({ params, searchParams }: 
     notFound();
   }
 
+  if (booking.status !== "CONFIRMED") {
+    await syncBookingDepositIfPaid(booking.id);
+
+    booking = await prisma.booking.findFirst({
+      where: { id, userId: user.id },
+      include: {
+        service: true,
+        agreement: true,
+        invoice: true,
+        payments: { where: { type: "DEPOSIT" }, take: 1 },
+      },
+    });
+
+    if (!booking) {
+      notFound();
+    }
+  }
+
   const depositPayment = booking.payments[0];
   const isConfirmed = booking.status === "CONFIRMED";
+  const depositPaid = depositPayment?.status === "SUCCEEDED";
   const paymentsEnabled = isStripeConfigured();
-  const awaitingWebhook = checkout === "success" && !isConfirmed;
+  const awaitingConfirmation =
+    (checkout === "success" || depositPaid) && !isConfirmed;
 
   return (
     <>
@@ -74,6 +96,7 @@ export default async function BookingConfirmationPage({ params, searchParams }: 
         }
       />
       <Section>
+        <DepositConfirmationSync active={awaitingConfirmation} />
         <Card className="mx-auto max-w-2xl border-accent/30">
           <CardHeader>
             <CardTitle>{booking.service.name}</CardTitle>
@@ -83,14 +106,13 @@ export default async function BookingConfirmationPage({ params, searchParams }: 
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {awaitingWebhook && (
+            {awaitingConfirmation && (
               <p className="rounded-xl border border-primary/20 bg-primary/5 px-4 py-3 text-sm text-muted-foreground">
-                Payment received by Stripe — confirming your booking now. This page will update
-                when confirmation completes (usually within a few seconds). Refresh if needed.
+                Payment received — confirming your booking now. This usually takes a few seconds.
               </p>
             )}
 
-            {checkout === "cancelled" && !isConfirmed && (
+            {checkout === "cancelled" && !isConfirmed && !depositPaid && (
               <p className="rounded-xl bg-secondary/60 px-4 py-3 text-sm text-muted-foreground">
                 Checkout was cancelled. Your booking is saved — pay the deposit when you&apos;re
                 ready.
@@ -156,13 +178,12 @@ export default async function BookingConfirmationPage({ params, searchParams }: 
               </p>
             )}
 
-            {!isConfirmed && (
+            {!isConfirmed && !depositPaid && (
               <div className="rounded-xl border border-dashed border-primary/30 bg-primary/5 px-4 py-4">
                 <p className="font-medium text-brand-navy">Pay your deposit</p>
                 <p className="mt-1 text-sm text-muted-foreground">
                   Secure checkout via Stripe. Balance of {formatCurrency(booking.balanceAmount)}{" "}
-                  is due after your service. Payment status:{" "}
-                  {depositPayment?.status ?? "PENDING"}.
+                  is due after your service from your dashboard.
                 </p>
                 {paymentsEnabled ? (
                   <div className="mt-3">
@@ -173,8 +194,7 @@ export default async function BookingConfirmationPage({ params, searchParams }: 
                   </div>
                 ) : (
                   <p className="mt-3 text-sm text-destructive">
-                    Payments are not configured. Add STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET
-                    to the server environment.
+                    Payments are not configured. Add STRIPE_SECRET_KEY to the server environment.
                   </p>
                 )}
               </div>
@@ -182,7 +202,9 @@ export default async function BookingConfirmationPage({ params, searchParams }: 
 
             {isConfirmed && (
               <p className="rounded-xl bg-accent/10 px-4 py-3 text-sm text-brand-navy">
-                You&apos;re all set! We&apos;ll see you on{" "}
+                Deposit paid — you&apos;re all set! Balance of{" "}
+                {formatCurrency(booking.balanceAmount)} is due after your service and can be paid
+                from your dashboard. We&apos;ll see you on{" "}
                 {booking.scheduledDate.toLocaleDateString("en-US", {
                   weekday: "long",
                   month: "long",
