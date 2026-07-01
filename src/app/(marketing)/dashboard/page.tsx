@@ -75,7 +75,7 @@ export default async function DashboardPage() {
           },
           {
             icon: CreditCard,
-            label: "Pending deposits",
+            label: "Pending payments",
             value: stats.pendingDepositCount,
             href: "/dashboard/payments",
           },
@@ -117,10 +117,7 @@ export default async function DashboardPage() {
           <p className="text-muted-foreground">No bookings yet.</p>
           <div className="mt-4 flex flex-wrap justify-center gap-3">
             <Button asChild>
-              <Link href="/quote">Get a quote</Link>
-            </Button>
-            <Button asChild variant="outline">
-              <Link href="/book">Book a clean</Link>
+              <Link href="/book">Book now</Link>
             </Button>
           </div>
         </section>
@@ -129,10 +126,7 @@ export default async function DashboardPage() {
       {stats.recentBookings.length > 0 && (
         <div className="mt-10 flex flex-wrap gap-3">
           <Button asChild>
-            <Link href="/quote">Get a quote</Link>
-          </Button>
-          <Button asChild variant="outline">
-            <Link href="/book">Book a clean</Link>
+            <Link href="/book">Book another clean</Link>
           </Button>
         </div>
       )}

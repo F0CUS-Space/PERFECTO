@@ -9,7 +9,7 @@ import { formatCurrency } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 
 const TYPE_LABELS: Record<PaymentType, string> = {
-  DEPOSIT: "Deposit",
+  DEPOSIT: "Payment",
   BALANCE: "Balance",
   REFUND: "Refund",
 };
@@ -44,7 +44,7 @@ export function PaymentsTableClient() {
   if (!payments?.length) {
     return (
       <p className="rounded-xl bg-secondary/60 px-4 py-8 text-center text-sm text-muted-foreground">
-        No payments yet. They will appear here after you book and pay a deposit.
+        No payments yet. They will appear here after you book and pay.
       </p>
     );
   }

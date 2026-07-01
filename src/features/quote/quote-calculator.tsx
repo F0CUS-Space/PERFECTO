@@ -36,9 +36,11 @@ const selectClassName =
 
 interface QuoteCalculatorProps {
   catalog: QuoteCatalogService[];
+  /** When true, stays on /book instead of navigating away after save. */
+  embedded?: boolean;
 }
 
-export function QuoteCalculator({ catalog }: QuoteCalculatorProps) {
+export function QuoteCalculator({ catalog, embedded }: QuoteCalculatorProps) {
   const [selectedServiceId, setSelectedServiceId] = useState(catalog[0]?.id ?? "");
   const selectedService = catalog.find((s) => s.id === selectedServiceId);
 
@@ -46,7 +48,7 @@ export function QuoteCalculator({ catalog }: QuoteCalculatorProps) {
     return (
       <Card className="mx-auto max-w-xl text-center">
         <CardHeader>
-          <CardTitle>Quote calculator unavailable</CardTitle>
+          <CardTitle>Pricing unavailable</CardTitle>
           <CardDescription>
             Our service catalog is not loaded yet. Start the database and run{" "}
             <code className="rounded bg-secondary px-1.5 py-0.5 text-xs">npm run db:seed</code>, then
@@ -89,16 +91,19 @@ export function QuoteCalculator({ catalog }: QuoteCalculatorProps) {
       </Card>
 
       {selectedService && (
-        <QuoteServiceForm
-          key={selectedService.slug}
-          service={selectedService}
-        />
+        <QuoteServiceForm key={selectedService.slug} service={selectedService} embedded={embedded} />
       )}
     </div>
   );
 }
 
-function QuoteServiceForm({ service }: { service: QuoteCatalogService }) {
+function QuoteServiceForm({
+  service,
+  embedded,
+}: {
+  service: QuoteCatalogService;
+  embedded?: boolean;
+}) {
   const router = useRouter();
   const setDraft = useQuoteStore((s) => s.setDraft);
   const profile = getServiceQuoteProfile(service.slug);
@@ -179,6 +184,11 @@ function QuoteServiceForm({ service }: { service: QuoteCatalogService }) {
       addOnIds: values.addOnIds,
       calculation: result.calculation,
     });
+
+    if (embedded) {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
 
     router.push("/book");
   });
@@ -405,8 +415,8 @@ function QuoteServiceForm({ service }: { service: QuoteCatalogService }) {
       <div className="lg:sticky lg:top-24">
         <Card className="overflow-hidden border-primary/20">
           <CardHeader className="bg-gradient-to-br from-primary/10 via-transparent to-accent/10">
-            <CardTitle>Your estimate</CardTitle>
-            <CardDescription>Transparent pricing — what you see is what you pay.</CardDescription>
+            <CardTitle>Your price</CardTitle>
+            <CardDescription>Transparent pricing — what you see is what you pay at booking.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4 pt-6">
             <ul className="space-y-2 text-sm">
@@ -434,8 +444,8 @@ function QuoteServiceForm({ service }: { service: QuoteCatalogService }) {
                 </span>
               </div>
               <p className="mt-2 text-xs text-muted-foreground">
-                {formatCurrency(calculation.depositCents)} deposit due at booking ·{" "}
-                {formatCurrency(calculation.balanceCents)} due after service
+                Full payment of {formatCurrency(calculation.estimatedTotalCents)} is due when you
+                confirm your booking.
               </p>
             </div>
 
@@ -451,7 +461,7 @@ function QuoteServiceForm({ service }: { service: QuoteCatalogService }) {
               onClick={onContinue}
               disabled={isSubmitting || !form.formState.isValid}
             >
-              {isSubmitting ? "Saving…" : "Continue to booking"}
+              {isSubmitting ? "Saving…" : "Continue"}
             </Button>
           </CardContent>
         </Card>

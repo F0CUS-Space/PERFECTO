@@ -60,8 +60,8 @@ export default async function ServiceDetailPage({
         actions={
           <>
             <Button asChild size="lg">
-              <Link href="/quote">
-                Get an Instant Quote <ArrowRight className="h-4 w-4" />
+              <Link href="/book">
+                Book Now <ArrowRight className="h-4 w-4" />
               </Link>
             </Button>
             <Button asChild size="lg" variant="outline">
@@ -131,7 +131,7 @@ export default async function ServiceDetailPage({
                 calculator to see an estimate in seconds — no surprises.
               </p>
               <Button asChild className="mt-5">
-                <Link href="/quote">Calculate my price</Link>
+                <Link href="/book">Calculate my price</Link>
               </Button>
             </div>
           </Reveal>

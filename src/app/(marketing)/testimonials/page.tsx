@@ -33,7 +33,7 @@ export default function TestimonialsPage() {
         </div>
         <div className="mt-12 flex justify-center">
           <Button asChild size="lg">
-            <Link href="/quote">Join our happy customers</Link>
+            <Link href="/book">Book now</Link>
           </Button>
         </div>
       </Section>

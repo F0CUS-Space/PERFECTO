@@ -11,7 +11,7 @@ export default function DashboardPaymentsPage() {
     <div className="container py-8 md:py-12">
       <h1 className="text-3xl font-bold text-brand-navy">Payments</h1>
       <p className="mt-2 text-muted-foreground">
-        Deposits, balances, and downloadable invoices for your bookings.
+        Payments and downloadable invoices for your bookings.
       </p>
 
       <div className="mt-8">

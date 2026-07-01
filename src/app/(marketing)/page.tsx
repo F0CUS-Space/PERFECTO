@@ -25,9 +25,9 @@ import { testimonials } from "@/content/testimonials";
 export const dynamic = "force-dynamic";
 
 const steps = [
-  { icon: ClipboardList, title: "Get a Quote", body: "Tell us about your space for an instant, transparent estimate." },
-  { icon: CalendarCheck, title: "Book a Time", body: "Pick a date and arrival window that works for you." },
-  { icon: CreditCard, title: "Pay 50% Deposit", body: "Secure your booking with a simple, safe deposit." },
+  { icon: ClipboardList, title: "Choose your service", body: "Tell us about your space for an instant, transparent price." },
+  { icon: CalendarCheck, title: "Book a time", body: "Pick a date and arrival window that works for you." },
+  { icon: CreditCard, title: "Pay in full", body: "Secure your booking with a simple, safe checkout." },
   { icon: Sparkles, title: "Relax", body: "Our vetted pros arrive and deliver perfect results." },
 ];
 
@@ -54,12 +54,12 @@ export default async function HomePage() {
             Clean spaces. <span className="text-gradient-animated">Perfect results.</span>
           </>
         }
-        description="Premium residential and commercial cleaning, tailored to your lifestyle and delivered with meticulous care. Get an instant quote and book in minutes."
+        description="Premium residential and commercial cleaning, tailored to your lifestyle and delivered with meticulous care. See your price and book in minutes."
         actions={
           <>
             <Button asChild size="lg">
-              <Link href="/quote">
-                Get an Instant Quote <ArrowRight className="h-4 w-4" />
+              <Link href="/book">
+                Book Now <ArrowRight className="h-4 w-4" />
               </Link>
             </Button>
             <Button asChild size="lg" variant="outline">
@@ -209,12 +209,12 @@ export default async function HomePage() {
               Ready to experience perfection?
             </h2>
             <p className="relative mx-auto mt-3 max-w-xl text-pretty text-white/70">
-              Get your instant quote today and reclaim your time. Clean spaces, perfect results.
+              Book your clean today and reclaim your time. Clean spaces, perfect results.
             </p>
             <div className="relative mt-8 flex flex-col justify-center gap-3 sm:flex-row">
               <Button asChild size="lg" variant="accent">
-                <Link href="/quote">
-                  Get an Instant Quote <ArrowRight className="h-4 w-4" />
+                <Link href="/book">
+                  Book Now <ArrowRight className="h-4 w-4" />
                 </Link>
               </Button>
               <Button
@@ -223,7 +223,7 @@ export default async function HomePage() {
                 variant="outline"
                 className="border-white/30 bg-transparent text-white hover:bg-white/10 hover:text-white"
               >
-                <Link href="/book">Book Now</Link>
+                <Link href="/services">Explore Services</Link>
               </Button>
             </div>
           </div>

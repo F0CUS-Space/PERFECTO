@@ -1,6 +1,6 @@
 import Link from "next/link";
-import Image from "next/image";
 
+import { BrandLogo } from "@/components/shared/brand-logo";
 import { siteConfig } from "@/config/site";
 
 const COLUMNS: { title: string; links: { label: string; href: string }[] }[] = [
@@ -16,7 +16,7 @@ const COLUMNS: { title: string; links: { label: string; href: string }[] }[] = [
     title: "Services",
     links: [
       { label: "All Services", href: "/services" },
-      { label: "Instant Quote", href: "/quote" },
+      { label: "Book Now", href: "/book" },
       { label: "Gallery", href: "/gallery" },
       { label: "Promotions", href: "/promotions" },
       { label: "Testimonials", href: "/testimonials" },
@@ -46,16 +46,7 @@ export function Footer() {
       <div className="container py-14">
         <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-4">
           <div className="lg:col-span-1">
-            <Link href="/" className="flex items-center gap-2">
-              <Image
-                src="/brand/perfecto-logo.png"
-                alt="Perfecto Cleaning Services"
-                width={36}
-                height={36}
-                className="h-9 w-9 object-contain"
-              />
-              <span className="text-base font-bold text-brand-navy">Perfecto</span>
-            </Link>
+            <BrandLogo compact />
             <p className="mt-3 max-w-xs text-sm text-muted-foreground">{siteConfig.tagline}</p>
           </div>
 

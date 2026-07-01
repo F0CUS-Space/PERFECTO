@@ -48,8 +48,8 @@ export async function createBooking(raw: unknown): Promise<CreateBookingResult> 
       return { ok: false, error: "This quote belongs to another account." };
     }
 
-    const depositAmount = Math.round(quote.estimatedTotal * 0.5);
-    const balanceAmount = quote.estimatedTotal - depositAmount;
+    const depositAmount = quote.estimatedTotal;
+    const balanceAmount = 0;
 
     const breakdown = quote.breakdown as { serviceDetails?: Record<string, unknown> } | null;
     const serviceDetails = breakdown?.serviceDetails;

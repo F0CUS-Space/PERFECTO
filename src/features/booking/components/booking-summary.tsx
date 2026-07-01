@@ -69,8 +69,7 @@ export function BookingSummary({ quote, property, schedule, compact }: BookingSu
           </span>
         </div>
         <p className="mt-1 text-xs text-muted-foreground">
-          {formatCurrency(calculation.depositCents)} deposit ·{" "}
-          {formatCurrency(calculation.balanceCents)} after service
+          Full payment due when you confirm your booking
         </p>
       </div>
     </div>

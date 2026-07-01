@@ -38,7 +38,7 @@ export default async function PromotionsPage() {
               Check back soon — or get an instant quote to see today&apos;s pricing.
             </p>
             <Button asChild className="mt-5">
-              <Link href="/quote">Get an Instant Quote</Link>
+              <Link href="/book">Book Now</Link>
             </Button>
           </div>
         ) : (
@@ -55,7 +55,7 @@ export default async function PromotionsPage() {
                 <div className="flex flex-1 flex-col p-6">
                   <p className="flex-1 text-sm text-muted-foreground">{promo.description}</p>
                   <Button asChild className="mt-5 w-fit">
-                    <Link href="/quote">Claim this offer</Link>
+                    <Link href="/book">Claim this offer</Link>
                   </Button>
                 </div>
               </div>

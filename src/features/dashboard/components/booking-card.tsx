@@ -8,8 +8,7 @@ import { BookingStatusBadge } from "./booking-status-badge";
 import type { CustomerBookingSummary } from "../types";
 
 export function BookingCard({ booking }: { booking: CustomerBookingSummary }) {
-  const balanceDue = Math.max(booking.totalAmount - booking.amountPaid, 0);
-  const needsDeposit = booking.status === "PENDING_PAYMENT" && booking.amountPaid < booking.depositAmount;
+  const needsPayment = booking.status === "PENDING_PAYMENT" && booking.amountPaid < booking.depositAmount;
 
   return (
     <article className="rounded-2xl border border-border bg-card p-5 shadow-card">
@@ -40,15 +39,10 @@ export function BookingCard({ booking }: { booking: CustomerBookingSummary }) {
             {formatCurrency(booking.amountPaid)}
           </span>
           <span className="text-muted-foreground"> of {formatCurrency(booking.totalAmount)}</span>
-          {balanceDue > 0 && booking.amountPaid >= booking.depositAmount ? (
-            <span className="ml-2 text-muted-foreground">
-              · Balance {formatCurrency(balanceDue)}
-            </span>
-          ) : null}
         </div>
-        <Button asChild size="sm" variant={needsDeposit ? "default" : "outline"}>
-          <Link href={needsDeposit ? `/book/confirmation/${booking.id}` : `/dashboard/bookings/${booking.id}`}>
-            {needsDeposit ? "Pay deposit" : "View"}
+        <Button asChild size="sm" variant={needsPayment ? "default" : "outline"}>
+          <Link href={needsPayment ? `/book/confirmation/${booking.id}` : `/dashboard/bookings/${booking.id}`}>
+            {needsPayment ? "Pay now" : "View"}
             <ArrowRight className="h-4 w-4" />
           </Link>
         </Button>

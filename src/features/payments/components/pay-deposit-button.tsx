@@ -63,7 +63,7 @@ export function PayDepositButton({
             Redirecting to Stripe…
           </>
         ) : (
-          `Pay deposit ${formatCurrency(depositAmountCents)}`
+          `Pay now ${formatCurrency(depositAmountCents)}`
         )}
       </Button>
       {error && <p className="text-sm text-destructive">{error}</p>}

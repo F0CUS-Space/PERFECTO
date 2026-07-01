@@ -40,7 +40,7 @@ export function BookingsListClient({ filter }: { filter?: "upcoming" | "past" | 
           ? "No upcoming bookings yet."
           : filter === "past"
             ? "No past bookings yet."
-            : "No bookings yet. Get a quote to schedule your first clean."}
+            : "No bookings yet. Book a clean to get started."}
       </p>
     );
   }

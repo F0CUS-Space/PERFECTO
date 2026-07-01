@@ -59,22 +59,7 @@ export function BookingWizard() {
   }, [quote, resetWizard]);
 
   if (!quote) {
-    return (
-      <Card className="mx-auto max-w-xl text-center">
-        <CardHeader>
-          <CardTitle>Start with a quote</CardTitle>
-          <CardDescription>
-            Our booking wizard uses your instant quote estimate. Get a transparent price first,
-            then come back here to schedule your clean.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Button asChild size="lg">
-            <Link href="/quote">Get an instant quote</Link>
-          </Button>
-        </CardContent>
-      </Card>
-    );
+    return null;
   }
 
   const goNext = () => {
@@ -86,14 +71,19 @@ export function BookingWizard() {
         setStepError("Sign in or create an account below to continue with your booking.");
         return;
       }
+      const parsed = propertyStepSchema.safeParse(property);
+      if (!parsed.success) {
+        setStepError(parsed.error.errors[0]?.message ?? "Check property details");
+        return;
+      }
       setStepIndex(1);
       return;
     }
 
     if (stepIndex === 1) {
-      const parsed = propertyStepSchema.safeParse(property);
+      const parsed = scheduleStepSchema.safeParse(schedule);
       if (!parsed.success) {
-        setStepError(parsed.error.errors[0]?.message ?? "Check property details");
+        setStepError(parsed.error.errors[0]?.message ?? "Check schedule details");
         return;
       }
       setStepIndex(2);
@@ -101,9 +91,9 @@ export function BookingWizard() {
     }
 
     if (stepIndex === 2) {
-      const parsed = scheduleStepSchema.safeParse(schedule);
+      const parsed = accessStepSchema.safeParse(access);
       if (!parsed.success) {
-        setStepError(parsed.error.errors[0]?.message ?? "Check schedule details");
+        setStepError(parsed.error.errors[0]?.message ?? "Check access details");
         return;
       }
       setStepIndex(3);
@@ -111,22 +101,12 @@ export function BookingWizard() {
     }
 
     if (stepIndex === 3) {
-      const parsed = accessStepSchema.safeParse(access);
-      if (!parsed.success) {
-        setStepError(parsed.error.errors[0]?.message ?? "Check access details");
-        return;
-      }
-      setStepIndex(4);
-      return;
-    }
-
-    if (stepIndex === 4) {
       const parsed = agreementStepSchema.safeParse(agreement);
       if (!parsed.success) {
         setStepError(parsed.error.errors[0]?.message ?? "Complete the agreement");
         return;
       }
-      setStepIndex(5);
+      setStepIndex(4);
     }
   };
 
@@ -179,9 +159,7 @@ export function BookingWizard() {
           </CardHeader>
           <CardContent className="space-y-6">
             {stepIndex === 0 && (
-              <div className="space-y-4">
-                <BookingSummary quote={quote} compact />
-
+              <>
                 {authUser === undefined ? (
                   <p className="text-sm text-muted-foreground">Checking your account…</p>
                 ) : authUser ? (
@@ -192,14 +170,13 @@ export function BookingWizard() {
                         ? `${authUser.firstName} ${authUser.lastName ?? ""}`.trim()
                         : authUser.phone}
                     </span>
-                    . Continue to add property details and schedule your visit.
                   </p>
                 ) : (
                   <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 space-y-3">
                     <p className="font-medium text-brand-navy">Account required to book</p>
                     <p className="text-sm text-muted-foreground">
-                      We save your quote and link it to your booking. Sign in if you already have an
-                      account, or create one — it only takes a minute with your phone number.
+                      Sign in or create an account to continue — it only takes a minute with your
+                      phone number.
                     </p>
                     <div className="flex flex-wrap gap-3">
                       <Button asChild>
@@ -217,11 +194,7 @@ export function BookingWizard() {
                     </div>
                   </div>
                 )}
-              </div>
-            )}
 
-            {stepIndex === 1 && (
-              <>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2 sm:col-span-2">
                     <Label htmlFor="addressLine">Street address</Label>
@@ -269,7 +242,7 @@ export function BookingWizard() {
               </>
             )}
 
-            {stepIndex === 2 && (
+            {stepIndex === 1 && (
               <>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
@@ -317,7 +290,7 @@ export function BookingWizard() {
               </>
             )}
 
-            {stepIndex === 3 && (
+            {stepIndex === 2 && (
               <>
                 <div className="space-y-2">
                   <Label htmlFor="accessInfo">How do we get in?</Label>
@@ -340,7 +313,7 @@ export function BookingWizard() {
               </>
             )}
 
-            {stepIndex === 4 && (
+            {stepIndex === 3 && (
               <>
                 <AgreementCheckbox
                   id="acceptedTerms"
@@ -401,7 +374,7 @@ export function BookingWizard() {
               </>
             )}
 
-            {stepIndex === 5 && (
+            {stepIndex === 4 && (
               <div className="space-y-4">
                 <dl className="grid gap-3 text-sm sm:grid-cols-2">
                   <ReviewItem label="Address" value={`${property.addressLine}, ${property.city} ${property.postalCode}`} />
@@ -425,9 +398,9 @@ export function BookingWizard() {
                 <div className="rounded-xl bg-secondary/40 px-4 py-3 text-sm">
                   <p className="font-medium text-brand-navy">Payment next</p>
                   <p className="mt-1 text-muted-foreground">
-                    After confirming, you&apos;ll pay a{" "}
-                    {formatCurrency(quote.calculation.depositCents)} deposit (50%) to secure your
-                    booking. Payment processing arrives in the next milestone.
+                    After confirming, you&apos;ll pay{" "}
+                    {formatCurrency(quote.calculation.estimatedTotalCents)} in full to secure your
+                    booking.
                   </p>
                 </div>
               </div>
@@ -445,7 +418,7 @@ export function BookingWizard() {
                   Back
                 </Button>
               )}
-              {stepIndex < 5 ? (
+              {stepIndex < 4 ? (
                 <Button
                   type="button"
                   onClick={goNext}
@@ -464,22 +437,12 @@ export function BookingWizard() {
                   {submitting ? "Creating booking…" : "Confirm booking"}
                 </Button>
               )}
-              {stepIndex === 0 && (
-                <Button asChild variant="ghost" className="w-full sm:w-auto">
-                  <Link href="/quote">Adjust quote</Link>
-                </Button>
-              )}
             </div>
           </CardContent>
         </Card>
       </div>
 
-      <div
-        className={cn(
-          "min-w-0 lg:sticky lg:top-24",
-          stepIndex === 0 && "hidden lg:block",
-        )}
-      >
+      <div className="min-w-0 lg:sticky lg:top-24">
         <Card className="border-primary/20">
           <CardHeader>
             <CardTitle className="text-base">Booking summary</CardTitle>
@@ -532,7 +495,6 @@ function ReviewItem({ label, value }: { label: string; value: string }) {
 
 function stepTitle(id: string): string {
   const titles: Record<string, string> = {
-    quote: "Review your quote",
     property: "Property details",
     schedule: "Pick a date & time",
     access: "Access & notes",
@@ -544,7 +506,6 @@ function stepTitle(id: string): string {
 
 function stepDescription(id: string): string {
   const descriptions: Record<string, string> = {
-    quote: "Confirm the service and estimate before continuing.",
     property: "Where should we clean? Photos help our team prepare.",
     schedule: "Choose your preferred date and arrival window.",
     access: "Share how we get in and anything we should know.",

@@ -23,7 +23,7 @@ import { getCurrentUser } from "@/server/auth";
 
 export const metadata: Metadata = {
   title: "Booking Confirmation",
-  description: "Your Perfecto booking confirmation and deposit payment.",
+  description: "Your Perfecto booking confirmation and payment.",
 };
 
 export const dynamic = "force-dynamic";
@@ -72,9 +72,8 @@ export default async function BookingConfirmationPage({ params, searchParams }: 
 
   const isConfirmed = booking.status === "CONFIRMED";
   const fullyPaid = reconcile.fullyPaid;
-  const balanceDue = Math.max(booking.totalAmount - reconcile.amountPaid, 0);
-  const depositDue = Math.max(booking.depositAmount - reconcile.amountPaid, 0);
-  const showPayDeposit = !fullyPaid && !reconcile.depositSatisfied && booking.status === "PENDING_PAYMENT";
+  const amountDue = Math.max(booking.totalAmount - reconcile.amountPaid, 0);
+  const showPayNow = !fullyPaid && !reconcile.depositSatisfied && booking.status === "PENDING_PAYMENT";
   const paymentsEnabled = isStripeConfigured();
   const awaitingConfirmation = checkout === "success" && !reconcile.depositSatisfied;
 
@@ -86,8 +85,8 @@ export default async function BookingConfirmationPage({ params, searchParams }: 
           fullyPaid
             ? "Your booking is fully paid and scheduled."
             : isConfirmed
-              ? "Your deposit was received and your clean is scheduled."
-              : "Pay the 50% deposit to secure your appointment."
+              ? "Your payment was received and your clean is scheduled."
+              : "Pay in full to secure your appointment."
         }
       />
       <Section>
@@ -97,7 +96,7 @@ export default async function BookingConfirmationPage({ params, searchParams }: 
             <CardTitle>{booking.service.name}</CardTitle>
             <CardDescription>
               Reference {booking.id.slice(0, 8).toUpperCase()} ·{" "}
-              {fullyPaid ? "Paid in full" : isConfirmed ? "Confirmed" : "Pending deposit"}
+              {fullyPaid ? "Paid in full" : isConfirmed ? "Confirmed" : "Pending payment"}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -107,17 +106,15 @@ export default async function BookingConfirmationPage({ params, searchParams }: 
               </p>
             )}
 
-            {checkout === "cancelled" && showPayDeposit && (
+            {checkout === "cancelled" && showPayNow && (
               <p className="rounded-xl bg-secondary/60 px-4 py-3 text-sm text-muted-foreground">
-                Checkout was cancelled. Your booking is saved — pay the deposit when you&apos;re
-                ready.
+                Checkout was cancelled. Your booking is saved — pay when you&apos;re ready.
               </p>
             )}
 
             {fullyPaid && !isConfirmed && (
               <p className="rounded-xl border border-accent/30 bg-accent/10 px-4 py-3 text-sm text-brand-navy">
-                We received more than the required deposit for this booking. No further payment is
-                needed — refresh if this message persists.
+                We received your payment. Refresh if this message persists.
               </p>
             )}
 
@@ -158,12 +155,8 @@ export default async function BookingConfirmationPage({ params, searchParams }: 
               </div>
               {!fullyPaid && (
                 <div>
-                  <dt className="text-muted-foreground">
-                    {reconcile.depositSatisfied ? "Balance due" : "Deposit due"}
-                  </dt>
-                  <dd className="font-medium text-brand-navy">
-                    {formatCurrency(reconcile.depositSatisfied ? balanceDue : depositDue)}
-                  </dd>
+                  <dt className="text-muted-foreground">Amount due</dt>
+                  <dd className="font-medium text-brand-navy">{formatCurrency(amountDue)}</dd>
                 </div>
               )}
               {booking.invoice && (
@@ -188,12 +181,11 @@ export default async function BookingConfirmationPage({ params, searchParams }: 
               </p>
             )}
 
-            {showPayDeposit && (
+            {showPayNow && (
               <div className="rounded-xl border border-dashed border-primary/30 bg-primary/5 px-4 py-4">
-                <p className="font-medium text-brand-navy">Pay your deposit</p>
+                <p className="font-medium text-brand-navy">Complete your payment</p>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Secure checkout via Stripe. Balance of {formatCurrency(booking.balanceAmount)} is
-                  due after your service from your dashboard.
+                  Secure checkout via Stripe. Full payment is required to confirm your booking.
                 </p>
                 {paymentsEnabled ? (
                   <div className="mt-3">
@@ -212,8 +204,7 @@ export default async function BookingConfirmationPage({ params, searchParams }: 
 
             {isConfirmed && !fullyPaid && (
               <p className="rounded-xl bg-accent/10 px-4 py-3 text-sm text-brand-navy">
-                Deposit paid — you&apos;re all set! Balance of {formatCurrency(balanceDue)} is due
-                after your service and can be paid from your dashboard. We&apos;ll see you on{" "}
+                Payment received — you&apos;re all set! We&apos;ll see you on{" "}
                 {booking.scheduledDate.toLocaleDateString("en-US", {
                   weekday: "long",
                   month: "long",

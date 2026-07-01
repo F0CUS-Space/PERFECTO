@@ -2,12 +2,12 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { ChevronDown, Menu, X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { BrandLogo } from "@/components/shared/brand-logo";
 import { AuthNavActions } from "@/features/auth/auth-nav-actions";
 import { LogoutButton } from "@/features/auth/logout-button";
 import { useAuthUser } from "@/features/auth/use-auth-user";
@@ -16,7 +16,7 @@ import type { PublicUser } from "@/features/auth/types";
 const MAIN_LINKS = [
   { label: "Home", href: "/" },
   { label: "Services", href: "/services" },
-  { label: "Quote", href: "/quote" },
+  { label: "Book Now", href: "/book" },
   { label: "Gallery", href: "/gallery" },
   { label: "About", href: "/about" },
   { label: "Contact", href: "/contact" },
@@ -69,17 +69,7 @@ export function Navbar({ initialUser }: { initialUser?: PublicUser | null }) {
   return (
     <header className="sticky top-0 z-50 border-b border-border/60 bg-background/80 backdrop-blur-md">
       <div className="container flex h-16 items-center justify-between gap-6">
-        <Link href="/" className="flex items-center gap-2">
-          <Image
-            src="/brand/perfecto-logo.png"
-            alt="Perfecto Cleaning Services"
-            width={40}
-            height={40}
-            className="h-10 w-10 object-contain"
-            priority
-          />
-          <span className="text-lg font-bold tracking-tight text-brand-navy">Perfecto</span>
-        </Link>
+        <BrandLogo />
 
         {/* Desktop nav */}
         <nav className="hidden items-center gap-1 lg:flex">

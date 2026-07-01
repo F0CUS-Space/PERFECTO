@@ -3,7 +3,7 @@ import type { BookingStatus } from "@prisma/client";
 import { cn } from "@/lib/utils";
 
 const STATUS_LABELS: Record<BookingStatus, string> = {
-  PENDING_PAYMENT: "Pending deposit",
+  PENDING_PAYMENT: "Pending payment",
   CONFIRMED: "Confirmed",
   IN_PROGRESS: "In progress",
   COMPLETED: "Completed",

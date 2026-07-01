@@ -34,8 +34,8 @@ export default async function DashboardBookingDetailPage({ params }: PageProps) 
     notFound();
   }
 
-  const balanceDue = Math.max(booking.totalAmount - booking.amountPaid, 0);
-  const needsDeposit = !booking.depositSatisfied && booking.status === "PENDING_PAYMENT";
+  const amountDue = Math.max(booking.totalAmount - booking.amountPaid, 0);
+  const needsPayment = !booking.depositSatisfied && booking.status === "PENDING_PAYMENT";
   const paymentsEnabled = isStripeConfigured();
 
   return (
@@ -101,16 +101,8 @@ export default async function DashboardBookingDetailPage({ params }: PageProps) 
             </div>
             {!booking.fullyPaid && (
               <div>
-                <dt className="text-muted-foreground">
-                  {booking.depositSatisfied ? "Balance due" : "Deposit due"}
-                </dt>
-                <dd className="font-medium text-brand-navy">
-                  {formatCurrency(
-                    booking.depositSatisfied
-                      ? balanceDue
-                      : Math.max(booking.depositAmount - booking.amountPaid, 0),
-                  )}
-                </dd>
+                <dt className="text-muted-foreground">Amount due</dt>
+                <dd className="font-medium text-brand-navy">{formatCurrency(amountDue)}</dd>
               </div>
             )}
           </dl>
@@ -128,11 +120,11 @@ export default async function DashboardBookingDetailPage({ params }: PageProps) 
             </p>
           )}
 
-          {needsDeposit && (
+          {needsPayment && (
             <div className="rounded-xl border border-dashed border-primary/30 bg-primary/5 px-4 py-4">
-              <p className="font-medium text-brand-navy">Pay your deposit</p>
+              <p className="font-medium text-brand-navy">Complete your payment</p>
               <p className="mt-1 text-sm text-muted-foreground">
-                Secure checkout via Stripe to confirm your appointment.
+                Secure checkout via Stripe. Full payment is required to confirm your appointment.
               </p>
               {paymentsEnabled ? (
                 <div className="mt-3">
@@ -145,12 +137,6 @@ export default async function DashboardBookingDetailPage({ params }: PageProps) 
                 <p className="mt-3 text-sm text-destructive">Payments are not configured.</p>
               )}
             </div>
-          )}
-
-          {booking.depositSatisfied && !booking.fullyPaid && (
-            <p className="rounded-xl bg-accent/10 px-4 py-3 text-sm text-brand-navy">
-              Deposit received. Balance of {formatCurrency(balanceDue)} is due after your service.
-            </p>
           )}
 
           {booking.fullyPaid && (

@@ -12,7 +12,7 @@ export const faqs: FaqItem[] = [
   {
     question: "Do I need to pay the full amount upfront?",
     answer:
-      "No. To confirm a booking we collect a 50% deposit. The remaining balance is due after your service is completed. You'll always see the deposit and remaining balance clearly before you pay.",
+      "No. To confirm a booking we collect full payment upfront. You'll always see the total clearly before you pay.",
   },
   {
     question: "Are your cleaners insured and vetted?",

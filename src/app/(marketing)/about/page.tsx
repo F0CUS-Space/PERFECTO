@@ -72,12 +72,12 @@ export default function AboutPage() {
                 guarantee.
               </p>
               <p>
-                We built our platform to make excellence effortless: get an instant quote, book in
-                minutes, pay a simple deposit, and relax while we deliver perfect results.
+                We built our platform to make excellence effortless: see your price, book in
+                minutes, pay securely, and relax while we deliver perfect results.
               </p>
             </div>
             <Button asChild className="mt-8">
-              <Link href="/quote">Get an Instant Quote</Link>
+              <Link href="/book">Book Now</Link>
             </Button>
           </div>
         </div>

@@ -94,7 +94,7 @@ export const legalDocuments: Record<string, LegalDocument> = {
       {
         heading: "1. Confirming a Booking",
         body: [
-          "A booking is confirmed only after a 50% deposit is successfully paid. The remaining balance is due upon completion of the service unless otherwise agreed in writing.",
+          "A booking is confirmed only after full payment is successfully received. Your appointment is not secured until payment is complete.",
         ],
       },
       {
@@ -158,28 +158,22 @@ export const legalDocuments: Record<string, LegalDocument> = {
   payment: {
     slug: "payment",
     title: "Payment Policy",
-    summary: "How deposits, balances, and payments are handled.",
+    summary: "How payments are handled.",
     sections: [
       {
-        heading: "1. Deposits",
+        heading: "1. Full Payment",
         body: [
-          "A 50% deposit is required to confirm and reserve your booking. Your appointment is not secured until the deposit is paid.",
+          "Full payment is required to confirm and reserve your booking. Your appointment is not secured until payment is complete.",
         ],
       },
       {
-        heading: "2. Remaining Balance",
-        body: [
-          "The remaining balance is due upon completion of the service unless otherwise agreed in writing.",
-        ],
-      },
-      {
-        heading: "3. Payment Processing",
+        heading: "2. Payment Processing",
         body: [
           "Payments are processed securely through our third-party payment processor. We do not store full card details on our servers.",
         ],
       },
       {
-        heading: "4. Pricing Adjustments",
+        heading: "3. Pricing Adjustments",
         body: [
           "If on-site conditions differ materially from the information provided at booking, we will discuss any pricing or scope adjustments with you before proceeding.",
         ],
@@ -200,19 +194,19 @@ export const legalDocuments: Record<string, LegalDocument> = {
       {
         heading: "2. Cancellations",
         body: [
-          "Cancellations made more than 48 hours in advance are eligible for a full deposit refund. Cancellations within 48 hours may forfeit part or all of the deposit to compensate for reserved time.",
+          "Cancellations made more than 48 hours in advance are eligible for a full refund. Cancellations within 48 hours may forfeit part or all of the payment to compensate for reserved time.",
         ],
       },
       {
         heading: "3. No-Access & No-Shows",
         body: [
-          "If our professional cannot access the property at the scheduled time, the appointment may be treated as a late cancellation and the deposit may be retained.",
+          "If our professional cannot access the property at the scheduled time, the appointment may be treated as a late cancellation and the payment may be retained.",
         ],
       },
       {
         heading: "4. Changes by Perfecto",
         body: [
-          `In rare cases ${company} may need to reschedule. If we cannot offer a suitable alternative, your deposit will be refunded in full.`,
+          `In rare cases ${company} may need to reschedule. If we cannot offer a suitable alternative, your payment will be refunded in full.`,
         ],
       },
     ],
@@ -380,9 +374,9 @@ export const legalDocuments: Record<string, LegalDocument> = {
         ],
       },
       {
-        heading: "3. Bookings & Deposits",
+        heading: "3. Bookings & Payment",
         body: [
-          "A booking is confirmed only after a 50% deposit is successfully paid. The remaining balance is due upon completion of the service unless otherwise agreed in writing.",
+          "A booking is confirmed only after full payment is successfully received. Your appointment is not secured until payment is complete.",
         ],
       },
       {

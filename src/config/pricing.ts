@@ -19,8 +19,8 @@ export const PRICING_CONFIG = {
     BIWEEKLY: 0.1,
     MONTHLY: 0.05,
   } satisfies Record<Frequency, number>,
-  /** Deposit collected at booking (M4/M5). */
-  depositPercent: 0.5,
+  /** Full amount collected at booking. */
+  depositPercent: 1,
   /** Office-specific sizing fees (first N included in base). */
   office: {
     workstationsIncluded: 5,

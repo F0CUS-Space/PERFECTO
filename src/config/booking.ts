@@ -6,7 +6,6 @@ export const ARRIVAL_WINDOWS = [
 ] as const;
 
 export const BOOKING_WIZARD_STEPS = [
-  { id: "quote", label: "Quote" },
   { id: "property", label: "Property" },
   { id: "schedule", label: "Schedule" },
   { id: "access", label: "Access" },

@@ -84,7 +84,7 @@ export default function GalleryPage() {
         </div>
         <div className="mt-12 flex justify-center">
           <Button asChild size="lg">
-            <Link href="/quote">Get your space perfected</Link>
+            <Link href="/book">Book your clean</Link>
           </Button>
         </div>
       </Section>

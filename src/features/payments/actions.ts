@@ -16,7 +16,7 @@ export type CreateDepositCheckoutResult =
   | { ok: true; url: string }
   | { ok: false; error: string };
 
-/** Creates a Stripe Checkout session for the booking deposit. */
+/** Creates a Stripe Checkout session for the booking payment. */
 export async function createDepositCheckout(
   bookingId: string,
 ): Promise<CreateDepositCheckoutResult> {
@@ -45,7 +45,7 @@ export async function createDepositCheckout(
     if (reconcile.depositSatisfied) {
       return {
         ok: false,
-        error: "Deposit already paid. Any remaining balance is due after your service.",
+        error: "Payment already received for this booking.",
       };
     }
 

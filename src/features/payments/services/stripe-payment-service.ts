@@ -25,8 +25,8 @@ export class StripePaymentService implements PaymentService {
               currency: "usd",
               unit_amount: input.amountCents,
               product_data: {
-                name: `${input.serviceName} — 50% deposit`,
-                description: "Perfecto Cleaning Services booking deposit",
+                name: `${input.serviceName} — full payment`,
+                description: "Perfecto Cleaning Services booking payment",
               },
             },
           },
