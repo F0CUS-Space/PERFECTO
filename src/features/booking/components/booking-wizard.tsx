@@ -2,7 +2,7 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
-import { Check, LogIn, UserPlus } from "lucide-react";
+import { LogIn, UserPlus } from "lucide-react";
 
 import { ARRIVAL_WINDOWS, BOOKING_WIZARD_STEPS, minScheduleDateString } from "@/config/booking";
 import { Button } from "@/components/ui/button";
@@ -28,6 +28,7 @@ import {
   scheduleStepSchema,
 } from "../schema";
 import { useBookingWizardStore } from "../store";
+import { BookingProgress } from "./booking-progress";
 import { BookingSummary } from "./booking-summary";
 import { PhotoUploader } from "./photo-uploader";
 
@@ -167,39 +168,9 @@ export function BookingWizard() {
   const currentStep = BOOKING_WIZARD_STEPS[stepIndex];
 
   return (
-    <div className="mx-auto grid max-w-6xl gap-8 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start">
-      <div className="space-y-6">
-        <nav aria-label="Booking progress" className="overflow-x-auto">
-          <ol className="flex min-w-max gap-2">
-            {BOOKING_WIZARD_STEPS.map((step, index) => {
-              const done = index < stepIndex;
-              const active = index === stepIndex;
-              return (
-                <li
-                  key={step.id}
-                  className={cn(
-                    "flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
-                    done && "bg-accent/15 text-brand-green",
-                    active && "bg-primary text-primary-foreground",
-                    !done && !active && "bg-secondary text-muted-foreground",
-                  )}
-                >
-                  <span
-                    className={cn(
-                      "flex h-5 w-5 items-center justify-center rounded-full text-[10px]",
-                      done && "bg-accent text-white",
-                      active && "bg-primary-foreground/20",
-                      !done && !active && "bg-background",
-                    )}
-                  >
-                    {done ? <Check className="h-3 w-3" /> : index + 1}
-                  </span>
-                  {step.label}
-                </li>
-              );
-            })}
-          </ol>
-        </nav>
+    <div className="mx-auto grid w-full min-w-0 max-w-6xl gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,320px)] lg:items-start lg:gap-8">
+      <div className="min-w-0 space-y-6">
+        <BookingProgress stepIndex={stepIndex} />
 
         <Card>
           <CardHeader>
@@ -468,9 +439,9 @@ export function BookingWizard() {
               </p>
             )}
 
-            <div className="flex flex-wrap gap-3 border-t border-border pt-4">
+            <div className="flex flex-col gap-3 border-t border-border pt-4 sm:flex-row sm:flex-wrap">
               {stepIndex > 0 && (
-                <Button type="button" variant="outline" onClick={goBack}>
+                <Button type="button" variant="outline" onClick={goBack} className="w-full sm:w-auto">
                   Back
                 </Button>
               )}
@@ -479,16 +450,22 @@ export function BookingWizard() {
                   type="button"
                   onClick={goNext}
                   disabled={authUser === undefined || (stepIndex === 0 && authUser === null)}
+                  className="w-full sm:w-auto"
                 >
                   Continue
                 </Button>
               ) : (
-                <Button type="button" onClick={onSubmitBooking} disabled={submitting}>
+                <Button
+                  type="button"
+                  onClick={onSubmitBooking}
+                  disabled={submitting}
+                  className="w-full sm:w-auto"
+                >
                   {submitting ? "Creating booking…" : "Confirm booking"}
                 </Button>
               )}
               {stepIndex === 0 && (
-                <Button asChild variant="ghost">
+                <Button asChild variant="ghost" className="w-full sm:w-auto">
                   <Link href="/quote">Adjust quote</Link>
                 </Button>
               )}
@@ -497,7 +474,12 @@ export function BookingWizard() {
         </Card>
       </div>
 
-      <div className="lg:sticky lg:top-24">
+      <div
+        className={cn(
+          "min-w-0 lg:sticky lg:top-24",
+          stepIndex === 0 && "hidden lg:block",
+        )}
+      >
         <Card className="border-primary/20">
           <CardHeader>
             <CardTitle className="text-base">Booking summary</CardTitle>

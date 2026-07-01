@@ -17,8 +17,9 @@ export default function BookPage() {
       <PageHero
         title="Book your clean"
         description="Complete the steps below to schedule your service. Your quote carries forward automatically."
+        containerClassName="py-12 md:py-20"
       />
-      <Section>
+      <Section className="[&>div]:py-10 md:[&>div]:py-16">
         <BookingWizard />
       </Section>
     </>

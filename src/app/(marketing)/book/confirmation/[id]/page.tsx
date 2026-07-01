@@ -12,29 +12,33 @@ import {
 } from "@/components/ui/card";
 import { PageHero } from "@/components/shared/page-hero";
 import { Section } from "@/components/shared/section";
+import { PayDepositButton } from "@/features/payments/components/pay-deposit-button";
+import { isStripeConfigured } from "@/lib/stripe-ready";
 import { formatCurrency } from "@/lib/utils";
 import { prisma } from "@/lib/prisma";
 import { isDatabaseConfigured } from "@/lib/db-ready";
 import { getCurrentUser } from "@/server/auth";
 
 export const metadata: Metadata = {
-  title: "Booking Confirmed",
-  description: "Your Perfecto booking has been created.",
+  title: "Booking Confirmation",
+  description: "Your Perfecto booking confirmation and deposit payment.",
 };
 
 export const dynamic = "force-dynamic";
 
 interface PageProps {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ checkout?: string }>;
 }
 
-export default async function BookingConfirmationPage({ params }: PageProps) {
+export default async function BookingConfirmationPage({ params, searchParams }: PageProps) {
   const user = await getCurrentUser();
   if (!user) {
     redirect(`/login?next=${encodeURIComponent("/book")}`);
   }
 
   const { id } = await params;
+  const { checkout } = await searchParams;
 
   if (!isDatabaseConfigured()) {
     notFound();
@@ -45,7 +49,7 @@ export default async function BookingConfirmationPage({ params }: PageProps) {
     include: {
       service: true,
       agreement: true,
-      photos: true,
+      invoice: true,
       payments: { where: { type: "DEPOSIT" }, take: 1 },
     },
   });
@@ -55,22 +59,44 @@ export default async function BookingConfirmationPage({ params }: PageProps) {
   }
 
   const depositPayment = booking.payments[0];
+  const isConfirmed = booking.status === "CONFIRMED";
+  const paymentsEnabled = isStripeConfigured();
+  const awaitingWebhook = checkout === "success" && !isConfirmed;
 
   return (
     <>
       <PageHero
-        title="Booking created"
-        description="Your appointment is saved. Pay the deposit next to confirm your slot."
+        title={isConfirmed ? "Booking confirmed" : "Booking created"}
+        description={
+          isConfirmed
+            ? "Your deposit was received and your clean is scheduled."
+            : "Pay the 50% deposit to secure your appointment."
+        }
       />
       <Section>
         <Card className="mx-auto max-w-2xl border-accent/30">
           <CardHeader>
             <CardTitle>{booking.service.name}</CardTitle>
             <CardDescription>
-              Reference {booking.id.slice(0, 8).toUpperCase()} · Status: pending deposit
+              Reference {booking.id.slice(0, 8).toUpperCase()} ·{" "}
+              {isConfirmed ? "Confirmed" : "Pending deposit"}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            {awaitingWebhook && (
+              <p className="rounded-xl border border-primary/20 bg-primary/5 px-4 py-3 text-sm text-muted-foreground">
+                Payment received by Stripe — confirming your booking now. This page will update
+                when confirmation completes (usually within a few seconds). Refresh if needed.
+              </p>
+            )}
+
+            {checkout === "cancelled" && !isConfirmed && (
+              <p className="rounded-xl bg-secondary/60 px-4 py-3 text-sm text-muted-foreground">
+                Checkout was cancelled. Your booking is saved — pay the deposit when you&apos;re
+                ready.
+              </p>
+            )}
+
             <dl className="grid gap-3 text-sm sm:grid-cols-2">
               <div>
                 <dt className="text-muted-foreground">Date</dt>
@@ -101,16 +127,25 @@ export default async function BookingConfirmationPage({ params }: PageProps) {
                 </dd>
               </div>
               <div>
-                <dt className="text-muted-foreground">Deposit due</dt>
+                <dt className="text-muted-foreground">
+                  {isConfirmed ? "Deposit paid" : "Deposit due"}
+                </dt>
                 <dd className="text-lg font-bold tabular-nums text-primary">
                   {formatCurrency(booking.depositAmount)}
                 </dd>
               </div>
+              {isConfirmed && booking.invoice && (
+                <div className="sm:col-span-2">
+                  <dt className="text-muted-foreground">Invoice</dt>
+                  <dd className="font-medium text-brand-navy">{booking.invoice.number}</dd>
+                </div>
+              )}
             </dl>
 
             {booking.agreement && (
               <p className="rounded-xl bg-secondary/40 px-4 py-3 text-sm text-muted-foreground">
-                Signed by <span className="font-medium text-brand-navy">{booking.agreement.signatureName}</span>{" "}
+                Signed by{" "}
+                <span className="font-medium text-brand-navy">{booking.agreement.signatureName}</span>{" "}
                 on{" "}
                 {booking.agreement.signedAt.toLocaleDateString("en-US", {
                   month: "short",
@@ -121,16 +156,41 @@ export default async function BookingConfirmationPage({ params }: PageProps) {
               </p>
             )}
 
-            <div className="rounded-xl border border-dashed border-primary/30 bg-primary/5 px-4 py-4">
-              <p className="font-medium text-brand-navy">Pay deposit — coming in Milestone 5</p>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Stripe checkout will collect your {formatCurrency(booking.depositAmount)} deposit and
-                confirm the booking. Payment status: {depositPayment?.status ?? "PENDING"}.
+            {!isConfirmed && (
+              <div className="rounded-xl border border-dashed border-primary/30 bg-primary/5 px-4 py-4">
+                <p className="font-medium text-brand-navy">Pay your deposit</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Secure checkout via Stripe. Balance of {formatCurrency(booking.balanceAmount)}{" "}
+                  is due after your service. Payment status:{" "}
+                  {depositPayment?.status ?? "PENDING"}.
+                </p>
+                {paymentsEnabled ? (
+                  <div className="mt-3">
+                    <PayDepositButton
+                      bookingId={booking.id}
+                      depositAmountCents={booking.depositAmount}
+                    />
+                  </div>
+                ) : (
+                  <p className="mt-3 text-sm text-destructive">
+                    Payments are not configured. Add STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET
+                    to the server environment.
+                  </p>
+                )}
+              </div>
+            )}
+
+            {isConfirmed && (
+              <p className="rounded-xl bg-accent/10 px-4 py-3 text-sm text-brand-navy">
+                You&apos;re all set! We&apos;ll see you on{" "}
+                {booking.scheduledDate.toLocaleDateString("en-US", {
+                  weekday: "long",
+                  month: "long",
+                  day: "numeric",
+                })}{" "}
+                during {booking.arrivalWindow}.
               </p>
-              <Button className="mt-3" disabled>
-                Pay deposit (M5)
-              </Button>
-            </div>
+            )}
 
             <div className="flex flex-wrap gap-3">
               <Button asChild variant="outline">

@@ -103,6 +103,21 @@ docker compose up -d --build
 
 App: `http://<EC2_HOST>:3000` (or your `APP_HOST_PORT`).
 
+### Stripe (M5 — deposit payments)
+
+Add to server `.env`:
+```env
+STRIPE_SECRET_KEY=sk_test_...
+STRIPE_WEBHOOK_SECRET=whsec_...
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...
+```
+
+Webhook endpoint (after deploy): `https://your-domain/api/webhooks/stripe`
+
+For local testing: `stripe listen --forward-to localhost:3000/api/webhooks/stripe`
+
+Booking confirmation is driven by the **webhook**, not the Stripe redirect alone.
+
 ## Project Structure
 
 ```
