@@ -6,6 +6,7 @@ import { LogOut } from "lucide-react";
 import { useState } from "react";
 
 import { getFirebaseAuth } from "@/lib/firebase/client";
+import { notifyAuthChanged } from "@/features/auth/auth-events";
 import { Button } from "@/components/ui/button";
 
 export function LogoutButton({
@@ -39,6 +40,7 @@ export function LogoutButton({
         // Session cookie is cleared; Firebase client may not be initialized.
       }
 
+      notifyAuthChanged();
       window.location.assign("/");
     } catch {
       setLoading(false);

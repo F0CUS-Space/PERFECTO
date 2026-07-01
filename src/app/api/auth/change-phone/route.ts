@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-import { verifyIdToken } from "@/lib/firebase/admin";
+import { attachSessionCookie } from "@/lib/auth/session-cookie";
+import { verifyIdToken, createSessionCookie } from "@/lib/firebase/admin";
 import { prisma } from "@/lib/prisma";
-import { getCurrentUser, setSessionFromIdToken } from "@/server/auth";
+import { getCurrentUser } from "@/server/auth";
 
 const bodySchema = z.object({
   idToken: z.string().min(1),
@@ -49,9 +50,10 @@ export async function POST(request: Request) {
       },
     });
 
-    await setSessionFromIdToken(idToken);
-
-    return NextResponse.json({ ok: true, phone: newPhone });
+    const sessionCookie = await createSessionCookie(idToken);
+    const response = NextResponse.json({ ok: true, phone: newPhone });
+    attachSessionCookie(response, sessionCookie);
+    return response;
   } catch (error) {
     console.error("[auth/change-phone]", error);
     const message = error instanceof Error ? error.message : "Unable to update phone.";

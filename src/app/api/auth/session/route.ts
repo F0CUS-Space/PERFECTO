@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-import { verifyIdToken } from "@/lib/firebase/admin";
-import { setSessionFromIdToken } from "@/server/auth";
+import { attachSessionCookie } from "@/lib/auth/session-cookie";
+import { verifyIdToken, createSessionCookie } from "@/lib/firebase/admin";
 import { toPublicUser, upsertUserFromFirebaseClaims } from "@/features/auth/user-sync";
 
 const bodySchema = z.object({
@@ -16,13 +16,16 @@ export async function POST(request: Request) {
 
     const claims = await verifyIdToken(idToken);
     const { user, isNewUser } = await upsertUserFromFirebaseClaims(claims);
-    await setSessionFromIdToken(idToken);
+    const sessionCookie = await createSessionCookie(idToken);
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       user: toPublicUser(user),
       isNewUser,
       needsProfile: !user.firstName,
     });
+
+    attachSessionCookie(response, sessionCookie);
+    return response;
   } catch (error) {
     console.error("[auth/session]", error);
     const message = error instanceof Error ? error.message : "Unable to create session.";

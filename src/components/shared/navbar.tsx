@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { AuthNavActions } from "@/features/auth/auth-nav-actions";
 import { LogoutButton } from "@/features/auth/logout-button";
 import { useAuthUser } from "@/features/auth/use-auth-user";
+import type { PublicUser } from "@/features/auth/types";
 
 const MAIN_LINKS = [
   { label: "Home", href: "/" },
@@ -28,9 +29,9 @@ const MORE_LINKS = [
   { label: "Careers", href: "/careers" },
 ];
 
-export function Navbar() {
+export function Navbar({ initialUser }: { initialUser?: PublicUser | null }) {
   const pathname = usePathname();
-  const authUser = useAuthUser();
+  const authUser = useAuthUser(initialUser);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const moreRef = useRef<HTMLDivElement>(null);
@@ -143,7 +144,7 @@ export function Navbar() {
         </nav>
 
         {/* Desktop CTAs */}
-        <AuthNavActions />
+        <AuthNavActions initialUser={initialUser} />
 
         {/* Mobile toggle */}
         <button

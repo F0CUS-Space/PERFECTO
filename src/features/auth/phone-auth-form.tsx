@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { updateProfile } from "@/features/auth/actions";
+import { notifyAuthChanged } from "@/features/auth/auth-events";
 import {
   ADMIN_TEST_PHONE,
   CUSTOMER_TEST_PHONES,
@@ -98,6 +99,7 @@ export function PhoneAuthForm({ mode = "login" }: { mode?: AuthMode }) {
   }, []);
 
   const finishAndRedirect = (user: PublicUser) => {
+    notifyAuthChanged();
     if (user.role === "ADMIN") {
       router.replace(nextPath.startsWith("/admin") ? nextPath : "/admin");
       router.refresh();
@@ -111,6 +113,8 @@ export function PhoneAuthForm({ mode = "login" }: { mode?: AuthMode }) {
     const res = await fetch("/api/auth/session", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
+      credentials: "same-origin",
+      cache: "no-store",
       body: JSON.stringify({ idToken }),
     });
     const data = await res.json();

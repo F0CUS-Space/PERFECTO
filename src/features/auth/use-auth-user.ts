@@ -1,18 +1,41 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 
+import { AUTH_CHANGED_EVENT } from "@/features/auth/auth-events";
 import type { PublicUser } from "@/features/auth/types";
 
-export function useAuthUser() {
-  const [user, setUser] = useState<PublicUser | null | undefined>(undefined);
+async function fetchAuthUser(): Promise<PublicUser | null> {
+  const res = await fetch("/api/auth/me", {
+    credentials: "same-origin",
+    cache: "no-store",
+  });
+  if (!res.ok) return null;
+  const data = await res.json();
+  return data.user ?? null;
+}
+
+export function useAuthUser(initialUser?: PublicUser | null) {
+  const pathname = usePathname();
+  const [user, setUser] = useState<PublicUser | null | undefined>(
+    initialUser !== undefined ? initialUser : undefined,
+  );
+
+  const refresh = useCallback(async () => {
+    const next = await fetchAuthUser();
+    setUser(next);
+  }, []);
 
   useEffect(() => {
-    fetch("/api/auth/me")
-      .then((res) => (res.ok ? res.json() : { user: null }))
-      .then((data) => setUser(data.user ?? null))
-      .catch(() => setUser(null));
-  }, []);
+    void refresh();
+  }, [pathname, refresh]);
+
+  useEffect(() => {
+    const onAuthChanged = () => void refresh();
+    window.addEventListener(AUTH_CHANGED_EVENT, onAuthChanged);
+    return () => window.removeEventListener(AUTH_CHANGED_EVENT, onAuthChanged);
+  }, [refresh]);
 
   return user;
 }
