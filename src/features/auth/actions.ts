@@ -20,6 +20,7 @@ export async function updateProfile(input: ProfileInput): Promise<ProfileActionR
   const user = await requireUser();
   const { firstName, lastName, email } = parsed.data;
   const normalizedEmail = email?.trim() ? email.trim().toLowerCase() : null;
+  const emailChanged = normalizedEmail !== (user.email?.toLowerCase() ?? null);
 
   if (normalizedEmail) {
     const taken = await prisma.user.findFirst({
@@ -36,11 +37,12 @@ export async function updateProfile(input: ProfileInput): Promise<ProfileActionR
       firstName,
       lastName: lastName?.trim() || null,
       email: normalizedEmail,
-      // emailVerifiedAt stays null until Firebase email verification completes (M2 client flow).
+      ...(emailChanged ? { emailVerifiedAt: null } : {}),
     },
   });
 
   revalidatePath("/dashboard");
+  revalidatePath("/dashboard/profile");
   revalidatePath("/login");
 
   return { ok: true };
