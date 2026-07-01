@@ -1,5 +1,7 @@
 import { PaymentsTableClient } from "@/features/dashboard/components/payments-table-client";
 
+export const dynamic = "force-dynamic";
+
 export const metadata = {
   title: "Payments",
 };

@@ -4,10 +4,18 @@ import { AlertTriangle, Calendar, CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BookingCard } from "@/features/dashboard/components/booking-card";
 import { getCustomerDashboardStats } from "@/features/dashboard/queries";
-import { requireUser } from "@/server/rbac";
+import { getCurrentUser } from "@/server/auth";
+
+export const dynamic = "force-dynamic";
+
+export const metadata = {
+  title: "Dashboard",
+};
 
 export default async function DashboardPage() {
-  const user = await requireUser();
+  const user = await getCurrentUser();
+  if (!user) return null;
+
   const displayName = user.firstName ?? "there";
   const showEmailCaution = user.email && !user.emailVerifiedAt;
   const showAddEmailCaution = !user.email;
@@ -90,7 +98,7 @@ export default async function DashboardPage() {
         ))}
       </div>
 
-      {stats.recentBookings.length > 0 && (
+      {stats.recentBookings.length > 0 ? (
         <section className="mt-10">
           <div className="mb-4 flex items-center justify-between">
             <h2 className="text-xl font-semibold text-brand-navy">Recent bookings</h2>
@@ -104,16 +112,30 @@ export default async function DashboardPage() {
             ))}
           </div>
         </section>
+      ) : (
+        <section className="mt-10 rounded-2xl border border-dashed border-border bg-card p-8 text-center">
+          <p className="text-muted-foreground">No bookings yet.</p>
+          <div className="mt-4 flex flex-wrap justify-center gap-3">
+            <Button asChild>
+              <Link href="/quote">Get a quote</Link>
+            </Button>
+            <Button asChild variant="outline">
+              <Link href="/book">Book a clean</Link>
+            </Button>
+          </div>
+        </section>
       )}
 
-      <div className="mt-10 flex flex-wrap gap-3">
-        <Button asChild>
-          <Link href="/quote">Get a quote</Link>
-        </Button>
-        <Button asChild variant="outline">
-          <Link href="/book">Book a clean</Link>
-        </Button>
-      </div>
+      {stats.recentBookings.length > 0 && (
+        <div className="mt-10 flex flex-wrap gap-3">
+          <Button asChild>
+            <Link href="/quote">Get a quote</Link>
+          </Button>
+          <Button asChild variant="outline">
+            <Link href="/book">Book a clean</Link>
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

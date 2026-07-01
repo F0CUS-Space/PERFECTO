@@ -10,14 +10,18 @@ import {
 import { ChangePhoneForm } from "@/features/dashboard/components/change-phone-form";
 import { ProfileForm } from "@/features/dashboard/components/profile-form";
 import { toPublicUser } from "@/features/auth/user-sync";
-import { requireUser } from "@/server/rbac";
+import { getCurrentUser } from "@/server/auth";
+
+export const dynamic = "force-dynamic";
 
 export const metadata = {
   title: "Profile",
 };
 
 export default async function DashboardProfilePage() {
-  const user = await requireUser();
+  const user = await getCurrentUser();
+  if (!user) return null;
+
   const publicUser = toPublicUser(user);
 
   return (

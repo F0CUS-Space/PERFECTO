@@ -3,6 +3,8 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { BookingsListClient } from "@/features/dashboard/components/bookings-list-client";
 
+export const dynamic = "force-dynamic";
+
 export const metadata = {
   title: "My Bookings",
 };

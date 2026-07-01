@@ -15,14 +15,18 @@ import { getCustomerBookingById } from "@/features/dashboard/queries";
 import { PayDepositButton } from "@/features/payments/components/pay-deposit-button";
 import { isStripeConfigured } from "@/lib/stripe-ready";
 import { formatCurrency } from "@/lib/utils";
-import { requireUser } from "@/server/rbac";
+import { getCurrentUser } from "@/server/auth";
+
+export const dynamic = "force-dynamic";
 
 interface PageProps {
   params: Promise<{ id: string }>;
 }
 
 export default async function DashboardBookingDetailPage({ params }: PageProps) {
-  const user = await requireUser();
+  const user = await getCurrentUser();
+  if (!user) return null;
+
   const { id } = await params;
   const booking = await getCustomerBookingById(user.id, id);
 
