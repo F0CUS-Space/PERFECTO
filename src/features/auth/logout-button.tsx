@@ -19,18 +19,30 @@ export function LogoutButton({
   const [loading, setLoading] = useState(false);
 
   const handleLogout = async () => {
+    if (loading) return;
     setLoading(true);
+
     try {
-      await fetch("/api/auth/logout", { method: "POST" });
+      const res = await fetch("/api/auth/logout", {
+        method: "POST",
+        credentials: "same-origin",
+        cache: "no-store",
+      });
+
+      if (!res.ok) {
+        throw new Error("Logout failed");
+      }
+
       try {
         await signOut(getFirebaseAuth());
       } catch {
-        // Session cookie cleared; Firebase client may not be initialized.
+        // Session cookie is cleared; Firebase client may not be initialized.
       }
-      router.push("/");
-      router.refresh();
-    } finally {
+
+      window.location.assign("/");
+    } catch {
       setLoading(false);
+      router.refresh();
     }
   };
 

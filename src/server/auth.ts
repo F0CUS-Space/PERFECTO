@@ -25,9 +25,26 @@ export async function getCurrentUser(): Promise<User | null> {
 
   try {
     const decoded = await verifySessionCookie(token);
-    const user = await prisma.user.findUnique({ where: { firebaseUid: decoded.uid } });
+
+    let user = await prisma.user.findUnique({ where: { firebaseUid: decoded.uid } });
+
+    // Fallback: link session to local user by phone (seeded accounts, uid drift after phone change).
+    if (!user && decoded.phone_number) {
+      const byPhone = await prisma.user.findUnique({ where: { phone: decoded.phone_number } });
+      if (byPhone) {
+        user = await prisma.user.update({
+          where: { id: byPhone.id },
+          data: {
+            firebaseUid: decoded.uid,
+            phoneVerifiedAt: byPhone.phoneVerifiedAt ?? new Date(),
+          },
+        });
+      }
+    }
+
     return user;
-  } catch {
+  } catch (error) {
+    console.error("[getCurrentUser]", error);
     return null;
   }
 }
@@ -46,7 +63,11 @@ export async function setSessionFromIdToken(idToken: string) {
 /** Clear the session cookie on logout. */
 export async function clearSession() {
   const cookieStore = await cookies();
-  cookieStore.set(SESSION_COOKIE, "", { ...sessionCookieOptions(0), maxAge: 0 });
+  cookieStore.set(SESSION_COOKIE, "", {
+    ...sessionCookieOptions(0),
+    maxAge: 0,
+    expires: new Date(0),
+  });
 }
 
 export { SESSION_COOKIE_NAME } from "@/lib/auth/constants";

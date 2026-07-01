@@ -8,10 +8,22 @@ import { requireUser } from "@/server/rbac";
 
 export default async function DashboardPage() {
   const user = await requireUser();
-  const stats = await getCustomerDashboardStats(user.id);
   const displayName = user.firstName ?? "there";
   const showEmailCaution = user.email && !user.emailVerifiedAt;
   const showAddEmailCaution = !user.email;
+
+  let stats = {
+    upcomingCount: 0,
+    totalBookings: 0,
+    pendingDepositCount: 0,
+    recentBookings: [] as Awaited<ReturnType<typeof getCustomerDashboardStats>>["recentBookings"],
+  };
+
+  try {
+    stats = await getCustomerDashboardStats(user.id);
+  } catch (error) {
+    console.error("[dashboard/overview]", error);
+  }
 
   return (
     <div className="container py-8 md:py-12">

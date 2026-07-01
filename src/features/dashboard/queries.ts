@@ -23,20 +23,15 @@ function isUpcoming(scheduledDate: Date, status: BookingStatus): boolean {
   return scheduled >= today;
 }
 
-async function amountPaidForBooking(bookingId: string, totalAmount: number): Promise<number> {
-  try {
-    const result = await reconcileBookingPayments(bookingId);
-    return result.amountPaid;
-  } catch {
-    const payments = await prisma.payment.findMany({
-      where: { bookingId, status: "SUCCEEDED" },
-      select: { amount: true },
-    });
-    return Math.min(
-      payments.reduce((sum, payment) => sum + payment.amount, 0),
-      totalAmount,
-    );
-  }
+async function amountPaidFromDb(bookingId: string, totalAmount: number): Promise<number> {
+  const payments = await prisma.payment.findMany({
+    where: { bookingId, status: "SUCCEEDED" },
+    select: { amount: true },
+  });
+  return Math.min(
+    payments.reduce((sum, payment) => sum + payment.amount, 0),
+    totalAmount,
+  );
 }
 
 export async function getCustomerBookings(userId: string): Promise<CustomerBookingSummary[]> {
@@ -53,7 +48,7 @@ export async function getCustomerBookings(userId: string): Promise<CustomerBooki
 
   const summaries = await Promise.all(
     bookings.map(async (booking) => {
-      const amountPaid = await amountPaidForBooking(booking.id, booking.totalAmount);
+      const amountPaid = await amountPaidFromDb(booking.id, booking.totalAmount);
 
       return {
         id: booking.id,
@@ -107,7 +102,7 @@ export async function getCustomerBookingById(
     depositSatisfied = reconcile.depositSatisfied;
     fullyPaid = reconcile.fullyPaid;
   } catch {
-    amountPaid = await amountPaidForBooking(booking.id, booking.totalAmount);
+    amountPaid = await amountPaidFromDb(booking.id, booking.totalAmount);
     depositSatisfied = amountPaid >= booking.depositAmount;
     fullyPaid = amountPaid >= booking.totalAmount;
   }

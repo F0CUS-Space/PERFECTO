@@ -6,7 +6,10 @@ import { LogoutButton } from "@/features/auth/logout-button";
 import { requireUser } from "@/server/rbac";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
-  await requireUser().catch(() => redirect("/login?next=/dashboard"));
+  const user = await requireUser().catch(() => null);
+  if (!user) {
+    redirect("/login?next=/dashboard");
+  }
 
   return (
     <div className="min-h-screen bg-background">
