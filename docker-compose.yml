@@ -18,21 +18,39 @@ services:
       timeout: 5s
       retries: 10
 
-  app:
+  migrate:
     build:
       context: .
       dockerfile: Dockerfile
-    restart: unless-stopped
+      target: migrate
+    restart: "no"
     depends_on:
       db:
         condition: service_healthy
     env_file:
       - .env
     environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-perfecto}:${POSTGRES_PASSWORD:-perfecto}@db:5432/${POSTGRES_DB:-perfecto}?schema=public
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runner
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    env_file:
+      - .env
+    environment:
       # Inside the compose network the database host is "db", not "localhost".
       DATABASE_URL: postgresql://${POSTGRES_USER:-perfecto}:${POSTGRES_PASSWORD:-perfecto}@db:5432/${POSTGRES_DB:-perfecto}?schema=public
     ports:
-      - "3000:3000"
+      # Host port defaults to 3002 so `npm run dev` on 3000/3001 can run alongside Docker.
+      - "${APP_HOST_PORT:-3002}:3000"
 
 volumes:
   postgres-data:
