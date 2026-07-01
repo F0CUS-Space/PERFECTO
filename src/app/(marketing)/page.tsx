@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { HeroBrand } from "@/components/shared/hero-brand";
 import { Section, SectionHeading } from "@/components/shared/section";
 import { ServiceCard } from "@/components/shared/service-card";
 import { TestimonialCard } from "@/components/shared/testimonial-card";
@@ -44,6 +45,7 @@ export default async function HomePage() {
     <>
       <PageHero
         align="left"
+        brand={<HeroBrand />}
         eyebrow={
           <>
             <Sparkles className="h-3.5 w-3.5" /> Premium Home & Office Care
@@ -54,7 +56,7 @@ export default async function HomePage() {
             Clean spaces. <span className="text-gradient-animated">Perfect results.</span>
           </>
         }
-        description="Premium residential and commercial cleaning, tailored to your lifestyle and delivered with meticulous care. See your price and book in minutes."
+        description="Premium residential and commercial cleaning for homes and offices — tailored to your lifestyle and delivered with meticulous care. See your price and book in minutes."
         actions={
           <>
             <Button asChild size="lg">

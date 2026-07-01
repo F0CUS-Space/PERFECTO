@@ -25,6 +25,8 @@ export function HeroBackground({ className }: { className?: string }) {
 }
 
 interface PageHeroProps {
+  /** Brand lockup above the headline (e.g. logo + business name). Renders title as h2. */
+  brand?: ReactNode;
   eyebrow?: ReactNode;
   title: ReactNode;
   description?: ReactNode;
@@ -39,6 +41,7 @@ interface PageHeroProps {
 }
 
 export function PageHero({
+  brand,
   eyebrow,
   title,
   description,
@@ -75,9 +78,16 @@ export function PageHero({
               {eyebrow}
             </span>
           ) : null}
-          <h1 className="max-w-3xl text-balance text-4xl font-bold tracking-tight text-brand-navy md:text-6xl">
-            {title}
-          </h1>
+          {brand ? <div className="mb-1">{brand}</div> : null}
+          {brand ? (
+            <h2 className="max-w-3xl text-balance text-3xl font-bold tracking-tight text-brand-navy md:text-5xl">
+              {title}
+            </h2>
+          ) : (
+            <h1 className="max-w-3xl text-balance text-4xl font-bold tracking-tight text-brand-navy md:text-6xl">
+              {title}
+            </h1>
+          )}
           {description ? (
             <p
               className={cn(
