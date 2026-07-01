@@ -1,0 +1,94 @@
+name: Deploy to EC2
+
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: deploy-ec2-production
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+  deploy:
+    needs: validate
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure SSH
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "${{ secrets.EC2_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Prepare app directory on EC2
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          EC2_USER: ${{ secrets.EC2_USER }}
+          EC2_APP_DIR: ${{ secrets.EC2_APP_DIR }}
+        run: |
+          APP_DIR="${EC2_APP_DIR:-/home/${EC2_USER}/PERFECTO}"
+          ssh -i ~/.ssh/deploy_key "${EC2_USER}@${EC2_HOST}" "mkdir -p '${APP_DIR}'"
+
+      - name: Sync files to EC2
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          EC2_USER: ${{ secrets.EC2_USER }}
+          EC2_APP_DIR: ${{ secrets.EC2_APP_DIR }}
+        run: |
+          APP_DIR="${EC2_APP_DIR:-/home/${EC2_USER}/PERFECTO}"
+          rsync -avz --delete \
+            --exclude '.git' \
+            --exclude 'node_modules' \
+            --exclude '.next' \
+            --exclude '.env' \
+            --exclude '.env.*' \
+            --exclude 'postgres-data' \
+            --exclude '.cursor' \
+            -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes" \
+            ./ "${EC2_USER}@${EC2_HOST}:${APP_DIR}/"
+
+      - name: Build and restart Docker stack
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          EC2_USER: ${{ secrets.EC2_USER }}
+          EC2_APP_DIR: ${{ secrets.EC2_APP_DIR }}
+        run: |
+          APP_DIR="${EC2_APP_DIR:-/home/${EC2_USER}/PERFECTO}"
+          ssh -i ~/.ssh/deploy_key "${EC2_USER}@${EC2_HOST}" \
+            "cd '${APP_DIR}' && bash scripts/deploy-ec2-remote.sh"
+
+      - name: Smoke check
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          EC2_USER: ${{ secrets.EC2_USER }}
+          EC2_APP_DIR: ${{ secrets.EC2_APP_DIR }}
+          APP_PORT: ${{ secrets.EC2_APP_PORT }}
+        run: |
+          PORT="${APP_PORT:-3002}"
+          ssh -i ~/.ssh/deploy_key "${EC2_USER}@${EC2_HOST}" \
+            "curl -fsS --max-time 30 http://127.0.0.1:${PORT}/ > /dev/null && echo 'App responded on port ${PORT}'"
