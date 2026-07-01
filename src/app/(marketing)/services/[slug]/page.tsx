@@ -13,6 +13,9 @@ import { Reveal } from "@/components/shared/reveal";
 import { getServiceBySlug, getServiceSlugs } from "@/features/services-catalog/queries";
 import { serviceDetails, defaultServiceDetail } from "@/content/services-detail";
 
+// Runtime SSR — catalog comes from PostgreSQL; no DB required at image build time.
+export const dynamic = "force-dynamic";
+
 export async function generateStaticParams() {
   const slugs = await getServiceSlugs();
   return slugs.map((slug) => ({ slug }));

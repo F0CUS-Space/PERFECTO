@@ -21,8 +21,7 @@ services:
   migrate:
     build:
       context: .
-      dockerfile: Dockerfile
-      target: migrate
+      dockerfile: docker/Dockerfile.migrate
     restart: "no"
     depends_on:
       db:

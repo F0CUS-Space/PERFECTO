@@ -29,6 +29,10 @@ const envSchema = z.object({
   NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: z.string().optional(),
   NEXT_PUBLIC_FIREBASE_APP_ID: z.string().optional(),
 
+  // When "true", shows test-phone helpers and relaxes Firebase app verification for local dev.
+  NEXT_PUBLIC_AUTH_DEV_MODE: z.string().optional(),
+  AUTH_DEV_MODE: z.string().optional(),
+
   // Stripe
   STRIPE_SECRET_KEY: z.string().optional(),
   STRIPE_WEBHOOK_SECRET: z.string().optional(),

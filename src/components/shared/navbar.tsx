@@ -8,8 +8,12 @@ import { ChevronDown, Menu, X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { AuthNavActions } from "@/features/auth/auth-nav-actions";
+import { LogoutButton } from "@/features/auth/logout-button";
+import { useAuthUser } from "@/features/auth/use-auth-user";
 
 const MAIN_LINKS = [
+  { label: "Home", href: "/" },
   { label: "Services", href: "/services" },
   { label: "Quote", href: "/quote" },
   { label: "Gallery", href: "/gallery" },
@@ -26,6 +30,7 @@ const MORE_LINKS = [
 
 export function Navbar() {
   const pathname = usePathname();
+  const authUser = useAuthUser();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const moreRef = useRef<HTMLDivElement>(null);
@@ -55,7 +60,10 @@ export function Navbar() {
     };
   }, [mobileOpen]);
 
-  const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
+  const isActive = (href: string) => {
+    if (href === "/") return pathname === "/";
+    return pathname === href || pathname.startsWith(`${href}/`);
+  };
 
   return (
     <header className="sticky top-0 z-50 border-b border-border/60 bg-background/80 backdrop-blur-md">
@@ -135,14 +143,7 @@ export function Navbar() {
         </nav>
 
         {/* Desktop CTAs */}
-        <div className="hidden items-center gap-3 lg:flex">
-          <Button asChild variant="ghost" size="sm">
-            <Link href="/login">Login</Link>
-          </Button>
-          <Button asChild size="sm">
-            <Link href="/book">Book Now</Link>
-          </Button>
-        </div>
+        <AuthNavActions />
 
         {/* Mobile toggle */}
         <button
@@ -182,9 +183,25 @@ export function Navbar() {
               ))}
             </div>
             <div className="mt-5 flex flex-col gap-3 border-t border-border pt-5">
-              <Button asChild variant="outline" size="lg">
-                <Link href="/login">Login</Link>
-              </Button>
+              {authUser ? (
+                <>
+                  <Button asChild variant="outline" size="lg">
+                    <Link href={authUser.role === "ADMIN" ? "/admin" : "/dashboard"}>
+                      {authUser.role === "ADMIN" ? "Admin" : "Dashboard"}
+                    </Link>
+                  </Button>
+                  <LogoutButton variant="outline" />
+                </>
+              ) : (
+                <>
+                  <Button asChild variant="outline" size="lg">
+                    <Link href="/login">Login</Link>
+                  </Button>
+                  <Button asChild variant="outline" size="lg">
+                    <Link href="/register">Sign Up</Link>
+                  </Button>
+                </>
+              )}
               <Button asChild size="lg">
                 <Link href="/book">Book Now</Link>
               </Button>

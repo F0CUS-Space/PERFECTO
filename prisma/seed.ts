@@ -5,11 +5,18 @@ const prisma = new PrismaClient();
 async function main() {
   console.log("Seeding Perfecto database...");
 
-  // --- Admin user (phone-first; phone pre-verified for the initial admin) ---
+  // --- Admin user (login with +10000000000 / OTP 123123 in dev) ---
   const adminPhone = process.env.SEED_ADMIN_PHONE ?? "+10000000000";
   await prisma.user.upsert({
     where: { phone: adminPhone },
-    update: { role: Role.ADMIN },
+    update: {
+      role: Role.ADMIN,
+      firstName: "Perfecto",
+      lastName: "Admin",
+      email: process.env.SEED_ADMIN_EMAIL ?? "admin@perfecto.local",
+      phoneVerifiedAt: new Date(),
+      emailVerifiedAt: new Date(),
+    },
     create: {
       phone: adminPhone,
       email: process.env.SEED_ADMIN_EMAIL ?? "admin@perfecto.local",
@@ -20,6 +27,7 @@ async function main() {
       emailVerifiedAt: new Date(),
     },
   });
+  console.log(`Admin seeded: ${adminPhone} (dev login — OTP 123123)`);
 
   // --- Service catalog ---
   const services = [
@@ -86,6 +94,29 @@ async function main() {
       await prisma.addOn.create({ data: addOn });
     }
   }
+
+  // Link add-ons to residential-style services (quote calculator eligibility).
+  const residentialSlugs = [
+    "residential-cleaning",
+    "deep-cleaning",
+    "move-in-out",
+    "recurring-cleaning",
+  ];
+  const allAddOns = await prisma.addOn.findMany({ where: { isActive: true } });
+  for (const slug of residentialSlugs) {
+    const service = await prisma.service.findUnique({ where: { slug } });
+    if (!service) continue;
+    for (const addOn of allAddOns) {
+      await prisma.addOnOnService.upsert({
+        where: {
+          serviceId_addOnId: { serviceId: service.id, addOnId: addOn.id },
+        },
+        create: { serviceId: service.id, addOnId: addOn.id },
+        update: {},
+      });
+    }
+  }
+  console.log(`Linked ${allAddOns.length} add-ons to ${residentialSlugs.length} services.`);
 
   // --- Promotions (display only in V1.0) ---
   const promo = await prisma.promotion.findFirst({

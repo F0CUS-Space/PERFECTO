@@ -1,18 +1,38 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
+import { Suspense } from "react";
 
-import { ComingSoon } from "@/components/shared/coming-soon";
+import { PageHero } from "@/components/shared/page-hero";
+import { Section } from "@/components/shared/section";
+import { PhoneAuthForm } from "@/features/auth/phone-auth-form";
+import { getCurrentUser } from "@/server/auth";
 
-// Placeholder for Milestone 2 (Phone-first Authentication).
 export const metadata: Metadata = {
   title: "Login",
-  description: "Sign in to your Perfecto account.",
+  description: "Sign in to your Perfecto account with your phone number.",
 };
 
-export default function LoginPage() {
+export default async function LoginPage() {
+  const user = await getCurrentUser();
+  if (user) {
+    redirect(user.role === "ADMIN" ? "/admin" : "/dashboard");
+  }
+
   return (
-    <ComingSoon
-      title="Accounts — coming soon"
-      description="Secure phone-first sign in is launching shortly. Soon you'll be able to manage bookings, invoices, and your profile here."
-    />
+    <>
+      <PageHero
+        title="Welcome back"
+        description="Sign in securely with your phone number. No password to remember."
+      />
+      <Section>
+        <Suspense
+          fallback={
+            <div className="mx-auto h-64 max-w-md animate-pulse rounded-2xl bg-secondary/60" />
+          }
+        >
+          <PhoneAuthForm mode="login" />
+        </Suspense>
+      </Section>
+    </>
   );
 }

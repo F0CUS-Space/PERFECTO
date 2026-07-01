@@ -3,6 +3,8 @@
 import { getApp, getApps, initializeApp, type FirebaseApp } from "firebase/app";
 import { getAuth, type Auth } from "firebase/auth";
 
+import { isAuthDevMode } from "@/features/auth/firebase-test-phones";
+
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
@@ -13,6 +15,7 @@ const firebaseConfig = {
 };
 
 let app: FirebaseApp | undefined;
+let authConfigured = false;
 
 export function getFirebaseApp(): FirebaseApp {
   if (!firebaseConfig.apiKey) {
@@ -23,5 +26,11 @@ export function getFirebaseApp(): FirebaseApp {
 }
 
 export function getFirebaseAuth(): Auth {
-  return getAuth(getFirebaseApp());
+  const auth = getAuth(getFirebaseApp());
+  // Dev-only: skip reCAPTCHA app verification so Firebase test phone numbers work locally.
+  if (!authConfigured && isAuthDevMode() && typeof window !== "undefined") {
+    auth.settings.appVerificationDisabledForTesting = true;
+    authConfigured = true;
+  }
+  return auth;
 }

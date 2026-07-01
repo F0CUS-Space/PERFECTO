@@ -2,19 +2,30 @@ import "server-only";
 
 import { cookies } from "next/headers";
 
+import { SESSION_COOKIE_NAME } from "@/lib/auth/constants";
 import { prisma } from "@/lib/prisma";
-import { verifyIdToken } from "@/lib/firebase/admin";
+import {
+  createSessionCookie,
+  SESSION_EXPIRES_MS,
+  verifySessionCookie,
+} from "@/lib/firebase/admin";
 import type { User } from "@prisma/client";
 
-const SESSION_COOKIE = "perfecto_session";
+const SESSION_COOKIE = SESSION_COOKIE_NAME;
+
+function sessionCookieOptions(maxAgeSeconds: number) {
+  return {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax" as const,
+    path: "/",
+    maxAge: maxAgeSeconds,
+  };
+}
 
 /**
- * Resolves the currently authenticated user from the Firebase session cookie/ID token.
- *
- * The session cookie stores a Firebase ID token. We verify it server-side on every
- * request (never trust the client) and map it to the local User row by firebaseUid.
- *
- * Returns null when unauthenticated. Auth wiring is completed in Milestone 2.
+ * Resolves the currently authenticated user from the Firebase session cookie.
+ * Returns null when unauthenticated or the session is invalid/expired.
  */
 export async function getCurrentUser(): Promise<User | null> {
   const cookieStore = await cookies();
@@ -22,7 +33,7 @@ export async function getCurrentUser(): Promise<User | null> {
   if (!token) return null;
 
   try {
-    const decoded = await verifyIdToken(token);
+    const decoded = await verifySessionCookie(token);
     const user = await prisma.user.findUnique({ where: { firebaseUid: decoded.uid } });
     return user;
   } catch {
@@ -30,4 +41,21 @@ export async function getCurrentUser(): Promise<User | null> {
   }
 }
 
-export const SESSION_COOKIE_NAME = SESSION_COOKIE;
+/** Store a Firebase session cookie after the client completes phone OTP. */
+export async function setSessionFromIdToken(idToken: string) {
+  const sessionCookie = await createSessionCookie(idToken);
+  const cookieStore = await cookies();
+  cookieStore.set(
+    SESSION_COOKIE,
+    sessionCookie,
+    sessionCookieOptions(Math.floor(SESSION_EXPIRES_MS / 1000)),
+  );
+}
+
+/** Clear the session cookie on logout. */
+export async function clearSession() {
+  const cookieStore = await cookies();
+  cookieStore.set(SESSION_COOKIE, "", { ...sessionCookieOptions(0), maxAge: 0 });
+}
+
+export { SESSION_COOKIE_NAME } from "@/lib/auth/constants";

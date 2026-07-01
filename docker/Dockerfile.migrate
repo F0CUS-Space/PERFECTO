@@ -1,0 +1,20 @@
+# One-shot Prisma migrate service (separate from app image to avoid Compose Bake multi-target issues).
+FROM node:22-slim
+
+RUN apt-get update -y && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+ENV npm_config_fetch_retries=5 \
+    npm_config_fetch_retry_factor=2 \
+    npm_config_fetch_retry_mintimeout=20000 \
+    npm_config_fetch_retry_maxtimeout=180000 \
+    npm_config_fetch_timeout=600000
+
+COPY package.json package-lock.json* ./
+RUN npm ci --no-audit --no-fund
+
+COPY prisma ./prisma
+RUN npx prisma generate
+
+CMD ["npx", "prisma", "migrate", "deploy"]

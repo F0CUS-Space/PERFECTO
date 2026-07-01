@@ -33,3 +33,38 @@ export function getFirebaseAdminAuth(): Auth {
 export async function verifyIdToken(idToken: string) {
   return getFirebaseAdminAuth().verifyIdToken(idToken);
 }
+
+const SESSION_EXPIRES_MS = 60 * 60 * 24 * 5 * 1000; // 5 days
+
+/** Exchange a fresh ID token for a long-lived Firebase session cookie. */
+export async function createSessionCookie(idToken: string) {
+  return getFirebaseAdminAuth().createSessionCookie(idToken, {
+    expiresIn: SESSION_EXPIRES_MS,
+  });
+}
+
+/** Verify a Firebase session cookie issued by createSessionCookie. */
+export async function verifySessionCookie(sessionCookie: string) {
+  return getFirebaseAdminAuth().verifySessionCookie(sessionCookie, true);
+}
+
+/** Get or create a Firebase Auth user by E.164 phone (Admin SDK — no SMS). */
+export async function getOrCreateFirebaseUserByPhone(phone: string) {
+  const auth = getFirebaseAdminAuth();
+  try {
+    return await auth.getUserByPhoneNumber(phone);
+  } catch (error) {
+    const code = (error as { code?: string }).code;
+    if (code === "auth/user-not-found") {
+      return auth.createUser({ phoneNumber: phone });
+    }
+    throw error;
+  }
+}
+
+/** Issue a custom token for the client to exchange via signInWithCustomToken. */
+export async function createCustomTokenForUid(uid: string) {
+  return getFirebaseAdminAuth().createCustomToken(uid);
+}
+
+export { SESSION_EXPIRES_MS };

@@ -12,6 +12,8 @@ export const metadata: Metadata = {
   description: "Current offers and promotions from Perfecto Cleaning Services.",
 };
 
+export const dynamic = "force-dynamic";
+
 export default async function PromotionsPage() {
   const promotions = await getActivePromotions();
 

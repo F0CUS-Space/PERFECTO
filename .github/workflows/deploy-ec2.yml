@@ -80,7 +80,7 @@ jobs:
         run: |
           APP_DIR="${EC2_APP_DIR:-/home/${EC2_USER}/PERFECTO}"
           ssh -i ~/.ssh/deploy_key "${EC2_USER}@${EC2_HOST}" \
-            "cd '${APP_DIR}' && bash scripts/deploy-ec2-remote.sh"
+            "cd '${APP_DIR}' && chmod +x scripts/deploy-ec2-remote.sh scripts/ec2-bootstrap.sh 2>/dev/null || true && bash scripts/deploy-ec2-remote.sh"
 
       - name: Smoke check
         env:

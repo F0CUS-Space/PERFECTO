@@ -21,6 +21,9 @@ import { Reveal } from "@/components/shared/reveal";
 import { getActiveServices } from "@/features/services-catalog/queries";
 import { testimonials } from "@/content/testimonials";
 
+// Home service cards are loaded from the database at runtime.
+export const dynamic = "force-dynamic";
+
 const steps = [
   { icon: ClipboardList, title: "Get a Quote", body: "Tell us about your space for an instant, transparent estimate." },
   { icon: CalendarCheck, title: "Book a Time", body: "Pick a date and arrival window that works for you." },
