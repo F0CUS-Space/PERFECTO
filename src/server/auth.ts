@@ -3,6 +3,7 @@ import "server-only";
 import { cookies } from "next/headers";
 
 import { SESSION_COOKIE_NAME } from "@/lib/auth/constants";
+import { sessionCookieOptions } from "@/lib/auth/session-cookie";
 import { prisma } from "@/lib/prisma";
 import {
   createSessionCookie,
@@ -12,16 +13,6 @@ import {
 import type { User } from "@prisma/client";
 
 const SESSION_COOKIE = SESSION_COOKIE_NAME;
-
-function sessionCookieOptions(maxAgeSeconds: number) {
-  return {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax" as const,
-    path: "/",
-    maxAge: maxAgeSeconds,
-  };
-}
 
 /**
  * Resolves the currently authenticated user from the Firebase session cookie.

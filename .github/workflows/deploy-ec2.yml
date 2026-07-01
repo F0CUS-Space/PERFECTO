@@ -89,6 +89,6 @@ jobs:
           EC2_APP_DIR: ${{ secrets.EC2_APP_DIR }}
           APP_PORT: ${{ secrets.EC2_APP_PORT }}
         run: |
-          PORT="${APP_PORT:-3002}"
+          PORT="${APP_PORT:-3000}"
           ssh -i ~/.ssh/deploy_key "${EC2_USER}@${EC2_HOST}" \
             "curl -fsS --max-time 30 http://127.0.0.1:${PORT}/ > /dev/null && echo 'App responded on port ${PORT}'"

@@ -50,5 +50,5 @@ fi
 echo ""
 echo "==> Bootstrap complete."
 echo "    Set GitHub secrets: EC2_HOST, EC2_USER, EC2_SSH_KEY, EC2_APP_DIR (optional)"
-echo "    Open security group ports: 22 (SSH), ${APP_HOST_PORT:-3002} (app)"
+echo "    Open security group ports: 22 (SSH), ${APP_HOST_PORT:-3000} (app)"
 echo "    Push to main to trigger deploy."

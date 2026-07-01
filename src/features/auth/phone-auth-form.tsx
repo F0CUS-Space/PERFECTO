@@ -237,7 +237,9 @@ export function PhoneAuthForm({ mode = "login" }: { mode?: AuthMode }) {
         return;
       }
 
-      if (!confirmation) return;
+      if (!confirmation) {
+        throw new Error("Verification session expired. Go back and request a new code.");
+      }
       await confirmation.confirm(otp);
       const auth = getFirebaseAuth();
       const idToken = await auth.currentUser!.getIdToken(true);

@@ -72,4 +72,7 @@ $COMPOSE up -d --build --remove-orphans
 echo "==> Container status:"
 $COMPOSE ps
 
+echo "==> Seeding service catalog (idempotent — safe on every deploy)..."
+$COMPOSE run --rm migrate npx prisma db seed
+
 echo "==> Deploy complete."

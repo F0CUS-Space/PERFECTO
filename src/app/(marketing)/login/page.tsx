@@ -12,10 +12,15 @@ export const metadata: Metadata = {
   description: "Sign in to your Perfecto account with your phone number.",
 };
 
-export default async function LoginPage() {
+interface LoginPageProps {
+  searchParams: Promise<{ next?: string }>;
+}
+
+export default async function LoginPage({ searchParams }: LoginPageProps) {
+  const { next } = await searchParams;
   const user = await getCurrentUser();
   if (user) {
-    redirect(user.role === "ADMIN" ? "/admin" : "/dashboard");
+    redirect(next ?? (user.role === "ADMIN" ? "/admin" : "/dashboard"));
   }
 
   return (

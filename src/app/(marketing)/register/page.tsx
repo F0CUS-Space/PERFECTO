@@ -12,10 +12,16 @@ export const metadata: Metadata = {
   description: "Create your Perfecto account with phone verification — book cleans and manage appointments.",
 };
 
-export default async function RegisterPage() {
+interface RegisterPageProps {
+  searchParams: Promise<{ next?: string }>;
+}
+
+export default async function RegisterPage({ searchParams }: RegisterPageProps) {
+  const { next } = await searchParams;
   const user = await getCurrentUser();
   if (user) {
-    redirect(user.role === "ADMIN" ? "/admin" : "/dashboard");
+    const destination = next ?? (user.role === "ADMIN" ? "/admin" : "/dashboard");
+    redirect(destination);
   }
 
   return (

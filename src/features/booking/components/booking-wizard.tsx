@@ -2,8 +2,7 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { Check } from "lucide-react";
+import { Check, LogIn, UserPlus } from "lucide-react";
 
 import { ARRIVAL_WINDOWS, BOOKING_WIZARD_STEPS, minScheduleDateString } from "@/config/booking";
 import { Button } from "@/components/ui/button";
@@ -33,7 +32,6 @@ import { BookingSummary } from "./booking-summary";
 import { PhotoUploader } from "./photo-uploader";
 
 export function BookingWizard() {
-  const router = useRouter();
   const authUser = useAuthUser();
   const quote = useQuoteStore((s) => s.draft);
   const clearQuote = useQuoteStore((s) => s.clearDraft);
@@ -78,22 +76,16 @@ export function BookingWizard() {
     );
   }
 
-  const requireAuth = (targetStep: number) => {
-    if (authUser === undefined) return false;
-    if (authUser === null) {
-      router.push(`/login?next=${encodeURIComponent("/book")}`);
-      return false;
-    }
-    setStepIndex(targetStep);
-    setStepError(null);
-    return true;
-  };
-
   const goNext = () => {
     setStepError(null);
 
     if (stepIndex === 0) {
-      if (!requireAuth(1)) return;
+      if (authUser === undefined) return;
+      if (authUser === null) {
+        setStepError("Sign in or create an account below to continue with your booking.");
+        return;
+      }
+      setStepIndex(1);
       return;
     }
 
@@ -169,7 +161,7 @@ export function BookingWizard() {
 
     clearQuote();
     resetWizard();
-    router.push(`/book/confirmation/${result.bookingId}`);
+    window.location.href = `/book/confirmation/${result.bookingId}`;
   };
 
   const currentStep = BOOKING_WIZARD_STEPS[stepIndex];
@@ -218,10 +210,42 @@ export function BookingWizard() {
             {stepIndex === 0 && (
               <div className="space-y-4">
                 <BookingSummary quote={quote} compact />
-                <p className="text-sm text-muted-foreground">
-                  Happy with your estimate? Continue to add your property details and schedule your
-                  visit. You&apos;ll need to sign in before booking.
-                </p>
+
+                {authUser === undefined ? (
+                  <p className="text-sm text-muted-foreground">Checking your account…</p>
+                ) : authUser ? (
+                  <p className="text-sm text-muted-foreground">
+                    Signed in as{" "}
+                    <span className="font-medium text-brand-navy">
+                      {authUser.firstName
+                        ? `${authUser.firstName} ${authUser.lastName ?? ""}`.trim()
+                        : authUser.phone}
+                    </span>
+                    . Continue to add property details and schedule your visit.
+                  </p>
+                ) : (
+                  <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 space-y-3">
+                    <p className="font-medium text-brand-navy">Account required to book</p>
+                    <p className="text-sm text-muted-foreground">
+                      We save your quote and link it to your booking. Sign in if you already have an
+                      account, or create one — it only takes a minute with your phone number.
+                    </p>
+                    <div className="flex flex-wrap gap-3">
+                      <Button asChild>
+                        <Link href="/login?next=/book">
+                          <LogIn className="h-4 w-4" />
+                          Sign in
+                        </Link>
+                      </Button>
+                      <Button asChild variant="outline">
+                        <Link href="/register?next=/book">
+                          <UserPlus className="h-4 w-4" />
+                          Create account
+                        </Link>
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -451,8 +475,12 @@ export function BookingWizard() {
                 </Button>
               )}
               {stepIndex < 5 ? (
-                <Button type="button" onClick={goNext} disabled={authUser === undefined && stepIndex === 0}>
-                  {stepIndex === 0 && authUser === null ? "Sign in to continue" : "Continue"}
+                <Button
+                  type="button"
+                  onClick={goNext}
+                  disabled={authUser === undefined || (stepIndex === 0 && authUser === null)}
+                >
+                  Continue
                 </Button>
               ) : (
                 <Button type="button" onClick={onSubmitBooking} disabled={submitting}>

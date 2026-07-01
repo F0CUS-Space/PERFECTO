@@ -45,7 +45,7 @@ via GitHub Actions on every push to `main`.
 
 1. **Security group** — allow inbound:
    - `22` (SSH, for GitHub Actions deploy)
-   - `3002` (app — or `80`/`443` if you add a reverse proxy)
+   - `3000` (app — or `80`/`443` if you add a reverse proxy)
 
 2. **Attach IAM role** to the EC2 instance with S3 access (`s3:PutObject`, `s3:GetObject`
    on `arn:aws:s3:::your-bucket/*`). Then you can omit AWS access keys from server `.env`.
@@ -64,8 +64,8 @@ via GitHub Actions on every push to `main`.
    ```
    Important production values:
    ```env
-   NEXT_PUBLIC_APP_URL=http://100.57.92.144:3002
-   APP_HOST_PORT=3002
+   NEXT_PUBLIC_APP_URL=http://100.57.92.144:3000
+   APP_HOST_PORT=3000
    S3_BUCKET_NAME=perfecto1
    AWS_REGION=us-east-1
    # Firebase, Stripe, etc. — see .env.example
@@ -81,7 +81,7 @@ In **GitHub → Settings → Secrets and variables → Actions**, add:
 | `EC2_USER` | `ubuntu` or `ec2-user` | Yes |
 | `EC2_SSH_KEY` | Full private key (`.pem` contents) | Yes |
 | `EC2_APP_DIR` | `/home/ubuntu/PERFECTO` | No (defaults to `/home/{EC2_USER}/PERFECTO`) |
-| `EC2_APP_PORT` | `3002` | No (smoke check port, default `3002`) |
+| `EC2_APP_PORT` | `3000` | No (smoke check port, default `3000`) |
 
 Workflow: [`.github/workflows/deploy-ec2.yml`](./.github/workflows/deploy-ec2.yml)
 
@@ -96,7 +96,7 @@ cp .env.example .env   # fill in production values
 docker compose up -d --build
 ```
 
-App: `http://<EC2_HOST>:3002` (or your `APP_HOST_PORT`).
+App: `http://<EC2_HOST>:3000` (or your `APP_HOST_PORT`).
 
 ## Project Structure
 

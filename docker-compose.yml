@@ -36,6 +36,16 @@ services:
       context: .
       dockerfile: Dockerfile
       target: runner
+      args:
+        NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
+        NEXT_PUBLIC_AUTH_DEV_MODE: ${NEXT_PUBLIC_AUTH_DEV_MODE:-false}
+        NEXT_PUBLIC_FIREBASE_API_KEY: ${NEXT_PUBLIC_FIREBASE_API_KEY:-}
+        NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ${NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN:-}
+        NEXT_PUBLIC_FIREBASE_PROJECT_ID: ${NEXT_PUBLIC_FIREBASE_PROJECT_ID:-}
+        NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: ${NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET:-}
+        NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: ${NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID:-}
+        NEXT_PUBLIC_FIREBASE_APP_ID: ${NEXT_PUBLIC_FIREBASE_APP_ID:-}
+        NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY:-}
     restart: unless-stopped
     depends_on:
       db:
@@ -48,8 +58,8 @@ services:
       # Inside the compose network the database host is "db", not "localhost".
       DATABASE_URL: postgresql://${POSTGRES_USER:-perfecto}:${POSTGRES_PASSWORD:-perfecto}@db:5432/${POSTGRES_DB:-perfecto}?schema=public
     ports:
-      # Host port defaults to 3002 so `npm run dev` on 3000/3001 can run alongside Docker.
-      - "${APP_HOST_PORT:-3002}:3000"
+      # Host port 3000 for production (EC2 security group). Use APP_HOST_PORT=3002 locally if 3000 is taken.
+      - "${APP_HOST_PORT:-3000}:3000"
 
 volumes:
   postgres-data:
