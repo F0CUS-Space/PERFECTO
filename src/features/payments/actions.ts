@@ -5,6 +5,11 @@ import { env } from "@/env";
 import { isStripeConfigured } from "@/lib/stripe-ready";
 import { requireUser } from "@/server/rbac";
 
+import {
+  createDepositCheckoutAttempt,
+  getOpenDepositCheckoutUrlForBooking,
+  reconcileBookingPayments,
+} from "./services/reconcile-payments";
 import { getPaymentService } from "./services/stripe-payment-service";
 
 export type CreateDepositCheckoutResult =
@@ -24,14 +29,24 @@ export async function createDepositCheckout(
 
     const booking = await prisma.booking.findFirst({
       where: { id: bookingId, userId: user.id },
-      include: {
-        service: true,
-        payments: { where: { type: "DEPOSIT" }, take: 1 },
-      },
+      include: { service: true },
     });
 
     if (!booking) {
       return { ok: false, error: "Booking not found." };
+    }
+
+    const reconcile = await reconcileBookingPayments(booking.id);
+
+    if (reconcile.fullyPaid) {
+      return { ok: false, error: "This booking is already paid in full." };
+    }
+
+    if (reconcile.depositSatisfied) {
+      return {
+        ok: false,
+        error: "Deposit already paid. Any remaining balance is due after your service.",
+      };
     }
 
     if (booking.status === "CONFIRMED") {
@@ -42,14 +57,12 @@ export async function createDepositCheckout(
       return { ok: false, error: "This booking cannot accept payment in its current state." };
     }
 
-    const depositPayment = booking.payments[0];
-    if (!depositPayment) {
-      return { ok: false, error: "Deposit payment record not found." };
+    const existingUrl = await getOpenDepositCheckoutUrlForBooking(booking.id);
+    if (existingUrl) {
+      return { ok: true, url: existingUrl };
     }
 
-    if (depositPayment.status === "SUCCEEDED") {
-      return { ok: false, error: "Deposit has already been paid." };
-    }
+    const attempt = await createDepositCheckoutAttempt(booking.id, booking.depositAmount);
 
     const baseUrl = env.NEXT_PUBLIC_APP_URL.replace(/\/$/, "");
     const successUrl = `${baseUrl}/book/confirmation/${booking.id}?checkout=success`;
@@ -57,17 +70,18 @@ export async function createDepositCheckout(
 
     const { url, sessionId } = await getPaymentService().createDepositCheckoutSession({
       bookingId: booking.id,
-      paymentId: depositPayment.id,
+      paymentId: attempt.id,
       userId: user.id,
       amountCents: booking.depositAmount,
       serviceName: booking.service.name,
       customerEmail: user.email,
       successUrl,
       cancelUrl,
+      idempotencyKey: `deposit-checkout-${attempt.id}`,
     });
 
     await prisma.payment.update({
-      where: { id: depositPayment.id },
+      where: { id: attempt.id },
       data: { providerPaymentId: sessionId },
     });
 

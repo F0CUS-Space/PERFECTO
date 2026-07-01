@@ -14,7 +14,7 @@ import { PageHero } from "@/components/shared/page-hero";
 import { Section } from "@/components/shared/section";
 import { PayDepositButton } from "@/features/payments/components/pay-deposit-button";
 import { DepositConfirmationSync } from "@/features/payments/components/deposit-confirmation-sync";
-import { syncBookingDepositIfPaid } from "@/features/payments/services/confirm-deposit";
+import { reconcileBookingPayments } from "@/features/payments/services/reconcile-payments";
 import { isStripeConfigured } from "@/lib/stripe-ready";
 import { formatCurrency } from "@/lib/utils";
 import { prisma } from "@/lib/prisma";
@@ -33,6 +33,18 @@ interface PageProps {
   searchParams: Promise<{ checkout?: string }>;
 }
 
+async function loadBooking(id: string, userId: string) {
+  return prisma.booking.findFirst({
+    where: { id, userId },
+    include: {
+      service: true,
+      agreement: true,
+      invoice: true,
+      payments: { orderBy: { createdAt: "asc" } },
+    },
+  });
+}
+
 export default async function BookingConfirmationPage({ params, searchParams }: PageProps) {
   const user = await getCurrentUser();
   if (!user) {
@@ -46,53 +58,36 @@ export default async function BookingConfirmationPage({ params, searchParams }: 
     notFound();
   }
 
-  let booking = await prisma.booking.findFirst({
-    where: { id, userId: user.id },
-    include: {
-      service: true,
-      agreement: true,
-      invoice: true,
-      payments: { where: { type: "DEPOSIT" }, take: 1 },
-    },
-  });
+  let booking = await loadBooking(id, user.id);
+  if (!booking) {
+    notFound();
+  }
+
+  const reconcile = await reconcileBookingPayments(booking.id);
+  booking = await loadBooking(id, user.id);
 
   if (!booking) {
     notFound();
   }
 
-  if (booking.status !== "CONFIRMED") {
-    await syncBookingDepositIfPaid(booking.id);
-
-    booking = await prisma.booking.findFirst({
-      where: { id, userId: user.id },
-      include: {
-        service: true,
-        agreement: true,
-        invoice: true,
-        payments: { where: { type: "DEPOSIT" }, take: 1 },
-      },
-    });
-
-    if (!booking) {
-      notFound();
-    }
-  }
-
-  const depositPayment = booking.payments[0];
   const isConfirmed = booking.status === "CONFIRMED";
-  const depositPaid = depositPayment?.status === "SUCCEEDED";
+  const fullyPaid = reconcile.fullyPaid;
+  const balanceDue = Math.max(booking.totalAmount - reconcile.amountPaid, 0);
+  const depositDue = Math.max(booking.depositAmount - reconcile.amountPaid, 0);
+  const showPayDeposit = !fullyPaid && !reconcile.depositSatisfied && booking.status === "PENDING_PAYMENT";
   const paymentsEnabled = isStripeConfigured();
-  const awaitingConfirmation =
-    (checkout === "success" || depositPaid) && !isConfirmed;
+  const awaitingConfirmation = checkout === "success" && !reconcile.depositSatisfied;
 
   return (
     <>
       <PageHero
-        title={isConfirmed ? "Booking confirmed" : "Booking created"}
+        title={fullyPaid ? "Paid in full" : isConfirmed ? "Booking confirmed" : "Booking created"}
         description={
-          isConfirmed
-            ? "Your deposit was received and your clean is scheduled."
-            : "Pay the 50% deposit to secure your appointment."
+          fullyPaid
+            ? "Your booking is fully paid and scheduled."
+            : isConfirmed
+              ? "Your deposit was received and your clean is scheduled."
+              : "Pay the 50% deposit to secure your appointment."
         }
       />
       <Section>
@@ -102,7 +97,7 @@ export default async function BookingConfirmationPage({ params, searchParams }: 
             <CardTitle>{booking.service.name}</CardTitle>
             <CardDescription>
               Reference {booking.id.slice(0, 8).toUpperCase()} ·{" "}
-              {isConfirmed ? "Confirmed" : "Pending deposit"}
+              {fullyPaid ? "Paid in full" : isConfirmed ? "Confirmed" : "Pending deposit"}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -112,10 +107,17 @@ export default async function BookingConfirmationPage({ params, searchParams }: 
               </p>
             )}
 
-            {checkout === "cancelled" && !isConfirmed && !depositPaid && (
+            {checkout === "cancelled" && showPayDeposit && (
               <p className="rounded-xl bg-secondary/60 px-4 py-3 text-sm text-muted-foreground">
                 Checkout was cancelled. Your booking is saved — pay the deposit when you&apos;re
                 ready.
+              </p>
+            )}
+
+            {fullyPaid && !isConfirmed && (
+              <p className="rounded-xl border border-accent/30 bg-accent/10 px-4 py-3 text-sm text-brand-navy">
+                We received more than the required deposit for this booking. No further payment is
+                needed — refresh if this message persists.
               </p>
             )}
 
@@ -149,14 +151,22 @@ export default async function BookingConfirmationPage({ params, searchParams }: 
                 </dd>
               </div>
               <div>
-                <dt className="text-muted-foreground">
-                  {isConfirmed ? "Deposit paid" : "Deposit due"}
-                </dt>
+                <dt className="text-muted-foreground">Paid so far</dt>
                 <dd className="text-lg font-bold tabular-nums text-primary">
-                  {formatCurrency(booking.depositAmount)}
+                  {formatCurrency(reconcile.amountPaid)}
                 </dd>
               </div>
-              {isConfirmed && booking.invoice && (
+              {!fullyPaid && (
+                <div>
+                  <dt className="text-muted-foreground">
+                    {reconcile.depositSatisfied ? "Balance due" : "Deposit due"}
+                  </dt>
+                  <dd className="font-medium text-brand-navy">
+                    {formatCurrency(reconcile.depositSatisfied ? balanceDue : depositDue)}
+                  </dd>
+                </div>
+              )}
+              {booking.invoice && (
                 <div className="sm:col-span-2">
                   <dt className="text-muted-foreground">Invoice</dt>
                   <dd className="font-medium text-brand-navy">{booking.invoice.number}</dd>
@@ -178,12 +188,12 @@ export default async function BookingConfirmationPage({ params, searchParams }: 
               </p>
             )}
 
-            {!isConfirmed && !depositPaid && (
+            {showPayDeposit && (
               <div className="rounded-xl border border-dashed border-primary/30 bg-primary/5 px-4 py-4">
                 <p className="font-medium text-brand-navy">Pay your deposit</p>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Secure checkout via Stripe. Balance of {formatCurrency(booking.balanceAmount)}{" "}
-                  is due after your service from your dashboard.
+                  Secure checkout via Stripe. Balance of {formatCurrency(booking.balanceAmount)} is
+                  due after your service from your dashboard.
                 </p>
                 {paymentsEnabled ? (
                   <div className="mt-3">
@@ -200,11 +210,22 @@ export default async function BookingConfirmationPage({ params, searchParams }: 
               </div>
             )}
 
-            {isConfirmed && (
+            {isConfirmed && !fullyPaid && (
               <p className="rounded-xl bg-accent/10 px-4 py-3 text-sm text-brand-navy">
-                Deposit paid — you&apos;re all set! Balance of{" "}
-                {formatCurrency(booking.balanceAmount)} is due after your service and can be paid
-                from your dashboard. We&apos;ll see you on{" "}
+                Deposit paid — you&apos;re all set! Balance of {formatCurrency(balanceDue)} is due
+                after your service and can be paid from your dashboard. We&apos;ll see you on{" "}
+                {booking.scheduledDate.toLocaleDateString("en-US", {
+                  weekday: "long",
+                  month: "long",
+                  day: "numeric",
+                })}{" "}
+                during {booking.arrivalWindow}.
+              </p>
+            )}
+
+            {fullyPaid && (
+              <p className="rounded-xl bg-accent/10 px-4 py-3 text-sm text-brand-navy">
+                Paid in full — no balance remaining. We&apos;ll see you on{" "}
                 {booking.scheduledDate.toLocaleDateString("en-US", {
                   weekday: "long",
                   month: "long",

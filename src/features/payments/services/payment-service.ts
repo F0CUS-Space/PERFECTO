@@ -7,6 +7,8 @@ export interface CreateDepositCheckoutInput {
   customerEmail?: string | null;
   successUrl: string;
   cancelUrl: string;
+  /** Stripe idempotency key — prevents duplicate sessions on double-click. */
+  idempotencyKey: string;
 }
 
 export interface DepositCheckoutSession {

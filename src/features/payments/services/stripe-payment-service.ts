@@ -14,32 +14,37 @@ export class StripePaymentService implements PaymentService {
   ): Promise<DepositCheckoutSession> {
     const stripe = getStripe();
 
-    const session = await stripe.checkout.sessions.create({
-      mode: "payment",
-      payment_method_types: ["card"],
-      line_items: [
-        {
-          quantity: 1,
-          price_data: {
-            currency: "usd",
-            unit_amount: input.amountCents,
-            product_data: {
-              name: `${input.serviceName} — 50% deposit`,
-              description: "Perfecto Cleaning Services booking deposit",
+    const session = await stripe.checkout.sessions.create(
+      {
+        mode: "payment",
+        payment_method_types: ["card"],
+        line_items: [
+          {
+            quantity: 1,
+            price_data: {
+              currency: "usd",
+              unit_amount: input.amountCents,
+              product_data: {
+                name: `${input.serviceName} — 50% deposit`,
+                description: "Perfecto Cleaning Services booking deposit",
+              },
             },
           },
+        ],
+        customer_email: input.customerEmail ?? undefined,
+        success_url: input.successUrl,
+        cancel_url: input.cancelUrl,
+        metadata: {
+          bookingId: input.bookingId,
+          paymentId: input.paymentId,
+          userId: input.userId,
+          type: "DEPOSIT",
         },
-      ],
-      customer_email: input.customerEmail ?? undefined,
-      success_url: input.successUrl,
-      cancel_url: input.cancelUrl,
-      metadata: {
-        bookingId: input.bookingId,
-        paymentId: input.paymentId,
-        userId: input.userId,
-        type: "DEPOSIT",
       },
-    });
+      {
+        idempotencyKey: input.idempotencyKey,
+      },
+    );
 
     if (!session.url) {
       throw new Error("Stripe did not return a checkout URL.");

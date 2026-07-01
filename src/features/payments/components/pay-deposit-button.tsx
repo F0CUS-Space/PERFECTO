@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -21,25 +21,42 @@ export function PayDepositButton({
 }: PayDepositButtonProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const inFlight = useRef(false);
 
   const onPay = async () => {
+    if (inFlight.current || loading || disabled) return;
+
+    inFlight.current = true;
     setError(null);
     setLoading(true);
 
-    const result = await createDepositCheckout(bookingId);
-    setLoading(false);
+    try {
+      const result = await createDepositCheckout(bookingId);
 
-    if (!result.ok) {
-      setError(result.error);
-      return;
+      if (!result.ok) {
+        setError(result.error);
+        setLoading(false);
+        inFlight.current = false;
+        return;
+      }
+
+      window.location.assign(result.url);
+    } catch {
+      setError("Unable to start checkout. Please try again.");
+      setLoading(false);
+      inFlight.current = false;
     }
-
-    window.location.href = result.url;
   };
 
   return (
     <div className="space-y-2">
-      <Button className="w-full sm:w-auto" size="lg" onClick={onPay} disabled={disabled || loading}>
+      <Button
+        className="w-full sm:w-auto"
+        size="lg"
+        onClick={onPay}
+        disabled={disabled || loading}
+        aria-busy={loading}
+      >
         {loading ? (
           <>
             <Loader2 className="h-4 w-4 animate-spin" />
