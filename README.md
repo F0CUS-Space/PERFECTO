@@ -48,15 +48,20 @@ via GitHub Actions on every push to `main`.
    - `3000` (app — or `80`/`443` if you add a reverse proxy)
 
 2. **Attach IAM role** to the EC2 instance with S3 access (`s3:PutObject`, `s3:GetObject`
-   on `arn:aws:s3:::your-bucket/*`). Then you can omit AWS access keys from server `.env`.
+   on `arn:aws:s3:::your-bucket/*`). Remove `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY`
+   from server `.env` (do not leave them blank).
 
-3. **Bootstrap Docker** on the instance:
+3. **EC2 metadata hop limit = 2** (required for Docker to use the instance IAM role):
+   AWS Console → EC2 → your instance → **Actions → Modify instance metadata options**
+   → set **Metadata response hop limit** to **2** → Save, then `docker compose restart app`.
+
+4. **Bootstrap Docker** on the instance:
    ```bash
    bash scripts/ec2-bootstrap.sh
    newgrp docker   # or log out/in
    ```
 
-4. **Create server `.env`** at `~/PERFECTO/.env` (or your `EC2_APP_DIR`):
+5. **Create server `.env`** at `~/PERFECTO/.env` (or your `EC2_APP_DIR`):
    ```bash
    mkdir -p ~/PERFECTO
    # After first deploy sync, or copy .env.example manually:

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { MAX_PHOTO_BYTES } from "@/config/booking";
-import { getViewUrl, putObject } from "@/lib/s3";
+import { formatS3Error, getViewUrl, putObject } from "@/lib/s3";
 import { isS3Configured } from "@/lib/s3-ready";
 import { getCurrentUser } from "@/server/auth";
 
@@ -52,12 +52,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ key, viewUrl });
   } catch (error) {
     console.error("[uploads/booking-photo]", error);
-    const awsMessage =
-      error instanceof Error && error.name !== "Error" ? `${error.name}: ${error.message}` : null;
-    const hint =
-      process.env.NODE_ENV === "development" && awsMessage
-        ? awsMessage
-        : "Check your S3 credentials, bucket name, region, and IAM permissions (s3:PutObject, s3:GetObject).";
-    return NextResponse.json({ error: `Unable to upload photo. ${hint}` }, { status: 500 });
+    return NextResponse.json(
+      { error: `Unable to upload photo. ${formatS3Error(error)}` },
+      { status: 500 },
+    );
   }
 }

@@ -17,11 +17,15 @@ export function PhotoUploader({ photos, onChange }: PhotoUploaderProps) {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [uploadsEnabled, setUploadsEnabled] = useState<boolean | null>(null);
+  const [uploadStatusReason, setUploadStatusReason] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/uploads/status")
       .then((res) => res.json())
-      .then((data: { enabled?: boolean }) => setUploadsEnabled(Boolean(data.enabled)))
+      .then((data: { enabled?: boolean; reason?: string }) => {
+        setUploadsEnabled(Boolean(data.enabled));
+        setUploadStatusReason(data.reason ?? null);
+      })
       .catch(() => setUploadsEnabled(false));
   }, []);
 
@@ -158,11 +162,8 @@ export function PhotoUploader({ photos, onChange }: PhotoUploaderProps) {
 
       {!checking && !showUploader && (
         <p className="text-xs text-muted-foreground">
-          Photo uploads need AWS S3 configured on the server (
-          <code className="rounded bg-secondary px-1">AWS_ACCESS_KEY_ID</code>,{" "}
-          <code className="rounded bg-secondary px-1">AWS_SECRET_ACCESS_KEY</code>,{" "}
-          <code className="rounded bg-secondary px-1">S3_BUCKET_NAME</code>
-          ). Restart the dev server after updating <code className="rounded bg-secondary px-1">.env</code>.
+          {uploadStatusReason ??
+            "Photo uploads are not available. Check S3_BUCKET_NAME and AWS credentials on the server."}
         </p>
       )}
 
