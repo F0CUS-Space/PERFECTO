@@ -106,6 +106,7 @@ export interface AdminApplicationRow {
   phone: string;
   position: string;
   status: ApplicationStatus;
+  hasResume: boolean;
   createdAt: string;
 }
 
@@ -114,4 +115,5 @@ export interface AdminApplicationDetail extends AdminApplicationRow {
   resumeUrl: string | null;
   resumeViewUrl: string | null;
   updatedAt: string;
+  priorApplications: { id: string; position: string; status: ApplicationStatus; createdAt: string }[];
 }

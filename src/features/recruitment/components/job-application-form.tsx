@@ -2,6 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2, Paperclip } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -11,99 +13,131 @@ import { Textarea } from "@/components/ui/textarea";
 import { jobOpenings } from "@/content/careers";
 
 import { submitJobApplication } from "../actions";
+import { jobApplicationSchema, type JobApplicationInput } from "../schema";
 
 const MAX_RESUME_BYTES = 5 * 1024 * 1024;
 
-export function JobApplicationForm({ defaultPosition }: { defaultPosition?: string }) {
+type FormValues = Omit<JobApplicationInput, "resumeS3Key" | "resumeUrl">;
+
+export function JobApplicationForm({
+  defaultPosition,
+  uploadsEnabled,
+}: {
+  defaultPosition: string;
+  uploadsEnabled: boolean;
+}) {
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
-  const [fullName, setFullName] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-  const [position, setPosition] = useState(defaultPosition ?? jobOpenings[0]?.title ?? "");
-  const [coverNote, setCoverNote] = useState("");
   const [resumeFile, setResumeFile] = useState<File | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [resumeError, setResumeError] = useState<string | null>(null);
+  const [serverError, setServerError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const onSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
+  const s3Ready = uploadsEnabled;
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<FormValues>({
+    resolver: zodResolver(
+      jobApplicationSchema.omit({ resumeS3Key: true, resumeUrl: true }),
+    ),
+    defaultValues: {
+      fullName: "",
+      email: "",
+      phone: "",
+      position: defaultPosition,
+      coverNote: "",
+      companyWebsite: "",
+    },
+  });
+
+  const onSubmit = async (values: FormValues) => {
+    setServerError(null);
+    setResumeError(null);
+
+    if (!resumeFile) {
+      setResumeError("Attach your resume (PDF).");
+      return;
+    }
+
+    if (!s3Ready) {
+      setServerError("Resume uploads are temporarily unavailable. Please try again later.");
+      return;
+    }
+
     setSubmitting(true);
 
     try {
-      let resumeS3Key: string | undefined;
-      let resumeUrl: string | undefined;
-
-      if (resumeFile) {
-        const formData = new FormData();
-        formData.append("file", resumeFile);
-        const uploadRes = await fetch("/api/uploads/resume", { method: "POST", body: formData });
-        const uploadData = await uploadRes.json().catch(() => ({}));
-        if (!uploadRes.ok) {
-          throw new Error(
-            typeof uploadData.error === "string" ? uploadData.error : "Resume upload failed.",
-          );
-        }
-        resumeS3Key = uploadData.key;
-        resumeUrl = uploadData.viewUrl;
+      const formData = new FormData();
+      formData.append("file", resumeFile);
+      const uploadRes = await fetch("/api/uploads/resume", { method: "POST", body: formData });
+      const uploadData = await uploadRes.json().catch(() => ({}));
+      if (!uploadRes.ok) {
+        throw new Error(
+          typeof uploadData.error === "string" ? uploadData.error : "Resume upload failed.",
+        );
       }
 
       const result = await submitJobApplication({
-        fullName,
-        email,
-        phone,
-        position,
-        coverNote: coverNote || undefined,
-        resumeS3Key,
-        resumeUrl,
+        ...values,
+        resumeS3Key: uploadData.key,
+        resumeUrl: uploadData.viewUrl,
       });
 
       if (!result.ok) {
-        setError(result.error);
+        setServerError(result.error);
         return;
       }
 
-      router.push(`/careers/apply/success?id=${result.applicationId}`);
+      const params = new URLSearchParams();
+      if (result.applicationId) {
+        params.set("id", result.applicationId);
+      }
+      params.set("email", result.confirmationEmailSent ? "sent" : "skipped");
+      router.push(`/careers/apply/success?${params.toString()}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong.");
+      setServerError(err instanceof Error ? err.message : "Something went wrong.");
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <form onSubmit={onSubmit} className="mx-auto max-w-xl space-y-5">
+    <form onSubmit={handleSubmit(onSubmit)} className="mx-auto max-w-xl space-y-5" noValidate>
+      <input
+        type="text"
+        tabIndex={-1}
+        autoComplete="off"
+        className="hidden"
+        aria-hidden
+        {...register("companyWebsite")}
+      />
+
+      {!s3Ready && (
+        <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          Resume uploads are not configured in this environment. Applications cannot be submitted
+          until file storage is available.
+        </p>
+      )}
+
       <div className="space-y-2">
         <Label htmlFor="fullName">Full name</Label>
-        <Input
-          id="fullName"
-          required
-          value={fullName}
-          onChange={(e) => setFullName(e.target.value)}
-        />
+        <Input id="fullName" {...register("fullName")} />
+        {errors.fullName && <p className="text-xs text-destructive">{errors.fullName.message}</p>}
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="email">Email</Label>
-          <Input
-            id="email"
-            type="email"
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
+          <Input id="email" type="email" {...register("email")} />
+          {errors.email && <p className="text-xs text-destructive">{errors.email.message}</p>}
         </div>
         <div className="space-y-2">
           <Label htmlFor="phone">Phone</Label>
-          <Input
-            id="phone"
-            type="tel"
-            required
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-          />
+          <Input id="phone" type="tel" {...register("phone")} />
+          {errors.phone && <p className="text-xs text-destructive">{errors.phone.message}</p>}
         </div>
       </div>
 
@@ -111,9 +145,7 @@ export function JobApplicationForm({ defaultPosition }: { defaultPosition?: stri
         <Label htmlFor="position">Position</Label>
         <select
           id="position"
-          required
-          value={position}
-          onChange={(e) => setPosition(e.target.value)}
+          {...register("position")}
           className="flex h-11 w-full rounded-xl border border-input bg-background px-4 text-sm"
         >
           {jobOpenings.map((job) => (
@@ -122,6 +154,7 @@ export function JobApplicationForm({ defaultPosition }: { defaultPosition?: stri
             </option>
           ))}
         </select>
+        {errors.position && <p className="text-xs text-destructive">{errors.position.message}</p>}
       </div>
 
       <div className="space-y-2">
@@ -129,16 +162,23 @@ export function JobApplicationForm({ defaultPosition }: { defaultPosition?: stri
         <Textarea
           id="coverNote"
           rows={4}
-          value={coverNote}
-          onChange={(e) => setCoverNote(e.target.value)}
           placeholder="Tell us about your experience and why you'd be a great fit."
+          {...register("coverNote")}
         />
+        {errors.coverNote && (
+          <p className="text-xs text-destructive">{errors.coverNote.message}</p>
+        )}
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="resume">Resume (PDF, optional)</Label>
+        <Label htmlFor="resume">Resume (PDF, required)</Label>
         <div className="flex flex-wrap items-center gap-3">
-          <Button type="button" variant="outline" onClick={() => fileRef.current?.click()}>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={!s3Ready}
+            onClick={() => fileRef.current?.click()}
+          >
             <Paperclip className="h-4 w-4" />
             {resumeFile ? resumeFile.name : "Attach resume"}
           </Button>
@@ -158,18 +198,20 @@ export function JobApplicationForm({ defaultPosition }: { defaultPosition?: stri
             const file = e.target.files?.[0];
             if (!file) return;
             if (file.size > MAX_RESUME_BYTES) {
-              setError("Resume must be under 5 MB.");
+              setResumeError("Resume must be under 5 MB.");
+              setResumeFile(null);
               return;
             }
             setResumeFile(file);
-            setError(null);
+            setResumeError(null);
           }}
         />
+        {resumeError && <p className="text-xs text-destructive">{resumeError}</p>}
       </div>
 
-      {error && <p className="text-sm text-destructive">{error}</p>}
+      {serverError && <p className="text-sm text-destructive">{serverError}</p>}
 
-      <Button type="submit" size="lg" disabled={submitting} className="w-full sm:w-auto">
+      <Button type="submit" size="lg" disabled={submitting || !s3Ready} className="w-full sm:w-auto">
         {submitting ? (
           <>
             <Loader2 className="h-4 w-4 animate-spin" />

@@ -86,6 +86,26 @@ export default async function AdminApplicationDetailPage({ params }: PageProps) 
               </div>
             )}
 
+            {application.priorApplications.length > 0 && (
+              <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+                <p className="font-medium">Previous applications from this email</p>
+                <ul className="mt-2 space-y-1">
+                  {application.priorApplications.map((prior) => (
+                    <li key={prior.id}>
+                      <Link
+                        href={`/admin/applications/${prior.id}`}
+                        className="text-brand-blue hover:underline"
+                      >
+                        {prior.position}
+                      </Link>{" "}
+                      — {prior.status.replace(/_/g, " ").toLowerCase()} (
+                      {new Date(prior.createdAt).toLocaleDateString()})
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
             {application.resumeViewUrl && (
               <Button asChild variant="outline">
                 <a href={application.resumeViewUrl} target="_blank" rel="noopener noreferrer">

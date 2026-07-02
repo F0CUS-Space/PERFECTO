@@ -9,6 +9,7 @@ import { sendEmail } from "@/lib/email";
 import {
   applicationAcceptedEmail,
   applicationRejectedEmail,
+  applicationUnderReviewEmail,
 } from "@/features/recruitment/emails";
 import { requireAdmin } from "@/server/rbac";
 import { slugifyServiceName } from "@/features/admin/service-slug";
@@ -76,7 +77,7 @@ async function resolveUniqueSlug(preferred: string): Promise<string> {
 }
 
 export type AdminActionResult =
-  | { ok: true; serviceId?: string; deactivated?: boolean }
+  | { ok: true; serviceId?: string; deactivated?: boolean; notified?: boolean; emailFailed?: boolean }
   | { ok: false; error: string };
 
 export async function updateBookingStatus(
@@ -335,6 +336,8 @@ export async function deleteAddOn(addOnId: string): Promise<AdminActionResult> {
 
 const applicationStatusSchema = z.enum(["UNDER_REVIEW", "ACCEPTED", "REJECTED"]);
 
+const CLOSED_APPLICATION_STATUSES: ApplicationStatus[] = ["ACCEPTED", "REJECTED"];
+
 export async function updateApplicationStatus(
   applicationId: string,
   status: ApplicationStatus,
@@ -351,8 +354,52 @@ export async function updateApplicationStatus(
     return { ok: false, error: "Application not found." };
   }
 
+  if (CLOSED_APPLICATION_STATUSES.includes(application.status)) {
+    return { ok: false, error: "This application is already closed and cannot be changed." };
+  }
+
   if (application.status === status) {
     return { ok: true };
+  }
+
+  let emailFailed = false;
+
+  if (status === "ACCEPTED" || status === "REJECTED" || status === "UNDER_REVIEW") {
+    const email =
+      status === "ACCEPTED"
+        ? applicationAcceptedEmail({
+            fullName: application.fullName,
+            position: application.position,
+          })
+        : status === "REJECTED"
+          ? applicationRejectedEmail({
+              fullName: application.fullName,
+              position: application.position,
+            })
+          : applicationUnderReviewEmail({
+              fullName: application.fullName,
+              position: application.position,
+            });
+
+    try {
+      const result = await sendEmail({
+        to: application.email,
+        subject: email.subject,
+        html: email.html,
+      });
+      if (result.skipped) {
+        emailFailed = true;
+      }
+    } catch (error) {
+      console.error("[updateApplicationStatus] email failed", error);
+      if (status === "ACCEPTED" || status === "REJECTED") {
+        return {
+          ok: false,
+          error: "Could not send the decision email. Status was not updated — try again.",
+        };
+      }
+      emailFailed = true;
+    }
   }
 
   await prisma.jobApplication.update({
@@ -360,26 +407,14 @@ export async function updateApplicationStatus(
     data: { status },
   });
 
-  if (status === "ACCEPTED") {
-    const email = applicationAcceptedEmail({
-      fullName: application.fullName,
-      position: application.position,
-    });
-    await sendEmail({ to: application.email, subject: email.subject, html: email.html });
-  }
-
-  if (status === "REJECTED") {
-    const email = applicationRejectedEmail({
-      fullName: application.fullName,
-      position: application.position,
-    });
-    await sendEmail({ to: application.email, subject: email.subject, html: email.html });
-  }
-
   revalidatePath("/admin/applications");
   revalidatePath(`/admin/applications/${applicationId}`);
 
-  return { ok: true };
+  return {
+    ok: true,
+    notified: status !== "SUBMITTED",
+    emailFailed,
+  };
 }
 
 const promoteAdminSchema = z.object({

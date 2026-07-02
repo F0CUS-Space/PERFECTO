@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { ApplicationStatus } from "@prisma/client";
 
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { getAdminApplications } from "@/features/admin/queries";
 import { cn } from "@/lib/utils";
 
@@ -24,23 +25,35 @@ const STATUS_STYLES: Record<ApplicationStatus, string> = {
 };
 
 interface PageProps {
-  searchParams: Promise<{ status?: string }>;
+  searchParams: Promise<{ status?: string; q?: string }>;
 }
 
 export default async function AdminApplicationsPage({ searchParams }: PageProps) {
-  const { status } = await searchParams;
+  const { status, q } = await searchParams;
   const statusFilter = STATUSES.includes(status as ApplicationStatus)
     ? (status as ApplicationStatus)
     : undefined;
 
-  const applications = await getAdminApplications({ status: statusFilter });
+  const applications = await getAdminApplications({ status: statusFilter, q });
 
   return (
     <div className="container py-8 md:py-12">
       <h1 className="text-3xl font-bold text-brand-navy">Job applications</h1>
-      <p className="mt-2 text-muted-foreground">Review candidates and send accept or reject emails.</p>
+      <p className="mt-2 text-muted-foreground">Review candidates and send hiring decisions.</p>
 
-      <form className="mt-6 flex flex-wrap items-end gap-3">
+      <form method="get" className="mt-6 flex flex-wrap items-end gap-3">
+        <div className="space-y-1">
+          <label htmlFor="q" className="text-sm font-medium text-brand-navy">
+            Search
+          </label>
+          <Input
+            id="q"
+            name="q"
+            defaultValue={q ?? ""}
+            placeholder="Name, email, phone, position…"
+            className="min-w-[220px]"
+          />
+        </div>
         <div className="space-y-1">
           <label htmlFor="status" className="text-sm font-medium text-brand-navy">
             Status
@@ -60,7 +73,7 @@ export default async function AdminApplicationsPage({ searchParams }: PageProps)
           </select>
         </div>
         <Button type="submit">Filter</Button>
-        {statusFilter && (
+        {(statusFilter || q) && (
           <Button asChild variant="outline">
             <Link href="/admin/applications">Clear</Link>
           </Button>
@@ -68,11 +81,12 @@ export default async function AdminApplicationsPage({ searchParams }: PageProps)
       </form>
 
       <div className="mt-6 overflow-x-auto rounded-2xl border border-border">
-        <table className="w-full min-w-[720px] text-sm">
+        <table className="w-full min-w-[820px] text-sm">
           <thead className="border-b border-border bg-secondary/40 text-left">
             <tr>
               <th className="px-4 py-3 font-medium text-muted-foreground">Applicant</th>
               <th className="px-4 py-3 font-medium text-muted-foreground">Position</th>
+              <th className="px-4 py-3 font-medium text-muted-foreground">Resume</th>
               <th className="px-4 py-3 font-medium text-muted-foreground">Status</th>
               <th className="px-4 py-3 font-medium text-muted-foreground">Applied</th>
               <th className="px-4 py-3 font-medium text-muted-foreground" />
@@ -81,8 +95,8 @@ export default async function AdminApplicationsPage({ searchParams }: PageProps)
           <tbody>
             {applications.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-4 py-10 text-center text-muted-foreground">
-                  No applications yet.
+                <td colSpan={6} className="px-4 py-10 text-center text-muted-foreground">
+                  No applications found.
                 </td>
               </tr>
             ) : (
@@ -93,6 +107,9 @@ export default async function AdminApplicationsPage({ searchParams }: PageProps)
                     <p className="text-xs text-muted-foreground">{app.email}</p>
                   </td>
                   <td className="px-4 py-3 text-muted-foreground">{app.position}</td>
+                  <td className="px-4 py-3 text-muted-foreground">
+                    {app.hasResume ? "Yes" : "No"}
+                  </td>
                   <td className="px-4 py-3">
                     <span
                       className={cn(

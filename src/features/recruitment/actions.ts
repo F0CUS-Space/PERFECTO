@@ -11,54 +11,112 @@ import {
 import { jobApplicationSchema, type JobApplicationInput } from "./schema";
 
 export type SubmitApplicationResult =
-  | { ok: true; applicationId: string }
+  | { ok: true; applicationId: string; confirmationEmailSent: boolean }
   | { ok: false; error: string };
 
-export async function submitJobApplication(
-  input: JobApplicationInput,
-): Promise<SubmitApplicationResult> {
-  const parsed = jobApplicationSchema.safeParse(input);
-  if (!parsed.success) {
-    return { ok: false, error: parsed.error.errors[0]?.message ?? "Invalid application." };
-  }
+const ACTIVE_STATUSES = ["SUBMITTED", "UNDER_REVIEW"] as const;
 
-  const { fullName, email, phone, position, coverNote, resumeS3Key, resumeUrl } = parsed.data;
+async function sendApplicationEmails(params: {
+  applicationId: string;
+  fullName: string;
+  email: string;
+  phone: string;
+  position: string;
+}): Promise<boolean> {
+  let confirmationEmailSent = true;
 
   try {
-    const application = await prisma.jobApplication.create({
-      data: {
-        fullName: fullName.trim(),
-        email: email.trim().toLowerCase(),
-        phone: phone.trim(),
-        position: position.trim(),
-        coverNote: coverNote?.trim() || null,
-        resumeS3Key: resumeS3Key ?? null,
-        resumeUrl: resumeUrl ?? null,
-        status: "SUBMITTED",
-      },
+    const applicantEmail = applicationReceivedApplicantEmail({
+      fullName: params.fullName,
+      position: params.position,
     });
-
-    const applicantEmail = applicationReceivedApplicantEmail({ fullName, position });
-    await sendEmail({
-      to: application.email,
+    const applicantResult = await sendEmail({
+      to: params.email,
       subject: applicantEmail.subject,
       html: applicantEmail.html,
     });
+    if (applicantResult.skipped) {
+      confirmationEmailSent = false;
+    }
+  } catch (error) {
+    console.error("[submitJobApplication] applicant email failed", error);
+    confirmationEmailSent = false;
+  }
 
+  try {
     const adminEmail = applicationReceivedAdminEmail({
-      fullName,
-      email: application.email,
-      phone: application.phone,
-      position,
-      applicationId: application.id,
+      fullName: params.fullName,
+      email: params.email,
+      phone: params.phone,
+      position: params.position,
+      applicationId: params.applicationId,
     });
     await sendEmail({
       to: siteConfig.contact.email,
       subject: adminEmail.subject,
       html: adminEmail.html,
     });
+  } catch (error) {
+    console.error("[submitJobApplication] admin email failed", error);
+  }
 
-    return { ok: true, applicationId: application.id };
+  return confirmationEmailSent;
+}
+
+export async function submitJobApplication(
+  input: JobApplicationInput,
+): Promise<SubmitApplicationResult> {
+  if (input.companyWebsite) {
+    return { ok: true, applicationId: "", confirmationEmailSent: false };
+  }
+
+  const parsed = jobApplicationSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.errors[0]?.message ?? "Invalid application." };
+  }
+
+  const { fullName, email, phone, position, coverNote, resumeS3Key, resumeUrl } = parsed.data;
+  const normalizedEmail = email.toLowerCase();
+
+  try {
+    const existing = await prisma.jobApplication.findFirst({
+      where: {
+        email: normalizedEmail,
+        position,
+        status: { in: [...ACTIVE_STATUSES] },
+      },
+      select: { id: true },
+    });
+
+    if (existing) {
+      return {
+        ok: false,
+        error: "You already have an open application for this position. Our team will be in touch.",
+      };
+    }
+
+    const application = await prisma.jobApplication.create({
+      data: {
+        fullName,
+        email: normalizedEmail,
+        phone,
+        position,
+        coverNote: coverNote || null,
+        resumeS3Key,
+        resumeUrl: resumeUrl ?? null,
+        status: "SUBMITTED",
+      },
+    });
+
+    const confirmationEmailSent = await sendApplicationEmails({
+      applicationId: application.id,
+      fullName,
+      email: normalizedEmail,
+      phone,
+      position,
+    });
+
+    return { ok: true, applicationId: application.id, confirmationEmailSent };
   } catch (error) {
     console.error("[submitJobApplication]", error);
     return { ok: false, error: "Unable to submit application. Please try again." };

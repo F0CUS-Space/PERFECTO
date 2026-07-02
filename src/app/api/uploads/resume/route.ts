@@ -13,7 +13,7 @@ function sanitizeFilename(name: string) {
 export async function POST(request: Request) {
   if (!isS3Configured()) {
     return NextResponse.json(
-      { error: "Resume uploads are not configured. You can still apply without a resume." },
+      { error: "Resume uploads are not configured." },
       { status: 503 },
     );
   }

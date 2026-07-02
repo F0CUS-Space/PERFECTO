@@ -14,6 +14,19 @@ const STATUSES: { value: ApplicationStatus; label: string }[] = [
   { value: "REJECTED", label: "Reject" },
 ];
 
+function saveButtonLabel(status: ApplicationStatus): string {
+  switch (status) {
+    case "ACCEPTED":
+      return "Accept & notify applicant";
+    case "REJECTED":
+      return "Reject & notify applicant";
+    case "UNDER_REVIEW":
+      return "Mark under review & notify";
+    default:
+      return "Save status";
+  }
+}
+
 export function ApplicationStatusForm({
   applicationId,
   currentStatus,
@@ -24,15 +37,24 @@ export function ApplicationStatusForm({
   const router = useRouter();
   const [status, setStatus] = useState(currentStatus);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
   const onSave = () => {
     setError(null);
+    setNotice(null);
     startTransition(async () => {
       const result = await updateApplicationStatus(applicationId, status);
       if (!result.ok) {
         setError(result.error);
         return;
+      }
+      if (result.emailFailed) {
+        setNotice("Status saved, but the email could not be sent (check RESEND_API_KEY).");
+      } else if (result.notified) {
+        setNotice("Status saved and the applicant was notified.");
+      } else {
+        setNotice("Status saved.");
       }
       router.refresh();
     });
@@ -68,10 +90,10 @@ export function ApplicationStatusForm({
             onClick={onSave}
             disabled={pending || status === currentStatus || status === "SUBMITTED"}
           >
-            {pending ? "Saving…" : "Save & notify applicant"}
+            {pending ? "Saving…" : saveButtonLabel(status)}
           </Button>
           <p className="text-xs text-muted-foreground">
-            Accept or reject sends an email to the applicant automatically.
+            Each status change sends an update email to the applicant.
           </p>
         </>
       )}
@@ -80,6 +102,7 @@ export function ApplicationStatusForm({
           This application is closed. The applicant was notified by email.
         </p>
       )}
+      {notice && <p className="text-sm text-brand-green">{notice}</p>}
       {error && <p className="text-sm text-destructive">{error}</p>}
     </div>
   );

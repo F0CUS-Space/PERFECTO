@@ -410,11 +410,26 @@ export async function getAdminAddOns(): Promise<AdminAddOnRow[]> {
 
 export async function getAdminApplications(filters?: {
   status?: ApplicationStatus;
+  q?: string;
 }): Promise<AdminApplicationRow[]> {
   if (!isDatabaseConfigured()) return [];
 
+  const search = filters?.q?.trim();
+
   const applications = await prisma.jobApplication.findMany({
-    where: filters?.status ? { status: filters.status } : undefined,
+    where: {
+      ...(filters?.status ? { status: filters.status } : {}),
+      ...(search
+        ? {
+            OR: [
+              { fullName: { contains: search, mode: "insensitive" } },
+              { email: { contains: search, mode: "insensitive" } },
+              { position: { contains: search, mode: "insensitive" } },
+              { phone: { contains: search, mode: "insensitive" } },
+            ],
+          }
+        : {}),
+    },
     orderBy: { createdAt: "desc" },
     take: 100,
   });
@@ -426,6 +441,7 @@ export async function getAdminApplications(filters?: {
     phone: app.phone,
     position: app.position,
     status: app.status,
+    hasResume: Boolean(app.resumeS3Key),
     createdAt: app.createdAt.toISOString(),
   }));
 }
@@ -435,6 +451,21 @@ export async function getAdminApplicationById(id: string): Promise<AdminApplicat
 
   const app = await prisma.jobApplication.findUnique({ where: { id } });
   if (!app) return null;
+
+  const priorApplications = await prisma.jobApplication.findMany({
+    where: {
+      email: app.email,
+      id: { not: app.id },
+    },
+    orderBy: { createdAt: "desc" },
+    take: 5,
+    select: {
+      id: true,
+      position: true,
+      status: true,
+      createdAt: true,
+    },
+  });
 
   let resumeViewUrl: string | null = app.resumeUrl;
   if (isS3Configured() && app.resumeS3Key) {
@@ -452,11 +483,18 @@ export async function getAdminApplicationById(id: string): Promise<AdminApplicat
     phone: app.phone,
     position: app.position,
     status: app.status,
+    hasResume: Boolean(app.resumeS3Key),
     createdAt: app.createdAt.toISOString(),
     updatedAt: app.updatedAt.toISOString(),
     coverNote: app.coverNote,
     resumeUrl: app.resumeUrl,
     resumeViewUrl,
+    priorApplications: priorApplications.map((prior) => ({
+      id: prior.id,
+      position: prior.position,
+      status: prior.status,
+      createdAt: prior.createdAt.toISOString(),
+    })),
   };
 }
 
