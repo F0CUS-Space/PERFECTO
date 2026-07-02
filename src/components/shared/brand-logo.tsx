@@ -39,11 +39,11 @@ export function BrandLogo({
       <Image
         src={WORDMARK}
         alt={ALT}
-        width={hero ? 420 : compact ? 140 : 180}
-        height={hero ? 90 : compact ? 32 : 40}
+        width={hero ? 560 : compact ? 140 : 180}
+        height={hero ? 120 : compact ? 32 : 40}
         className={cn(
           "w-auto object-contain",
-          hero ? "h-12 sm:h-14 md:h-16" : compact ? "h-7" : "h-9",
+          hero ? "h-16 sm:h-[4.5rem] md:h-20 lg:h-24" : compact ? "h-7" : "h-9",
         )}
         priority={hero || !compact}
       />

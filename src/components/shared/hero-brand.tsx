@@ -8,7 +8,7 @@ interface HeroBrandProps {
 /** Home hero — wordmark only (transparent PNG). */
 export function HeroBrand({ className }: HeroBrandProps) {
   return (
-    <div className={cn(className)}>
+    <div className={cn("max-w-xl", className)}>
       <h1 className="sr-only">PERFECTO — Clean Spaces. Perfect Impression.</h1>
       <BrandLogo hero linked={false} />
     </div>

@@ -51,11 +51,6 @@ export default async function HomePage() {
             <Sparkles className="h-3.5 w-3.5" /> Premium Home & Office Care
           </>
         }
-        title={
-          <>
-            Clean spaces. <span className="text-gradient-animated">Perfect results.</span>
-          </>
-        }
         description="Premium residential and commercial cleaning for homes and offices — tailored to your lifestyle and delivered with meticulous care. See your price and book in minutes."
         actions={
           <>

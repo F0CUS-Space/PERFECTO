@@ -28,7 +28,7 @@ interface PageHeroProps {
   /** Brand lockup above the headline (e.g. logo + business name). Renders title as h2. */
   brand?: ReactNode;
   eyebrow?: ReactNode;
-  title: ReactNode;
+  title?: ReactNode;
   description?: ReactNode;
   actions?: ReactNode;
   /** Optional content placed below the copy (e.g. trust badges). */
@@ -79,15 +79,17 @@ export function PageHero({
             </span>
           ) : null}
           {brand ? <div className="mb-1">{brand}</div> : null}
-          {brand ? (
-            <h2 className="max-w-3xl text-balance text-3xl font-bold tracking-tight text-brand-navy md:text-5xl">
-              {title}
-            </h2>
-          ) : (
-            <h1 className="max-w-3xl text-balance text-4xl font-bold tracking-tight text-brand-navy md:text-6xl">
-              {title}
-            </h1>
-          )}
+          {title ? (
+            brand ? (
+              <h2 className="max-w-3xl text-balance text-3xl font-bold tracking-tight text-brand-navy md:text-5xl">
+                {title}
+              </h2>
+            ) : (
+              <h1 className="max-w-3xl text-balance text-4xl font-bold tracking-tight text-brand-navy md:text-6xl">
+                {title}
+              </h1>
+            )
+          ) : null}
           {description ? (
             <p
               className={cn(
