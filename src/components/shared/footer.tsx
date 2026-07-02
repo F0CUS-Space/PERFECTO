@@ -26,6 +26,7 @@ const COLUMNS: { title: string; links: { label: string; href: string }[] }[] = [
   {
     title: "Legal",
     links: [
+      { label: "Terms & Conditions", href: "/legal/terms" },
       { label: "Cleaning Service Agreement", href: "/legal/agreement" },
       { label: "Booking Terms", href: "/legal/booking-terms" },
       { label: "Cleaning Scope & Limitations", href: "/legal/scope" },

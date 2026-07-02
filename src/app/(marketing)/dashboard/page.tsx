@@ -59,7 +59,8 @@ export default async function DashboardPage() {
           <div>
             <p className="font-medium text-brand-navy">Verify your email when ready</p>
             <p className="mt-1 text-muted-foreground">
-              We sent a verification link to {user.email}. You can still book without verifying.
+              Email verification is optional. Update your profile to add or change {user.email} for
+              receipts.
             </p>
           </div>
         </div>

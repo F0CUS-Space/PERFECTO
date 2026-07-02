@@ -19,7 +19,6 @@ export function middleware(request: NextRequest) {
 
   return NextResponse.next();
 }
-// test
 export const config = {
   matcher: ["/dashboard", "/dashboard/:path*", "/admin", "/admin/:path*"],
 };

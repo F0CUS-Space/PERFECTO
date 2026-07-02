@@ -224,6 +224,8 @@ model Booking {
   invoice   Invoice?
   agreement Agreement?
 
+  confirmationEmailSentAt DateTime?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

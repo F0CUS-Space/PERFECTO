@@ -5,6 +5,7 @@ import type Stripe from "stripe";
 import { prisma } from "@/lib/prisma";
 
 import { reconcileBookingPayments } from "./reconcile-payments";
+import { maybeSendBookingConfirmationEmail } from "@/features/notifications/send-booking-confirmation";
 
 /**
  * Confirms a deposit after Stripe Checkout completes.
@@ -41,6 +42,7 @@ export async function confirmDepositFromCheckoutSession(session: Stripe.Checkout
   }
 
   if (result.bookingConfirmed) {
+    await maybeSendBookingConfirmationEmail(bookingId);
     return { skipped: false as const, bookingId, result };
   }
 

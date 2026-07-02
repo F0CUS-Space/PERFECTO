@@ -48,7 +48,8 @@ export default async function DashboardProfilePage() {
             <div>
               <p className="font-medium text-brand-navy">Email not verified</p>
               <p className="mt-1 text-muted-foreground">
-                Check your inbox for a verification link sent to {user.email}.
+                Your email ({user.email}) is not verified yet. Verification is optional — you can
+                still book and manage appointments.
               </p>
             </div>
           </div>

@@ -15,6 +15,7 @@ import { Section } from "@/components/shared/section";
 import { PayDepositButton } from "@/features/payments/components/pay-deposit-button";
 import { DepositConfirmationSync } from "@/features/payments/components/deposit-confirmation-sync";
 import { reconcileBookingPayments } from "@/features/payments/services/reconcile-payments";
+import { maybeSendBookingConfirmationEmail } from "@/features/notifications/send-booking-confirmation";
 import { isStripeConfigured } from "@/lib/stripe-ready";
 import { formatCurrency } from "@/lib/utils";
 import { prisma } from "@/lib/prisma";
@@ -71,6 +72,9 @@ export default async function BookingConfirmationPage({ params, searchParams }: 
   }
 
   const isConfirmed = booking.status === "CONFIRMED";
+  if (isConfirmed) {
+    await maybeSendBookingConfirmationEmail(booking.id);
+  }
   const fullyPaid = reconcile.fullyPaid;
   const amountDue = Math.max(booking.totalAmount - reconcile.amountPaid, 0);
   const showPayNow = !fullyPaid && !reconcile.depositSatisfied && booking.status === "PENDING_PAYMENT";

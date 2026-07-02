@@ -3,6 +3,7 @@
 import { contactSchema, type ContactInput } from "@/features/contact/schema";
 import { sendEmail } from "@/lib/email";
 import { siteConfig } from "@/config/site";
+import { escapeHtml } from "@/lib/escape-html";
 
 export interface ActionResult {
   success: boolean;
@@ -16,6 +17,10 @@ export async function submitContactForm(input: ContactInput): Promise<ActionResu
   }
 
   const { name, email, phone, message } = parsed.data;
+  const safeName = escapeHtml(name);
+  const safeEmail = escapeHtml(email);
+  const safePhone = escapeHtml(phone);
+  const safeMessage = escapeHtml(message).replace(/\n/g, "<br/>");
 
   try {
     await sendEmail({
@@ -23,11 +28,11 @@ export async function submitContactForm(input: ContactInput): Promise<ActionResu
       subject: `New contact enquiry from ${name}`,
       html: `
         <h2>New contact enquiry</h2>
-        <p><strong>Name:</strong> ${name}</p>
-        <p><strong>Email:</strong> ${email}</p>
-        <p><strong>Phone:</strong> ${phone}</p>
+        <p><strong>Name:</strong> ${safeName}</p>
+        <p><strong>Email:</strong> ${safeEmail}</p>
+        <p><strong>Phone:</strong> ${safePhone}</p>
         <p><strong>Message:</strong></p>
-        <p>${message.replace(/\n/g, "<br/>")}</p>
+        <p>${safeMessage}</p>
       `,
     });
 
