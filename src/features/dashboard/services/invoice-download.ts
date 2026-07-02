@@ -1,5 +1,7 @@
 import "server-only";
 
+import type { Role } from "@prisma/client";
+
 import { prisma } from "@/lib/prisma";
 import { formatCurrency } from "@/lib/utils";
 
@@ -18,9 +20,12 @@ type InvoiceData = {
   postalCode: string;
 };
 
-export async function getInvoiceForDownload(bookingId: string, userId: string) {
+export async function getInvoiceForDownload(bookingId: string, userId: string, role: Role) {
   const booking = await prisma.booking.findFirst({
-    where: { id: bookingId, userId },
+    where: {
+      id: bookingId,
+      ...(role === "ADMIN" ? {} : { userId }),
+    },
     include: {
       service: true,
       invoice: true,

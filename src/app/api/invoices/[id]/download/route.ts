@@ -18,7 +18,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
   }
 
   const { id: bookingId } = await params;
-  const invoice = await getInvoiceForDownload(bookingId, user.id);
+  const invoice = await getInvoiceForDownload(bookingId, user.id, user.role);
 
   if (!invoice) {
     return NextResponse.json({ error: "Invoice not found." }, { status: 404 });
