@@ -10,6 +10,7 @@ import { isS3Configured } from "@/lib/s3-ready";
 import { getServiceImage } from "@/lib/service-image";
 
 import type {
+  AdminAddOnRow,
   AdminApplicationDetail,
   AdminApplicationRow,
   AdminBookingDetail,
@@ -17,6 +18,7 @@ import type {
   AdminCustomerDetail,
   AdminCustomerRow,
   AdminPaymentRow,
+  AdminServiceDetail,
   AdminServiceRow,
 } from "./types";
 
@@ -334,32 +336,17 @@ export async function getAdminPayments(): Promise<AdminPaymentRow[]> {
   }));
 }
 
-export async function getAdminServices(): Promise<AdminServiceRow[]> {
-  if (!isDatabaseConfigured()) return [];
-
-  const services = await prisma.service.findMany({
-    orderBy: { sortOrder: "asc" },
-  });
-
-  return services.map((service) => ({
-    id: service.id,
-    slug: service.slug,
-    name: service.name,
-    description: service.description,
-    basePrice: service.basePrice,
-    isActive: service.isActive,
-    isPopular: service.isPopular,
-    sortOrder: service.sortOrder,
-    image: getServiceImage(service.slug, service.imageUrl),
-  }));
-}
-
-export async function getAdminServiceById(id: string): Promise<AdminServiceRow | null> {
-  if (!isDatabaseConfigured()) return null;
-
-  const service = await prisma.service.findUnique({ where: { id } });
-  if (!service) return null;
-
+function mapServiceRow(service: {
+  id: string;
+  slug: string;
+  name: string;
+  description: string;
+  basePrice: number;
+  isActive: boolean;
+  isPopular: boolean;
+  sortOrder: number;
+  imageUrl: string | null;
+}): AdminServiceRow {
   return {
     id: service.id,
     slug: service.slug,
@@ -369,8 +356,56 @@ export async function getAdminServiceById(id: string): Promise<AdminServiceRow |
     isActive: service.isActive,
     isPopular: service.isPopular,
     sortOrder: service.sortOrder,
+    imageUrl: service.imageUrl,
     image: getServiceImage(service.slug, service.imageUrl),
   };
+}
+
+export async function getAdminServices(): Promise<AdminServiceRow[]> {
+  if (!isDatabaseConfigured()) return [];
+
+  const services = await prisma.service.findMany({
+    orderBy: { sortOrder: "asc" },
+  });
+
+  return services.map(mapServiceRow);
+}
+
+export async function getAdminServiceById(id: string): Promise<AdminServiceDetail | null> {
+  if (!isDatabaseConfigured()) return null;
+
+  const service = await prisma.service.findUnique({
+    where: { id },
+    include: {
+      addOns: { select: { addOnId: true } },
+      _count: { select: { bookings: true } },
+    },
+  });
+
+  if (!service) return null;
+
+  return {
+    ...mapServiceRow(service),
+    linkedAddOnIds: service.addOns.map((link) => link.addOnId),
+    bookingCount: service._count.bookings,
+  };
+}
+
+export async function getAdminAddOns(): Promise<AdminAddOnRow[]> {
+  if (!isDatabaseConfigured()) return [];
+
+  const addOns = await prisma.addOn.findMany({
+    include: { _count: { select: { services: true } } },
+    orderBy: { name: "asc" },
+  });
+
+  return addOns.map((addOn) => ({
+    id: addOn.id,
+    name: addOn.name,
+    price: addOn.price,
+    isActive: addOn.isActive,
+    serviceCount: addOn._count.services,
+  }));
 }
 
 export async function getAdminApplications(filters?: {

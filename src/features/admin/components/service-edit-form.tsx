@@ -8,10 +8,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { updateService } from "@/features/admin/actions";
-import type { AdminServiceRow } from "@/features/admin/types";
+import type { AdminServiceDetail, AdminServiceRow } from "@/features/admin/types";
 import { formatCurrency } from "@/lib/utils";
 
-export function ServiceEditForm({ service }: { service: AdminServiceRow }) {
+export function ServiceEditForm({ service }: { service: AdminServiceRow | AdminServiceDetail }) {
   const router = useRouter();
   const [name, setName] = useState(service.name);
   const [description, setDescription] = useState(service.description);
@@ -19,6 +19,7 @@ export function ServiceEditForm({ service }: { service: AdminServiceRow }) {
   const [isActive, setIsActive] = useState(service.isActive);
   const [isPopular, setIsPopular] = useState(service.isPopular);
   const [sortOrder, setSortOrder] = useState(String(service.sortOrder));
+  const [imageUrl, setImageUrl] = useState(service.imageUrl ?? "");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [pending, startTransition] = useTransition();
@@ -34,6 +35,7 @@ export function ServiceEditForm({ service }: { service: AdminServiceRow }) {
         isActive,
         isPopular,
         sortOrder: Number(sortOrder),
+        imageUrl: imageUrl || undefined,
       });
       if (!result.ok) {
         setError(result.error);
@@ -102,6 +104,18 @@ export function ServiceEditForm({ service }: { service: AdminServiceRow }) {
             value={sortOrder}
             onChange={(e) => setSortOrder(e.target.value)}
           />
+        </div>
+        <div className="space-y-2 sm:col-span-2">
+          <Label htmlFor={`image-${service.id}`}>Image URL</Label>
+          <Input
+            id={`image-${service.id}`}
+            value={imageUrl}
+            onChange={(e) => setImageUrl(e.target.value)}
+            placeholder="/images/service-residential.png"
+          />
+          <p className="text-xs text-muted-foreground">
+            Leave blank to use the default image for this service slug.
+          </p>
         </div>
       </div>
 

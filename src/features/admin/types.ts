@@ -83,6 +83,20 @@ export interface AdminServiceRow {
   isPopular: boolean;
   sortOrder: number;
   image: string;
+  imageUrl: string | null;
+}
+
+export interface AdminServiceDetail extends AdminServiceRow {
+  linkedAddOnIds: string[];
+  bookingCount: number;
+}
+
+export interface AdminAddOnRow {
+  id: string;
+  name: string;
+  price: number;
+  isActive: boolean;
+  serviceCount: number;
 }
 
 export interface AdminApplicationRow {

@@ -11,6 +11,7 @@ import {
   applicationRejectedEmail,
 } from "@/features/recruitment/emails";
 import { requireAdmin } from "@/server/rbac";
+import { slugifyServiceName } from "@/features/admin/service-slug";
 
 const bookingStatusSchema = z.enum([
   "PENDING_PAYMENT",
@@ -27,9 +28,56 @@ const serviceUpdateSchema = z.object({
   isActive: z.boolean(),
   isPopular: z.boolean(),
   sortOrder: z.coerce.number().int().min(0).max(999),
+  imageUrl: z
+    .string()
+    .trim()
+    .url("Enter a valid image URL")
+    .optional()
+    .or(z.literal("")),
 });
 
-export type AdminActionResult = { ok: true } | { ok: false; error: string };
+const serviceCreateSchema = serviceUpdateSchema
+  .omit({ sortOrder: true })
+  .extend({
+    slug: z
+      .string()
+      .trim()
+      .min(2)
+      .max(80)
+      .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Use lowercase letters, numbers, and hyphens")
+      .optional()
+      .or(z.literal("")),
+    sortOrder: z.coerce.number().int().min(0).max(999).optional(),
+  });
+
+const addOnSchema = z.object({
+  name: z.string().min(2).max(120),
+  priceDollars: z.coerce.number().min(0).max(10000),
+  isActive: z.boolean(),
+});
+
+function revalidateCatalogPaths(serviceId?: string) {
+  revalidatePath("/admin/services");
+  if (serviceId) revalidatePath(`/admin/services/${serviceId}`);
+  revalidatePath("/admin/add-ons");
+  revalidatePath("/services");
+  revalidatePath("/book");
+}
+
+async function resolveUniqueSlug(preferred: string): Promise<string> {
+  let slug = preferred;
+  let suffix = 0;
+  while (true) {
+    const candidate = suffix === 0 ? slug : `${slug}-${suffix}`;
+    const existing = await prisma.service.findUnique({ where: { slug: candidate } });
+    if (!existing) return candidate;
+    suffix += 1;
+  }
+}
+
+export type AdminActionResult =
+  | { ok: true; serviceId?: string; deactivated?: boolean }
+  | { ok: false; error: string };
 
 export async function updateBookingStatus(
   bookingId: string,
@@ -76,7 +124,8 @@ export async function updateService(
     return { ok: false, error: "Service not found." };
   }
 
-  const { name, description, basePriceDollars, isActive, isPopular, sortOrder } = parsed.data;
+  const { name, description, basePriceDollars, isActive, isPopular, sortOrder, imageUrl } =
+    parsed.data;
 
   await prisma.service.update({
     where: { id: serviceId },
@@ -87,14 +136,200 @@ export async function updateService(
       isActive,
       isPopular,
       sortOrder,
+      imageUrl: imageUrl?.trim() ? imageUrl.trim() : null,
     },
   });
 
-  revalidatePath("/admin/services");
-  revalidatePath(`/admin/services/${serviceId}`);
-  revalidatePath("/services");
-  revalidatePath("/book");
+  revalidateCatalogPaths(serviceId);
 
+  return { ok: true };
+}
+
+export async function createService(
+  input: z.infer<typeof serviceCreateSchema>,
+): Promise<AdminActionResult> {
+  await requireAdmin();
+
+  const parsed = serviceCreateSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.errors[0]?.message ?? "Invalid input." };
+  }
+
+  const { name, description, basePriceDollars, isActive, isPopular, sortOrder, imageUrl, slug } =
+    parsed.data;
+
+  const baseSlug = slug?.trim() || slugifyServiceName(name);
+  if (!baseSlug) {
+    return { ok: false, error: "Could not generate a URL slug from the service name." };
+  }
+
+  const uniqueSlug = await resolveUniqueSlug(baseSlug);
+
+  const maxSort = await prisma.service.aggregate({ _max: { sortOrder: true } });
+  const nextSort = sortOrder ?? (maxSort._max.sortOrder ?? 0) + 1;
+
+  const service = await prisma.service.create({
+    data: {
+      slug: uniqueSlug,
+      name,
+      description,
+      basePrice: Math.round(basePriceDollars * 100),
+      isActive,
+      isPopular,
+      sortOrder: nextSort,
+      imageUrl: imageUrl?.trim() ? imageUrl.trim() : null,
+    },
+  });
+
+  revalidateCatalogPaths(service.id);
+
+  return { ok: true, serviceId: service.id };
+}
+
+export async function deleteService(serviceId: string): Promise<AdminActionResult> {
+  await requireAdmin();
+
+  const service = await prisma.service.findUnique({
+    where: { id: serviceId },
+    include: { _count: { select: { bookings: true, quotes: true } } },
+  });
+
+  if (!service) {
+    return { ok: false, error: "Service not found." };
+  }
+
+  const hasHistory = service._count.bookings > 0 || service._count.quotes > 0;
+
+  if (hasHistory) {
+    await prisma.service.update({
+      where: { id: serviceId },
+      data: { isActive: false, isPopular: false },
+    });
+    revalidateCatalogPaths(serviceId);
+    return { ok: true, deactivated: true };
+  }
+
+  await prisma.service.delete({ where: { id: serviceId } });
+  revalidateCatalogPaths();
+  return { ok: true };
+}
+
+export async function setServiceAddOns(
+  serviceId: string,
+  addOnIds: string[],
+): Promise<AdminActionResult> {
+  await requireAdmin();
+
+  const service = await prisma.service.findUnique({ where: { id: serviceId } });
+  if (!service) {
+    return { ok: false, error: "Service not found." };
+  }
+
+  const validAddOns = await prisma.addOn.findMany({
+    where: { id: { in: addOnIds }, isActive: true },
+    select: { id: true },
+  });
+  const validIds = validAddOns.map((a) => a.id);
+
+  await prisma.$transaction([
+    prisma.addOnOnService.deleteMany({ where: { serviceId } }),
+    ...validIds.map((addOnId) =>
+      prisma.addOnOnService.create({ data: { serviceId, addOnId } }),
+    ),
+  ]);
+
+  revalidateCatalogPaths(serviceId);
+  return { ok: true };
+}
+
+export async function createAddOn(
+  input: z.infer<typeof addOnSchema>,
+): Promise<AdminActionResult> {
+  await requireAdmin();
+
+  const parsed = addOnSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.errors[0]?.message ?? "Invalid input." };
+  }
+
+  const existing = await prisma.addOn.findFirst({ where: { name: parsed.data.name } });
+  if (existing) {
+    return { ok: false, error: "An add-on with this name already exists." };
+  }
+
+  await prisma.addOn.create({
+    data: {
+      name: parsed.data.name,
+      price: Math.round(parsed.data.priceDollars * 100),
+      isActive: parsed.data.isActive,
+    },
+  });
+
+  revalidateCatalogPaths();
+  return { ok: true };
+}
+
+export async function updateAddOn(
+  addOnId: string,
+  input: z.infer<typeof addOnSchema>,
+): Promise<AdminActionResult> {
+  await requireAdmin();
+
+  const parsed = addOnSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.errors[0]?.message ?? "Invalid input." };
+  }
+
+  const addOn = await prisma.addOn.findUnique({ where: { id: addOnId } });
+  if (!addOn) {
+    return { ok: false, error: "Add-on not found." };
+  }
+
+  const duplicate = await prisma.addOn.findFirst({
+    where: { name: parsed.data.name, NOT: { id: addOnId } },
+  });
+  if (duplicate) {
+    return { ok: false, error: "Another add-on already uses this name." };
+  }
+
+  await prisma.addOn.update({
+    where: { id: addOnId },
+    data: {
+      name: parsed.data.name,
+      price: Math.round(parsed.data.priceDollars * 100),
+      isActive: parsed.data.isActive,
+    },
+  });
+
+  revalidateCatalogPaths();
+  return { ok: true };
+}
+
+export async function deleteAddOn(addOnId: string): Promise<AdminActionResult> {
+  await requireAdmin();
+
+  const addOn = await prisma.addOn.findUnique({
+    where: { id: addOnId },
+    include: { _count: { select: { services: true, quoteItems: true } } },
+  });
+
+  if (!addOn) {
+    return { ok: false, error: "Add-on not found." };
+  }
+
+  const hasHistory = addOn._count.services > 0 || addOn._count.quoteItems > 0;
+
+  if (hasHistory) {
+    await prisma.addOn.update({
+      where: { id: addOnId },
+      data: { isActive: false },
+    });
+    revalidateCatalogPaths();
+    return { ok: true, deactivated: true };
+  }
+
+  await prisma.addOn.delete({ where: { id: addOnId } });
+  revalidateCatalogPaths();
   return { ok: true };
 }
 

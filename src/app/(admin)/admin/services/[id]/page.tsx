@@ -3,8 +3,10 @@ import Image from "next/image";
 import { notFound } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
+import { ServiceAddOnsForm } from "@/features/admin/components/service-addons-form";
+import { ServiceDeleteButton } from "@/features/admin/components/service-delete-button";
 import { ServiceEditForm } from "@/features/admin/components/service-edit-form";
-import { getAdminServiceById } from "@/features/admin/queries";
+import { getAdminAddOns, getAdminServiceById } from "@/features/admin/queries";
 import { formatCurrency } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -15,7 +17,7 @@ interface PageProps {
 
 export default async function AdminServiceDetailPage({ params }: PageProps) {
   const { id } = await params;
-  const service = await getAdminServiceById(id);
+  const [service, allAddOns] = await Promise.all([getAdminServiceById(id), getAdminAddOns()]);
 
   if (!service) {
     notFound();
@@ -39,7 +41,7 @@ export default async function AdminServiceDetailPage({ params }: PageProps) {
           />
         </div>
 
-        <div className="space-y-4">
+        <div className="space-y-6">
           <div>
             <p className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
               {service.slug}
@@ -52,6 +54,18 @@ export default async function AdminServiceDetailPage({ params }: PageProps) {
           </div>
 
           <ServiceEditForm service={service} />
+
+          <ServiceAddOnsForm
+            serviceId={service.id}
+            allAddOns={allAddOns}
+            linkedAddOnIds={service.linkedAddOnIds}
+          />
+
+          <ServiceDeleteButton
+            serviceId={service.id}
+            serviceName={service.name}
+            bookingCount={service.bookingCount}
+          />
         </div>
       </div>
     </div>
