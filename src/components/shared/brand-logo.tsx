@@ -7,27 +7,42 @@ interface BrandLogoProps {
   className?: string;
   /** Smaller lockup for footer / compact headers. */
   compact?: boolean;
+  /** Larger lockup for the home hero. */
+  hero?: boolean;
+  /** Wrap in a home link — off for decorative hero usage. */
+  linked?: boolean;
 }
 
-export function BrandLogo({ className, compact }: BrandLogoProps) {
+const WORDMARK = "/brand/perfecto-wordmark.png";
+const ALT = "Perfecto — Clean Spaces. Perfect Impression.";
+
+export function BrandLogo({
+  className,
+  compact,
+  hero,
+  linked = true,
+}: BrandLogoProps) {
+  const image = (
+    <Image
+      src={WORDMARK}
+      alt={ALT}
+      width={hero ? 420 : compact ? 140 : 180}
+      height={hero ? 90 : compact ? 32 : 40}
+      className={cn(
+        "w-auto object-contain",
+        hero ? "h-12 sm:h-14 md:h-16" : compact ? "h-7" : "h-9",
+      )}
+      priority={hero || !compact}
+    />
+  );
+
+  if (!linked) {
+    return <div className={className}>{image}</div>;
+  }
+
   return (
-    <Link href="/" className={cn("flex items-center gap-2.5", className)}>
-      <Image
-        src="/brand/perfecto-icon.png"
-        alt=""
-        width={compact ? 32 : 40}
-        height={compact ? 32 : 40}
-        className={cn("object-contain", compact ? "h-8 w-8" : "h-10 w-10")}
-        aria-hidden
-      />
-      <Image
-        src="/brand/perfecto-wordmark.png"
-        alt="Perfecto — Clean Spaces. Perfect Impression."
-        width={compact ? 120 : 160}
-        height={compact ? 28 : 36}
-        className={cn("w-auto object-contain", compact ? "h-7" : "h-9")}
-        priority
-      />
+    <Link href="/" className={cn("inline-flex items-center", className)}>
+      {image}
     </Link>
   );
 }
