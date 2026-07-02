@@ -65,7 +65,7 @@ function revalidateCatalogPaths(serviceId?: string) {
 }
 
 async function resolveUniqueSlug(preferred: string): Promise<string> {
-  let slug = preferred;
+  const slug = preferred;
   let suffix = 0;
   while (true) {
     const candidate = suffix === 0 ? slug : `${slug}-${suffix}`;
