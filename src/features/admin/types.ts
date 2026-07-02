@@ -1,4 +1,4 @@
-import type { BookingStatus, PaymentStatus, PaymentType, Role } from "@prisma/client";
+import type { ApplicationStatus, BookingStatus, PaymentStatus, PaymentType, Role } from "@prisma/client";
 
 export interface AdminBookingRow {
   id: string;
@@ -82,4 +82,22 @@ export interface AdminServiceRow {
   isActive: boolean;
   isPopular: boolean;
   sortOrder: number;
+  image: string;
+}
+
+export interface AdminApplicationRow {
+  id: string;
+  fullName: string;
+  email: string;
+  phone: string;
+  position: string;
+  status: ApplicationStatus;
+  createdAt: string;
+}
+
+export interface AdminApplicationDetail extends AdminApplicationRow {
+  coverNote: string | null;
+  resumeUrl: string | null;
+  resumeViewUrl: string | null;
+  updatedAt: string;
 }

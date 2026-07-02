@@ -1,14 +1,17 @@
 import "server-only";
 
-import type { BookingStatus } from "@prisma/client";
+import type { ApplicationStatus, BookingStatus } from "@prisma/client";
 
 import { reconcileBookingPayments } from "@/features/payments/services/reconcile-payments";
 import { prisma } from "@/lib/prisma";
 import { isDatabaseConfigured } from "@/lib/db-ready";
 import { getViewUrl } from "@/lib/s3";
 import { isS3Configured } from "@/lib/s3-ready";
+import { getServiceImage } from "@/lib/service-image";
 
 import type {
+  AdminApplicationDetail,
+  AdminApplicationRow,
   AdminBookingDetail,
   AdminBookingRow,
   AdminCustomerDetail,
@@ -45,13 +48,14 @@ export async function getAdminStats() {
       confirmedUpcoming: 0,
       totalCustomers: 0,
       totalRevenue: 0,
+      openApplications: 0,
     };
   }
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  const [totalBookings, pendingPayment, confirmedUpcoming, totalCustomers, succeededPayments] =
+  const [totalBookings, pendingPayment, confirmedUpcoming, totalCustomers, succeededPayments, openApplications] =
     await Promise.all([
       prisma.booking.count(),
       prisma.booking.count({ where: { status: "PENDING_PAYMENT" } }),
@@ -63,6 +67,9 @@ export async function getAdminStats() {
         where: { status: "SUCCEEDED" },
         _sum: { amount: true },
       }),
+      prisma.jobApplication.count({
+        where: { status: { in: ["SUBMITTED", "UNDER_REVIEW"] } },
+      }),
     ]);
 
   return {
@@ -71,6 +78,7 @@ export async function getAdminStats() {
     confirmedUpcoming,
     totalCustomers,
     totalRevenue: succeededPayments._sum.amount ?? 0,
+    openApplications,
   };
 }
 
@@ -342,5 +350,98 @@ export async function getAdminServices(): Promise<AdminServiceRow[]> {
     isActive: service.isActive,
     isPopular: service.isPopular,
     sortOrder: service.sortOrder,
+    image: getServiceImage(service.slug, service.imageUrl),
+  }));
+}
+
+export async function getAdminServiceById(id: string): Promise<AdminServiceRow | null> {
+  if (!isDatabaseConfigured()) return null;
+
+  const service = await prisma.service.findUnique({ where: { id } });
+  if (!service) return null;
+
+  return {
+    id: service.id,
+    slug: service.slug,
+    name: service.name,
+    description: service.description,
+    basePrice: service.basePrice,
+    isActive: service.isActive,
+    isPopular: service.isPopular,
+    sortOrder: service.sortOrder,
+    image: getServiceImage(service.slug, service.imageUrl),
+  };
+}
+
+export async function getAdminApplications(filters?: {
+  status?: ApplicationStatus;
+}): Promise<AdminApplicationRow[]> {
+  if (!isDatabaseConfigured()) return [];
+
+  const applications = await prisma.jobApplication.findMany({
+    where: filters?.status ? { status: filters.status } : undefined,
+    orderBy: { createdAt: "desc" },
+    take: 100,
+  });
+
+  return applications.map((app) => ({
+    id: app.id,
+    fullName: app.fullName,
+    email: app.email,
+    phone: app.phone,
+    position: app.position,
+    status: app.status,
+    createdAt: app.createdAt.toISOString(),
+  }));
+}
+
+export async function getAdminApplicationById(id: string): Promise<AdminApplicationDetail | null> {
+  if (!isDatabaseConfigured()) return null;
+
+  const app = await prisma.jobApplication.findUnique({ where: { id } });
+  if (!app) return null;
+
+  let resumeViewUrl: string | null = app.resumeUrl;
+  if (isS3Configured() && app.resumeS3Key) {
+    try {
+      resumeViewUrl = await getViewUrl(app.resumeS3Key, 3600);
+    } catch {
+      resumeViewUrl = app.resumeUrl;
+    }
+  }
+
+  return {
+    id: app.id,
+    fullName: app.fullName,
+    email: app.email,
+    phone: app.phone,
+    position: app.position,
+    status: app.status,
+    createdAt: app.createdAt.toISOString(),
+    updatedAt: app.updatedAt.toISOString(),
+    coverNote: app.coverNote,
+    resumeUrl: app.resumeUrl,
+    resumeViewUrl,
+  };
+}
+
+export async function getAdminUsers(): Promise<AdminCustomerRow[]> {
+  if (!isDatabaseConfigured()) return [];
+
+  const users = await prisma.user.findMany({
+    include: { _count: { select: { bookings: true } } },
+    orderBy: { createdAt: "desc" },
+    take: 200,
+  });
+
+  return users.map((user) => ({
+    id: user.id,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    phone: user.phone,
+    email: user.email,
+    role: user.role,
+    bookingCount: user._count.bookings,
+    createdAt: user.createdAt.toISOString(),
   }));
 }

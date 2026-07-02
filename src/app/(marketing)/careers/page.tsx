@@ -68,9 +68,8 @@ export default function CareersPage() {
                     </span>
                   </div>
                 </div>
-                {/* Online application portal arrives in a later milestone; route to contact for now. */}
                 <Button asChild variant="outline" className="shrink-0">
-                  <Link href="/contact">
+                  <Link href={`/careers/apply?position=${encodeURIComponent(job.title)}`}>
                     Apply <ArrowRight className="h-4 w-4" />
                   </Link>
                 </Button>

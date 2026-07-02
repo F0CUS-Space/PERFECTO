@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, Calendar, CreditCard, DollarSign, Users } from "lucide-react";
+import { ArrowRight, Briefcase, Calendar, CreditCard, DollarSign, Users } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { getAdminBookings, getAdminStats } from "@/features/admin/queries";
@@ -25,11 +25,12 @@ export default async function AdminPage() {
         Welcome back, {user.firstName ?? "Admin"}. Manage bookings, customers, and services.
       </p>
 
-      <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         {[
           { icon: Calendar, label: "Total bookings", value: stats.totalBookings, href: "/admin/bookings" },
           { icon: CreditCard, label: "Pending payment", value: stats.pendingPayment, href: "/admin/bookings?status=PENDING_PAYMENT" },
           { icon: Users, label: "Customers", value: stats.totalCustomers, href: "/admin/customers" },
+          { icon: Briefcase, label: "Open applications", value: stats.openApplications, href: "/admin/applications" },
           { icon: DollarSign, label: "Revenue collected", value: formatCurrency(stats.totalRevenue), href: "/admin/payments" },
         ].map(({ icon: Icon, label, value, href }) => (
           <Link
