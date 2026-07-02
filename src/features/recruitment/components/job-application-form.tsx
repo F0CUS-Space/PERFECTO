@@ -51,7 +51,7 @@ export function JobApplicationForm({
       fullName: "",
       email: "",
       phone: "",
-      position: defaultPosition,
+      position: positions.includes(defaultPosition) ? defaultPosition : (positions[0] ?? ""),
       coverNote: "",
       companyWebsite: "",
     },
@@ -149,6 +149,7 @@ export function JobApplicationForm({
         <Label htmlFor="position">Position</Label>
         <select
           id="position"
+          autoComplete="off"
           {...register("position")}
           className="flex h-11 w-full rounded-xl border border-input bg-background px-4 text-sm"
         >
@@ -158,6 +159,9 @@ export function JobApplicationForm({
             </option>
           ))}
         </select>
+        <p className="text-xs text-muted-foreground">
+          Only active job postings from our careers page are listed here.
+        </p>
         {errors.position && <p className="text-xs text-destructive">{errors.position.message}</p>}
       </div>
 

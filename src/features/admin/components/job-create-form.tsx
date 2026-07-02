@@ -9,13 +9,17 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { createJobPosting } from "@/features/admin/actions";
 import { slugifyServiceName } from "@/features/admin/service-slug";
+import { EMPLOYMENT_TYPES, JOB_LOCATIONS } from "@/features/recruitment/job-options";
+
+const selectClassName =
+  "flex h-11 w-full rounded-xl border border-input bg-background px-4 text-sm";
 
 export function JobCreateForm() {
   const router = useRouter();
   const [title, setTitle] = useState("");
   const [slug, setSlug] = useState("");
-  const [type, setType] = useState("Full-time");
-  const [location, setLocation] = useState("Local");
+  const [type, setType] = useState<(typeof EMPLOYMENT_TYPES)[number]>("Full-time");
+  const [location, setLocation] = useState<(typeof JOB_LOCATIONS)[number]>("Local");
   const [summary, setSummary] = useState("");
   const [isActive, setIsActive] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -77,22 +81,35 @@ export function JobCreateForm() {
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="new-job-type">Employment type</Label>
-          <Input
+          <select
             id="new-job-type"
             required
             value={type}
-            onChange={(e) => setType(e.target.value)}
-            placeholder="Full-time / Part-time"
-          />
+            onChange={(e) => setType(e.target.value as (typeof EMPLOYMENT_TYPES)[number])}
+            className={selectClassName}
+          >
+            {EMPLOYMENT_TYPES.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
         </div>
         <div className="space-y-2">
           <Label htmlFor="new-job-location">Location</Label>
-          <Input
+          <select
             id="new-job-location"
             required
             value={location}
-            onChange={(e) => setLocation(e.target.value)}
-          />
+            onChange={(e) => setLocation(e.target.value as (typeof JOB_LOCATIONS)[number])}
+            className={selectClassName}
+          >
+            {JOB_LOCATIONS.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
       <div className="space-y-2">

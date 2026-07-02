@@ -9,6 +9,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { updateJobPosting } from "@/features/admin/actions";
 import type { AdminJobPostingDetail } from "@/features/admin/types";
+import { EMPLOYMENT_TYPES, JOB_LOCATIONS, isEmploymentType, isJobLocation } from "@/features/recruitment/job-options";
+
+const selectClassName =
+  "flex h-11 w-full rounded-xl border border-input bg-background px-4 text-sm";
 
 export function JobEditForm({ job }: { job: AdminJobPostingDetail }) {
   const router = useRouter();
@@ -23,6 +27,11 @@ export function JobEditForm({ job }: { job: AdminJobPostingDetail }) {
   const [pending, startTransition] = useTransition();
 
   const onSave = () => {
+    if (!isEmploymentType(type) || !isJobLocation(location)) {
+      setError("Select a valid employment type and location.");
+      return;
+    }
+
     setError(null);
     setSuccess(false);
     startTransition(async () => {
@@ -76,19 +85,39 @@ export function JobEditForm({ job }: { job: AdminJobPostingDetail }) {
         </div>
         <div className="space-y-2">
           <Label htmlFor={`job-type-${job.id}`}>Employment type</Label>
-          <Input
+          <select
             id={`job-type-${job.id}`}
             value={type}
             onChange={(e) => setType(e.target.value)}
-          />
+            className={selectClassName}
+          >
+            {!isEmploymentType(type) && (
+              <option value={type}>{type} (update required)</option>
+            )}
+            {EMPLOYMENT_TYPES.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
         </div>
         <div className="space-y-2">
           <Label htmlFor={`job-location-${job.id}`}>Location</Label>
-          <Input
+          <select
             id={`job-location-${job.id}`}
             value={location}
             onChange={(e) => setLocation(e.target.value)}
-          />
+            className={selectClassName}
+          >
+            {!isJobLocation(location) && (
+              <option value={location}>{location} (update required)</option>
+            )}
+            {JOB_LOCATIONS.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
         </div>
         <div className="space-y-2 sm:col-span-2">
           <Label htmlFor={`job-summary-${job.id}`}>Summary</Label>

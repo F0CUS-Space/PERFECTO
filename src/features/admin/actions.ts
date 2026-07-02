@@ -13,6 +13,7 @@ import {
 } from "@/features/recruitment/emails";
 import { requireAdmin } from "@/server/rbac";
 import { slugifyServiceName } from "@/features/admin/service-slug";
+import { EMPLOYMENT_TYPES, JOB_LOCATIONS } from "@/features/recruitment/job-options";
 
 const bookingStatusSchema = z.enum([
   "PENDING_PAYMENT",
@@ -437,8 +438,8 @@ export async function updateApplicationStatus(
 
 const jobPostingSchema = z.object({
   title: z.string().trim().min(2, "Enter a job title").max(120),
-  type: z.string().trim().min(2, "Enter employment type").max(80),
-  location: z.string().trim().min(2, "Enter location").max(80),
+  type: z.enum(EMPLOYMENT_TYPES, { message: "Select an employment type" }),
+  location: z.enum(JOB_LOCATIONS, { message: "Select a location" }),
   summary: z.string().trim().min(10, "Enter a short summary").max(2000),
   isActive: z.boolean(),
   sortOrder: z.coerce.number().int().min(0).max(999),

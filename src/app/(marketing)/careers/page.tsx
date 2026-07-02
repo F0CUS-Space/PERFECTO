@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Section, SectionHeading } from "@/components/shared/section";
 import { PageHero } from "@/components/shared/page-hero";
 import { careerPerks } from "@/content/careers";
-import { fallbackJobPostings } from "@/features/recruitment/positions";
 import { getActiveJobPostings } from "@/features/recruitment/queries";
 
 export const metadata: Metadata = {
@@ -18,8 +17,7 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function CareersPage() {
-  const dbJobs = await getActiveJobPostings();
-  const jobOpenings = dbJobs.length > 0 ? dbJobs : fallbackJobPostings();
+  const jobOpenings = await getActiveJobPostings();
 
   return (
     <>

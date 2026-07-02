@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { PageHero } from "@/components/shared/page-hero";
 import { Section } from "@/components/shared/section";
 import { JobApplicationForm } from "@/features/recruitment/components/job-application-form";
-import { fallbackJobPostings, resolveJobPosition } from "@/features/recruitment/positions";
+import { resolveJobPosition } from "@/features/recruitment/positions";
 import { getActiveJobPostings } from "@/features/recruitment/queries";
 import { isS3Configured } from "@/lib/s3-ready";
 
@@ -22,8 +22,7 @@ interface PageProps {
 
 export default async function ApplyPage({ searchParams }: PageProps) {
   const { position } = await searchParams;
-  const dbJobs = await getActiveJobPostings();
-  const jobs = dbJobs.length > 0 ? dbJobs : fallbackJobPostings();
+  const jobs = await getActiveJobPostings();
   const positions = jobs.map((job) => job.title);
 
   if (positions.length === 0) {
@@ -43,6 +42,8 @@ export default async function ApplyPage({ searchParams }: PageProps) {
     );
   }
 
+  const defaultPosition = resolveJobPosition(position, jobs);
+
   return (
     <>
       <PageHero
@@ -52,7 +53,7 @@ export default async function ApplyPage({ searchParams }: PageProps) {
       />
       <Section className="[&>div]:py-10 md:[&>div]:py-14">
         <JobApplicationForm
-          defaultPosition={resolveJobPosition(position, jobs)}
+          defaultPosition={defaultPosition}
           positions={positions}
           uploadsEnabled={isS3Configured()}
         />
