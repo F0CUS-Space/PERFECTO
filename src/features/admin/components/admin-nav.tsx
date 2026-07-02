@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   Briefcase,
   Calendar,
+  ClipboardList,
   CreditCard,
   LayoutDashboard,
   Package,
@@ -22,6 +23,7 @@ const LINKS = [
   { href: "/admin/payments", label: "Payments", icon: CreditCard, exact: false },
   { href: "/admin/services", label: "Services", icon: Package, exact: false },
   { href: "/admin/add-ons", label: "Add-ons", icon: Puzzle, exact: false },
+  { href: "/admin/jobs", label: "Jobs", icon: ClipboardList, exact: false },
   { href: "/admin/applications", label: "Applications", icon: Briefcase, exact: false },
   { href: "/admin/team", label: "Team", icon: Shield, exact: false },
 ] as const;

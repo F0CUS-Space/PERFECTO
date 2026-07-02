@@ -5,14 +5,22 @@ import { Check, MapPin, Briefcase, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Section, SectionHeading } from "@/components/shared/section";
 import { PageHero } from "@/components/shared/page-hero";
-import { jobOpenings, careerPerks } from "@/content/careers";
+import { careerPerks } from "@/content/careers";
+import { fallbackJobPostings } from "@/features/recruitment/positions";
+import { getActiveJobPostings } from "@/features/recruitment/queries";
 
 export const metadata: Metadata = {
   title: "Careers",
-  description: "Join the Perfecto team. We're hiring vetted, detail-obsessed cleaning professionals who take pride in their work.",
+  description:
+    "Join the Perfecto team. We're hiring vetted, detail-obsessed cleaning professionals who take pride in their work.",
 };
 
-export default function CareersPage() {
+export const dynamic = "force-dynamic";
+
+export default async function CareersPage() {
+  const dbJobs = await getActiveJobPostings();
+  const jobOpenings = dbJobs.length > 0 ? dbJobs : fallbackJobPostings();
+
   return (
     <>
       <PageHero
@@ -24,9 +32,11 @@ export default function CareersPage() {
         title="Build your career with Perfecto"
         description="We're looking for dedicated, detail-obsessed professionals who take pride in their craft. Join a supportive team that invests in your growth."
         actions={
-          <Button asChild size="lg">
-            <Link href="#openings">View open roles</Link>
-          </Button>
+          jobOpenings.length > 0 ? (
+            <Button asChild size="lg">
+              <Link href="#openings">View open roles</Link>
+            </Button>
+          ) : undefined
         }
       />
 
@@ -50,32 +60,38 @@ export default function CareersPage() {
       <Section muted>
         <div id="openings" className="scroll-mt-24">
           <SectionHeading eyebrow="Open Roles" title="Current openings" />
-          <div className="mx-auto mt-10 flex max-w-3xl flex-col gap-4">
-            {jobOpenings.map((job) => (
-              <div
-                key={job.title}
-                className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-6 shadow-card sm:flex-row sm:items-center sm:justify-between"
-              >
-                <div>
-                  <h3 className="text-lg font-semibold text-brand-navy">{job.title}</h3>
-                  <p className="mt-1 text-sm text-muted-foreground">{job.summary}</p>
-                  <div className="mt-3 flex flex-wrap gap-4 text-xs text-muted-foreground">
-                    <span className="inline-flex items-center gap-1.5">
-                      <Briefcase className="h-3.5 w-3.5" /> {job.type}
-                    </span>
-                    <span className="inline-flex items-center gap-1.5">
-                      <MapPin className="h-3.5 w-3.5" /> {job.location}
-                    </span>
+          {jobOpenings.length === 0 ? (
+            <p className="mx-auto mt-10 max-w-xl text-center text-muted-foreground">
+              No open roles at the moment. Check back soon or contact us to express interest.
+            </p>
+          ) : (
+            <div className="mx-auto mt-10 flex max-w-3xl flex-col gap-4">
+              {jobOpenings.map((job) => (
+                <div
+                  key={job.id}
+                  className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-6 shadow-card sm:flex-row sm:items-center sm:justify-between"
+                >
+                  <div>
+                    <h3 className="text-lg font-semibold text-brand-navy">{job.title}</h3>
+                    <p className="mt-1 text-sm text-muted-foreground">{job.summary}</p>
+                    <div className="mt-3 flex flex-wrap gap-4 text-xs text-muted-foreground">
+                      <span className="inline-flex items-center gap-1.5">
+                        <Briefcase className="h-3.5 w-3.5" /> {job.type}
+                      </span>
+                      <span className="inline-flex items-center gap-1.5">
+                        <MapPin className="h-3.5 w-3.5" /> {job.location}
+                      </span>
+                    </div>
                   </div>
+                  <Button asChild variant="outline" className="shrink-0">
+                    <Link href={`/careers/apply?position=${encodeURIComponent(job.title)}`}>
+                      Apply <ArrowRight className="h-4 w-4" />
+                    </Link>
+                  </Button>
                 </div>
-                <Button asChild variant="outline" className="shrink-0">
-                  <Link href={`/careers/apply?position=${encodeURIComponent(job.title)}`}>
-                    Apply <ArrowRight className="h-4 w-4" />
-                  </Link>
-                </Button>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       </Section>
     </>

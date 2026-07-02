@@ -8,7 +8,8 @@ import {
   applicationReceivedAdminEmail,
   applicationReceivedApplicantEmail,
 } from "./emails";
-import { jobApplicationSchema, type JobApplicationInput } from "./schema";
+import { getActiveJobPostingTitles } from "./queries";
+import { createJobApplicationSchema, type JobApplicationInput } from "./schema";
 
 export type SubmitApplicationResult =
   | { ok: true; applicationId: string; confirmationEmailSent: boolean }
@@ -70,7 +71,9 @@ export async function submitJobApplication(
     return { ok: true, applicationId: "", confirmationEmailSent: false };
   }
 
-  const parsed = jobApplicationSchema.safeParse(input);
+  const activePositions = await getActiveJobPostingTitles();
+  const schema = createJobApplicationSchema(activePositions);
+  const parsed = schema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.errors[0]?.message ?? "Invalid application." };
   }

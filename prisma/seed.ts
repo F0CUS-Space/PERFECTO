@@ -118,6 +118,53 @@ async function main() {
   }
   console.log(`Linked ${allAddOns.length} add-ons to ${residentialSlugs.length} services.`);
 
+  // --- Job postings (careers) ---
+  const jobPostings = [
+    {
+      slug: "residential-cleaning-professional",
+      title: "Residential Cleaning Professional",
+      type: "Full-time / Part-time",
+      location: "Local",
+      summary:
+        "Deliver meticulous residential cleans, represent the Perfecto standard, and build lasting trust with our clients.",
+      sortOrder: 1,
+    },
+    {
+      slug: "deep-cleaning-specialist",
+      title: "Deep Cleaning Specialist",
+      type: "Full-time",
+      location: "Local",
+      summary:
+        "Tackle detailed, top-to-bottom restorations with an eye for the spots others miss.",
+      sortOrder: 2,
+    },
+    {
+      slug: "team-lead-operations",
+      title: "Team Lead — Operations",
+      type: "Full-time",
+      location: "Local",
+      summary:
+        "Coordinate schedules, mentor cleaning professionals, and ensure every job meets our quality bar.",
+      sortOrder: 3,
+    },
+  ];
+
+  for (const job of jobPostings) {
+    await prisma.jobPosting.upsert({
+      where: { slug: job.slug },
+      update: {
+        title: job.title,
+        type: job.type,
+        location: job.location,
+        summary: job.summary,
+        sortOrder: job.sortOrder,
+        isActive: true,
+      },
+      create: job,
+    });
+  }
+  console.log(`Seeded ${jobPostings.length} job postings.`);
+
   // --- Promotions (display only in V1.0) ---
   const promo = await prisma.promotion.findFirst({
     where: { title: "First-Time Customer Offer" },

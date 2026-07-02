@@ -117,3 +117,20 @@ export interface AdminApplicationDetail extends AdminApplicationRow {
   updatedAt: string;
   priorApplications: { id: string; position: string; status: ApplicationStatus; createdAt: string }[];
 }
+
+export interface AdminJobPostingRow {
+  id: string;
+  slug: string;
+  title: string;
+  type: string;
+  location: string;
+  summary: string;
+  isActive: boolean;
+  sortOrder: number;
+  applicationCount: number;
+  createdAt: string;
+}
+
+export interface AdminJobPostingDetail extends AdminJobPostingRow {
+  updatedAt: string;
+}

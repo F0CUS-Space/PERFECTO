@@ -65,6 +65,24 @@ function revalidateCatalogPaths(serviceId?: string) {
   revalidatePath("/book");
 }
 
+function revalidateJobPaths(jobId?: string) {
+  revalidatePath("/admin/jobs");
+  if (jobId) revalidatePath(`/admin/jobs/${jobId}`);
+  revalidatePath("/careers");
+  revalidatePath("/careers/apply");
+}
+
+async function resolveUniqueJobSlug(preferred: string): Promise<string> {
+  const slug = preferred;
+  let suffix = 0;
+  while (true) {
+    const candidate = suffix === 0 ? slug : `${slug}-${suffix}`;
+    const existing = await prisma.jobPosting.findUnique({ where: { slug: candidate } });
+    if (!existing) return candidate;
+    suffix += 1;
+  }
+}
+
 async function resolveUniqueSlug(preferred: string): Promise<string> {
   const slug = preferred;
   let suffix = 0;
@@ -415,6 +433,118 @@ export async function updateApplicationStatus(
     notified: status !== "SUBMITTED",
     emailFailed,
   };
+}
+
+const jobPostingSchema = z.object({
+  title: z.string().trim().min(2, "Enter a job title").max(120),
+  type: z.string().trim().min(2, "Enter employment type").max(80),
+  location: z.string().trim().min(2, "Enter location").max(80),
+  summary: z.string().trim().min(10, "Enter a short summary").max(2000),
+  isActive: z.boolean(),
+  sortOrder: z.coerce.number().int().min(0).max(999),
+});
+
+const jobPostingCreateSchema = jobPostingSchema
+  .omit({ sortOrder: true })
+  .extend({
+    sortOrder: z.coerce.number().int().min(0).max(999).optional(),
+    slug: z
+      .string()
+      .trim()
+      .min(2)
+      .max(80)
+      .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Use lowercase letters, numbers, and hyphens")
+      .optional()
+      .or(z.literal("")),
+  });
+
+export async function createJobPosting(
+  input: z.infer<typeof jobPostingCreateSchema>,
+): Promise<AdminActionResult> {
+  await requireAdmin();
+
+  const parsed = jobPostingCreateSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.errors[0]?.message ?? "Invalid input." };
+  }
+
+  const { title, type, location, summary, isActive, sortOrder, slug } = parsed.data;
+  const baseSlug = slug?.trim() || slugifyServiceName(title);
+  if (!baseSlug) {
+    return { ok: false, error: "Could not generate a URL slug from the job title." };
+  }
+
+  const uniqueSlug = await resolveUniqueJobSlug(baseSlug);
+  const maxSort = await prisma.jobPosting.aggregate({ _max: { sortOrder: true } });
+  const nextSort = sortOrder ?? (maxSort._max.sortOrder ?? 0) + 1;
+
+  const job = await prisma.jobPosting.create({
+    data: {
+      slug: uniqueSlug,
+      title,
+      type,
+      location,
+      summary,
+      isActive,
+      sortOrder: nextSort,
+    },
+  });
+
+  revalidateJobPaths(job.id);
+  return { ok: true, serviceId: job.id };
+}
+
+export async function updateJobPosting(
+  jobId: string,
+  input: z.infer<typeof jobPostingSchema>,
+): Promise<AdminActionResult> {
+  await requireAdmin();
+
+  const parsed = jobPostingSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.errors[0]?.message ?? "Invalid input." };
+  }
+
+  const job = await prisma.jobPosting.findUnique({ where: { id: jobId } });
+  if (!job) {
+    return { ok: false, error: "Job not found." };
+  }
+
+  const { title, type, location, summary, isActive, sortOrder } = parsed.data;
+
+  await prisma.jobPosting.update({
+    where: { id: jobId },
+    data: { title, type, location, summary, isActive, sortOrder },
+  });
+
+  revalidateJobPaths(jobId);
+  return { ok: true };
+}
+
+export async function deleteJobPosting(jobId: string): Promise<AdminActionResult> {
+  await requireAdmin();
+
+  const job = await prisma.jobPosting.findUnique({ where: { id: jobId } });
+  if (!job) {
+    return { ok: false, error: "Job not found." };
+  }
+
+  const applicationCount = await prisma.jobApplication.count({
+    where: { position: job.title },
+  });
+
+  if (applicationCount > 0) {
+    await prisma.jobPosting.update({
+      where: { id: jobId },
+      data: { isActive: false },
+    });
+    revalidateJobPaths(jobId);
+    return { ok: true, deactivated: true };
+  }
+
+  await prisma.jobPosting.delete({ where: { id: jobId } });
+  revalidateJobPaths();
+  return { ok: true };
 }
 
 const promoteAdminSchema = z.object({

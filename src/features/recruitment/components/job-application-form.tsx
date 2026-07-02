@@ -1,29 +1,34 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2, Paperclip } from "lucide-react";
+import type { z } from "zod";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { jobOpenings } from "@/content/careers";
 
 import { submitJobApplication } from "../actions";
-import { jobApplicationSchema, type JobApplicationInput } from "../schema";
+import { createJobApplicationSchema } from "../schema";
 
 const MAX_RESUME_BYTES = 5 * 1024 * 1024;
 
-type FormValues = Omit<JobApplicationInput, "resumeS3Key" | "resumeUrl">;
+type FormValues = Omit<
+  z.infer<ReturnType<typeof createJobApplicationSchema>>,
+  "resumeS3Key" | "resumeUrl"
+>;
 
 export function JobApplicationForm({
   defaultPosition,
+  positions,
   uploadsEnabled,
 }: {
   defaultPosition: string;
+  positions: string[];
   uploadsEnabled: boolean;
 }) {
   const router = useRouter();
@@ -34,15 +39,14 @@ export function JobApplicationForm({
   const [submitting, setSubmitting] = useState(false);
 
   const s3Ready = uploadsEnabled;
+  const schema = useMemo(() => createJobApplicationSchema(positions), [positions]);
 
   const {
     register,
     handleSubmit,
     formState: { errors },
   } = useForm<FormValues>({
-    resolver: zodResolver(
-      jobApplicationSchema.omit({ resumeS3Key: true, resumeUrl: true }),
-    ),
+    resolver: zodResolver(schema.omit({ resumeS3Key: true, resumeUrl: true })),
     defaultValues: {
       fullName: "",
       email: "",
@@ -148,9 +152,9 @@ export function JobApplicationForm({
           {...register("position")}
           className="flex h-11 w-full rounded-xl border border-input bg-background px-4 text-sm"
         >
-          {jobOpenings.map((job) => (
-            <option key={job.title} value={job.title}>
-              {job.title}
+          {positions.map((title) => (
+            <option key={title} value={title}>
+              {title}
             </option>
           ))}
         </select>

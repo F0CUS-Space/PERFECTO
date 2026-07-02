@@ -17,6 +17,8 @@ import type {
   AdminBookingRow,
   AdminCustomerDetail,
   AdminCustomerRow,
+  AdminJobPostingDetail,
+  AdminJobPostingRow,
   AdminPaymentRow,
   AdminServiceDetail,
   AdminServiceRow,
@@ -495,6 +497,60 @@ export async function getAdminApplicationById(id: string): Promise<AdminApplicat
       status: prior.status,
       createdAt: prior.createdAt.toISOString(),
     })),
+  };
+}
+
+export async function getAdminJobPostings(): Promise<AdminJobPostingRow[]> {
+  if (!isDatabaseConfigured()) return [];
+
+  const jobs = await prisma.jobPosting.findMany({
+    orderBy: [{ sortOrder: "asc" }, { title: "asc" }],
+  });
+
+  const applicationCounts = await prisma.jobApplication.groupBy({
+    by: ["position"],
+    _count: { _all: true },
+  });
+  const countByTitle = new Map(
+    applicationCounts.map((row) => [row.position, row._count._all]),
+  );
+
+  return jobs.map((job) => ({
+    id: job.id,
+    slug: job.slug,
+    title: job.title,
+    type: job.type,
+    location: job.location,
+    summary: job.summary,
+    isActive: job.isActive,
+    sortOrder: job.sortOrder,
+    applicationCount: countByTitle.get(job.title) ?? 0,
+    createdAt: job.createdAt.toISOString(),
+  }));
+}
+
+export async function getAdminJobPostingById(id: string): Promise<AdminJobPostingDetail | null> {
+  if (!isDatabaseConfigured()) return null;
+
+  const job = await prisma.jobPosting.findUnique({ where: { id } });
+  if (!job) return null;
+
+  const applicationCount = await prisma.jobApplication.count({
+    where: { position: job.title },
+  });
+
+  return {
+    id: job.id,
+    slug: job.slug,
+    title: job.title,
+    type: job.type,
+    location: job.location,
+    summary: job.summary,
+    isActive: job.isActive,
+    sortOrder: job.sortOrder,
+    applicationCount,
+    createdAt: job.createdAt.toISOString(),
+    updatedAt: job.updatedAt.toISOString(),
   };
 }
 
