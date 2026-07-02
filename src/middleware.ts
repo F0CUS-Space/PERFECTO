@@ -16,7 +16,7 @@ export function middleware(request: NextRequest) {
     loginUrl.searchParams.set("next", pathname);
     return NextResponse.redirect(loginUrl);
   }
-// test
+
   return NextResponse.next();
 }
 
