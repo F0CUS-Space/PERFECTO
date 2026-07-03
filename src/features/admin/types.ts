@@ -1,5 +1,7 @@
 import type { ApplicationStatus, BookingStatus, PaymentStatus, PaymentType, Role } from "@prisma/client";
 
+import type { AdminStatsPeriod } from "./stats-period";
+
 export interface AdminBookingRow {
   id: string;
   serviceName: string;
@@ -133,4 +135,21 @@ export interface AdminJobPostingRow {
 
 export interface AdminJobPostingDetail extends AdminJobPostingRow {
   updatedAt: string;
+}
+
+export interface AdminStatMetric {
+  value: number;
+  previousValue: number;
+  changePercent: number | null;
+}
+
+export interface AdminDashboardStats {
+  period: AdminStatsPeriod;
+  periodLabel: string;
+  comparisonLabel: string;
+  bookings: AdminStatMetric;
+  pendingPayment: AdminStatMetric;
+  customers: AdminStatMetric;
+  openApplications: AdminStatMetric;
+  revenue: AdminStatMetric;
 }

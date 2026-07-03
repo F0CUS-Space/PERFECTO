@@ -17,12 +17,20 @@ import type {
   AdminBookingRow,
   AdminCustomerDetail,
   AdminCustomerRow,
+  AdminDashboardStats,
   AdminJobPostingDetail,
   AdminJobPostingRow,
   AdminPaymentRow,
   AdminServiceDetail,
   AdminServiceRow,
+  AdminStatMetric,
 } from "./types";
+import {
+  getPeriodLabels,
+  getPeriodRange,
+  percentChange,
+  type AdminStatsPeriod,
+} from "./stats-period";
 
 function customerDisplayName(user: {
   firstName: string | null;
@@ -44,51 +52,94 @@ async function amountPaidFromDb(bookingId: string, totalAmount: number): Promise
   );
 }
 
-export async function getAdminStats() {
-  if (!isDatabaseConfigured()) {
-    return {
-      totalBookings: 0,
-      pendingPayment: 0,
-      confirmedUpcoming: 0,
-      totalCustomers: 0,
-      totalRevenue: 0,
-      openApplications: 0,
-    };
-  }
+async function countStatsInRange(start: Date, end: Date) {
+  const createdAt = { gte: start, lte: end };
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  const [totalBookings, pendingPayment, confirmedUpcoming, totalCustomers, succeededPayments, openApplications] =
+  const [totalBookings, pendingPayment, totalCustomers, openApplications, succeededPayments] =
     await Promise.all([
-      prisma.booking.count(),
-      prisma.booking.count({ where: { status: "PENDING_PAYMENT" } }),
-      prisma.booking.count({
-        where: { status: { in: ["CONFIRMED", "IN_PROGRESS"] }, scheduledDate: { gte: today } },
-      }),
-      prisma.user.count({ where: { role: "CUSTOMER" } }),
-      prisma.payment.aggregate({
-        where: { status: "SUCCEEDED" },
-        _sum: { amount: true },
-      }),
+      prisma.booking.count({ where: { createdAt } }),
+      prisma.booking.count({ where: { createdAt, status: "PENDING_PAYMENT" } }),
+      prisma.user.count({ where: { role: "CUSTOMER", createdAt } }),
       prisma.jobApplication.count({
-        where: { status: { in: ["SUBMITTED", "UNDER_REVIEW"] } },
+        where: { createdAt, status: { in: ["SUBMITTED", "UNDER_REVIEW"] } },
+      }),
+      prisma.payment.aggregate({
+        where: { status: "SUCCEEDED", createdAt },
+        _sum: { amount: true },
       }),
     ]);
 
   return {
     totalBookings,
     pendingPayment,
-    confirmedUpcoming,
     totalCustomers,
-    totalRevenue: succeededPayments._sum.amount ?? 0,
     openApplications,
+    totalRevenue: succeededPayments._sum.amount ?? 0,
+  };
+}
+
+function buildMetric(current: number, previous: number): AdminStatMetric {
+  return {
+    value: current,
+    previousValue: previous,
+    changePercent: percentChange(current, previous),
+  };
+}
+
+export async function getAdminDashboardStats(
+  period: AdminStatsPeriod = "24h",
+): Promise<AdminDashboardStats> {
+  const labels = getPeriodLabels(period);
+
+  if (!isDatabaseConfigured()) {
+    const empty = buildMetric(0, 0);
+    return {
+      period,
+      periodLabel: labels.short,
+      comparisonLabel: labels.comparison,
+      bookings: empty,
+      pendingPayment: empty,
+      customers: empty,
+      openApplications: empty,
+      revenue: empty,
+    };
+  }
+
+  const { start, end, previousStart, previousEnd } = getPeriodRange(period);
+  const [current, previous] = await Promise.all([
+    countStatsInRange(start, end),
+    countStatsInRange(previousStart, previousEnd),
+  ]);
+
+  return {
+    period,
+    periodLabel: labels.short,
+    comparisonLabel: labels.comparison,
+    bookings: buildMetric(current.totalBookings, previous.totalBookings),
+    pendingPayment: buildMetric(current.pendingPayment, previous.pendingPayment),
+    customers: buildMetric(current.totalCustomers, previous.totalCustomers),
+    openApplications: buildMetric(current.openApplications, previous.openApplications),
+    revenue: buildMetric(current.totalRevenue, previous.totalRevenue),
+  };
+}
+
+/** @deprecated Use getAdminDashboardStats */
+export async function getAdminStats() {
+  const stats = await getAdminDashboardStats("365d");
+  return {
+    totalBookings: stats.bookings.value,
+    pendingPayment: stats.pendingPayment.value,
+    confirmedUpcoming: 0,
+    totalCustomers: stats.customers.value,
+    totalRevenue: stats.revenue.value,
+    openApplications: stats.openApplications.value,
   };
 }
 
 export async function getAdminBookings(filters?: {
   status?: BookingStatus;
   q?: string;
+  since?: Date;
 }): Promise<AdminBookingRow[]> {
   if (!isDatabaseConfigured()) return [];
 
@@ -96,6 +147,7 @@ export async function getAdminBookings(filters?: {
   const bookings = await prisma.booking.findMany({
     where: {
       ...(filters?.status ? { status: filters.status } : {}),
+      ...(filters?.since ? { createdAt: { gte: filters.since } } : {}),
       ...(q
         ? {
             OR: [
