@@ -163,7 +163,16 @@ export default async function BookingConfirmationPage({ params, searchParams }: 
               {booking.invoice && (
                 <div className="sm:col-span-2">
                   <dt className="text-muted-foreground">Invoice</dt>
-                  <dd className="font-medium text-brand-navy">{booking.invoice.number}</dd>
+                  <dd className="font-medium text-brand-navy">
+                    {booking.invoice.number}
+                    {" · "}
+                    <a
+                      href={`/api/invoices/${booking.id}/download`}
+                      className="text-primary underline-offset-4 hover:underline"
+                    >
+                      Download PDF
+                    </a>
+                  </dd>
                 </div>
               )}
             </dl>

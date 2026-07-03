@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 import {
   getInvoiceForDownload,
-  renderInvoiceHtml,
+  renderInvoicePdf,
 } from "@/features/dashboard/services/invoice-download";
 import { getCurrentUser } from "@/server/auth";
 
@@ -10,7 +10,7 @@ interface RouteParams {
   params: Promise<{ id: string }>;
 }
 
-/** Downloadable HTML invoice — ownership-checked by booking id. */
+/** Downloadable PDF invoice — ownership-checked by booking id. */
 export async function GET(_request: Request, { params }: RouteParams) {
   const user = await getCurrentUser();
   if (!user) {
@@ -24,12 +24,12 @@ export async function GET(_request: Request, { params }: RouteParams) {
     return NextResponse.json({ error: "Invoice not found." }, { status: 404 });
   }
 
-  const html = renderInvoiceHtml(invoice);
-  const filename = `${invoice.number}.html`;
+  const pdf = await renderInvoicePdf(invoice);
+  const filename = `${invoice.number}.pdf`;
 
-  return new NextResponse(html, {
+  return new NextResponse(new Uint8Array(pdf), {
     headers: {
-      "Content-Type": "text/html; charset=utf-8",
+      "Content-Type": "application/pdf",
       "Content-Disposition": `attachment; filename="${filename}"`,
     },
   });

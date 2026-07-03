@@ -76,7 +76,7 @@ export function bookingConfirmationEmail(params: {
   const amountPaid = escapeHtml(formatMoney(params.amountPaid));
   const total = escapeHtml(formatMoney(params.totalAmount));
   const invoiceLine = params.invoiceNumber
-    ? `<tr><td style="padding: 6px 0; color: #64748b;">Invoice</td><td style="padding: 6px 0; font-weight: 600;">${escapeHtml(params.invoiceNumber)}</td></tr>`
+    ? `<tr><td style="padding: 6px 0; color: #64748b;">Invoice</td><td style="padding: 6px 0; font-weight: 600;">${escapeHtml(params.invoiceNumber)} (PDF attached)</td></tr>`
     : "";
 
   const calendarUrl = buildGoogleCalendarUrl({
