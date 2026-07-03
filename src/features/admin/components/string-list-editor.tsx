@@ -5,7 +5,6 @@ import { Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 
 export function StringListEditor({
   id,
@@ -14,7 +13,6 @@ export function StringListEditor({
   value,
   onChange,
   placeholder,
-  multiline = false,
   maxItems = 25,
 }: {
   id: string;
@@ -23,7 +21,6 @@ export function StringListEditor({
   value: string[];
   onChange: (items: string[]) => void;
   placeholder?: string;
-  multiline?: boolean;
   maxItems?: number;
 }) {
   const rows = value.length > 0 ? value : [""];
@@ -44,22 +41,18 @@ export function StringListEditor({
     onChange(next.length > 0 ? next : [""]);
   };
 
-  const Field = multiline ? Textarea : Input;
-  const fieldProps = multiline ? { rows: 2 } : {};
-
   return (
     <div className="space-y-2">
       <Label>{label}</Label>
       <ul className="space-y-2">
         {rows.map((item, index) => (
           <li key={`${id}-${index}`} className="flex gap-2">
-            <Field
+            <Input
               id={index === 0 ? id : `${id}-${index}`}
               value={item}
               onChange={(e) => updateRow(index, e.target.value)}
               placeholder={placeholder}
               className="min-w-0 flex-1"
-              {...fieldProps}
             />
             <Button
               type="button"

@@ -130,7 +130,6 @@ export function ServiceCreateForm() {
           label="What's included"
           value={includes}
           onChange={setIncludes}
-          multiline
           placeholder="Dusting of all accessible surfaces"
         />
         <StringListEditor

@@ -135,7 +135,6 @@ export function ServiceEditForm({ service }: { service: AdminServiceRow | AdminS
           label="What's included"
           value={includes}
           onChange={setIncludes}
-          multiline
           placeholder="Dusting of all accessible surfaces"
         />
         <StringListEditor

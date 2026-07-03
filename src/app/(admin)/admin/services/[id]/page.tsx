@@ -29,16 +29,18 @@ export default async function AdminServiceDetailPage({ params }: PageProps) {
         <Link href="/admin/services">← Back to services</Link>
       </Button>
 
-      <div className="grid gap-8 lg:grid-cols-[minmax(0,360px)_minmax(0,1fr)]">
-        <div className="relative aspect-[4/3] overflow-hidden rounded-2xl border border-border bg-secondary/30">
-          <Image
-            src={service.image}
-            alt={service.name}
-            fill
-            className="object-cover"
-            sizes="360px"
-            priority
-          />
+      <div className="grid gap-8 lg:grid-cols-[minmax(0,360px)_minmax(0,1fr)] lg:items-start">
+        <div className="lg:sticky lg:top-20 lg:self-start">
+          <div className="relative aspect-[4/3] overflow-hidden rounded-2xl border border-border bg-secondary/30">
+            <Image
+              src={service.image}
+              alt={service.name}
+              fill
+              className="object-cover"
+              sizes="360px"
+              priority
+            />
+          </div>
         </div>
 
         <div className="space-y-6">
