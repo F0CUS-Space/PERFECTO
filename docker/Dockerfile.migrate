@@ -11,8 +11,13 @@ ENV npm_config_fetch_retries=5 \
     npm_config_fetch_retry_maxtimeout=180000 \
     npm_config_fetch_timeout=600000
 
-COPY package.json package-lock.json* ./
-RUN npm ci --no-audit --no-fund
+COPY package.json ./
+# Migrate + seed only need Prisma tooling — not the full Next.js dependency tree (~700 packages).
+RUN npm install --no-save \
+    "prisma@$(node -p "require('./package.json').devDependencies.prisma")" \
+    "@prisma/client@$(node -p "require('./package.json').dependencies['@prisma/client']")" \
+    "tsx@$(node -p "require('./package.json').devDependencies.tsx")" \
+    --no-audit --no-fund
 
 COPY prisma ./prisma
 # seed.ts imports marketing defaults from src/content (docker compose run migrate npx prisma db seed).

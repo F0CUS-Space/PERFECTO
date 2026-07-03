@@ -4,7 +4,7 @@ const nextConfig = {
   output: "standalone",
   reactStrictMode: true,
   // Keep Node-only server SDKs out of the webpack bundle (they use `node:` built-ins).
-  serverExternalPackages: ["firebase-admin", "stripe", "pdfkit"],
+  serverExternalPackages: ["firebase-admin", "stripe"],
   images: {
     remotePatterns: [
       // S3 bucket (property photos, resumes-derived public assets, etc.)

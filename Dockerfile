@@ -6,19 +6,6 @@ FROM node:22-slim AS base
 RUN apt-get update -y && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 
-# ---- Dependencies ----
-FROM base AS deps
-# Make npm resilient to slow/flaky networks (avoids ECONNRESET aborts).
-ENV npm_config_fetch_retries=5 \
-    npm_config_fetch_retry_factor=2 \
-    npm_config_fetch_retry_mintimeout=20000 \
-    npm_config_fetch_retry_maxtimeout=180000 \
-    npm_config_fetch_timeout=600000
-COPY package.json package-lock.json* ./
-# BuildKit cache mount: keeps the npm cache across builds so a retry after a
-# network drop resumes from already-downloaded tarballs instead of restarting.
-RUN --mount=type=cache,target=/root/.npm npm ci --no-audit --no-fund
-
 # ---- Builder ----
 FROM base AS builder
 # NEXT_PUBLIC_* must be available at build time (baked into the client bundle).
@@ -40,9 +27,16 @@ ENV NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL \
     NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=$NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET \
     NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=$NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID \
     NEXT_PUBLIC_FIREBASE_APP_ID=$NEXT_PUBLIC_FIREBASE_APP_ID \
-    NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=$NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+    NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=$NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY \
+    npm_config_fetch_retries=5 \
+    npm_config_fetch_retry_factor=2 \
+    npm_config_fetch_retry_mintimeout=20000 \
+    npm_config_fetch_retry_maxtimeout=180000 \
+    npm_config_fetch_timeout=600000
 
-COPY --from=deps /app/node_modules ./node_modules
+COPY package.json package-lock.json* ./
+# Install in-place (no separate deps stage) to avoid duplicating node_modules on disk during build.
+RUN --mount=type=cache,target=/root/.npm npm ci --no-audit --no-fund
 COPY . .
 # `npm run build` runs `prisma generate && next build` and emits a standalone server.
 RUN npm run build

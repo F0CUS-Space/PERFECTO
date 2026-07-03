@@ -64,10 +64,18 @@ else
   exit 1
 fi
 
-echo "==> Building and starting Perfecto stack..."
-# Compose Bake can fail when two services target different stages of one Dockerfile.
-export COMPOSE_BAKE=false
-$COMPOSE up -d --build --remove-orphans
+echo "==> Cleaning unused Docker artifacts from past deploys..."
+bash "${ROOT}/scripts/ec2-docker-cleanup.sh"
+
+echo "==> Building migrate image..."
+$COMPOSE build migrate
+
+echo "==> Building app image..."
+$COMPOSE build app
+
+echo "==> Starting Perfecto stack..."
+# Build sequentially above to limit peak disk use on small EC2 volumes.
+$COMPOSE up -d --remove-orphans
 
 echo "==> Container status:"
 $COMPOSE ps
