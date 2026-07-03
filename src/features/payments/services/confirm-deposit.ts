@@ -5,12 +5,10 @@ import type Stripe from "stripe";
 import { prisma } from "@/lib/prisma";
 
 import { reconcileBookingPayments } from "./reconcile-payments";
-import { maybeSendBookingConfirmationEmail } from "@/features/notifications/send-booking-confirmation";
-import { notifyAdminsNewBooking } from "@/features/notifications/create-notifications";
 
 /**
  * Confirms a deposit after Stripe Checkout completes.
- * Delegates to reconcile so duplicate sessions and overpayments stay consistent.
+ * Side effects (customer email + admin notifications) run inside reconcile when newly confirmed.
  */
 export async function confirmDepositFromCheckoutSession(session: Stripe.Checkout.Session) {
   const bookingId = session.metadata?.bookingId;
@@ -38,13 +36,11 @@ export async function confirmDepositFromCheckoutSession(session: Stripe.Checkout
 
   const result = await reconcileBookingPayments(bookingId);
 
-  if (before.status === "CONFIRMED") {
+  if (before.status === "CONFIRMED" && !result.newlyConfirmed) {
     return { skipped: true as const, reason: "already_confirmed", result };
   }
 
-  if (result.bookingConfirmed) {
-    await maybeSendBookingConfirmationEmail(bookingId);
-    await notifyAdminsNewBooking(bookingId);
+  if (result.newlyConfirmed) {
     return { skipped: false as const, bookingId, result };
   }
 

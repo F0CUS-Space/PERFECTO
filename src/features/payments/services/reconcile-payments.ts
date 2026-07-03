@@ -7,6 +7,7 @@ import { getStripe } from "@/lib/stripe";
 import { prisma } from "@/lib/prisma";
 import type { Booking, Invoice, Payment, Prisma } from "@prisma/client";
 
+import { handleBookingNewlyConfirmed } from "@/features/notifications/handle-booking-confirmed";
 import { generateInvoiceNumber } from "./invoice";
 
 export type PaymentReconcileResult = {
@@ -15,6 +16,7 @@ export type PaymentReconcileResult = {
   depositSatisfied: boolean;
   fullyPaid: boolean;
   bookingConfirmed: boolean;
+  newlyConfirmed: boolean;
 };
 
 type BookingWithRelations = Booking & {
@@ -188,12 +190,20 @@ export async function reconcileBookingPayments(
     refreshed.totalAmount,
   );
 
+  const newlyConfirmed =
+    booking.status === "PENDING_PAYMENT" && refreshed.status === "CONFIRMED";
+
+  if (newlyConfirmed) {
+    await handleBookingNewlyConfirmed(bookingId);
+  }
+
   return {
     amountPaid,
     amountDue: refreshed.totalAmount,
     depositSatisfied: amountPaid >= refreshed.depositAmount,
     fullyPaid: amountPaid >= refreshed.totalAmount,
     bookingConfirmed: refreshed.status === "CONFIRMED",
+    newlyConfirmed,
   };
 }
 
