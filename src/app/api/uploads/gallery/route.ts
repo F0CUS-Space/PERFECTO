@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { MAX_PHOTO_BYTES } from "@/config/booking";
-import { formatS3Error, putObject } from "@/lib/s3";
+import { formatS3Error, getViewUrl, putObject } from "@/lib/s3";
 import { isS3Configured } from "@/lib/s3-ready";
 import { requireAdmin } from "@/server/rbac";
 
@@ -42,8 +42,9 @@ export async function POST(request: Request) {
     const buffer = Buffer.from(await file.arrayBuffer());
 
     await putObject(key, buffer, file.type);
+    const viewUrl = await getViewUrl(key, 3600);
 
-    return NextResponse.json({ key, url: `/api/uploads/gallery/${encodeURIComponent(key)}` });
+    return NextResponse.json({ key, viewUrl });
   } catch (error) {
     console.error("[uploads/gallery]", error);
     return NextResponse.json(

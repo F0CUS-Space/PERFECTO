@@ -1,8 +1,8 @@
 "use client";
 
+import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
-import type { GalleryItem } from "@prisma/client";
+import { useEffect, useState, useTransition } from "react";
 import { Loader2, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -13,13 +13,14 @@ import {
   deleteGalleryItem,
   updateGalleryItem,
 } from "@/features/admin/actions";
+import type { AdminGalleryItemRow } from "@/features/gallery/queries";
 
 const selectClass =
   "flex h-11 w-full rounded-xl border border-input bg-background px-4 text-sm";
 
 const CATEGORIES = ["Residential", "Deep Clean", "Office", "Move In/Out"];
 
-async function uploadImage(file: File): Promise<string> {
+async function uploadImage(file: File): Promise<{ key: string; viewUrl: string }> {
   const formData = new FormData();
   formData.append("file", file);
   const res = await fetch("/api/uploads/gallery", { method: "POST", body: formData });
@@ -27,14 +28,23 @@ async function uploadImage(file: File): Promise<string> {
   if (!res.ok) {
     throw new Error(typeof data.error === "string" ? data.error : "Upload failed.");
   }
-  return data.key as string;
+  return { key: data.key as string, viewUrl: data.viewUrl as string };
+}
+
+function ImagePreview({ src, label }: { src: string | null; label: string }) {
+  if (!src) return null;
+  return (
+    <div className="relative aspect-video w-full max-w-xs overflow-hidden rounded-xl border border-border bg-secondary/30">
+      <Image src={src} alt={label} fill className="object-cover" sizes="320px" unoptimized />
+    </div>
+  );
 }
 
 function GalleryItemForm({
   item,
   onDone,
 }: {
-  item?: GalleryItem;
+  item?: AdminGalleryItemRow;
   onDone: () => void;
 }) {
   const [type, setType] = useState<"CARD" | "BEFORE_AFTER">(item?.type ?? "CARD");
@@ -43,10 +53,22 @@ function GalleryItemForm({
   const [imageUrl, setImageUrl] = useState(item?.imageUrl ?? "");
   const [beforeUrl, setBeforeUrl] = useState(item?.beforeUrl ?? "");
   const [afterUrl, setAfterUrl] = useState(item?.afterUrl ?? "");
+  const [imagePreview, setImagePreview] = useState<string | null>(item?.imageDisplayUrl ?? null);
+  const [beforePreview, setBeforePreview] = useState<string | null>(item?.beforeDisplayUrl ?? null);
+  const [afterPreview, setAfterPreview] = useState<string | null>(item?.afterDisplayUrl ?? null);
   const [isActive, setIsActive] = useState(item?.isActive ?? true);
   const [sortOrder, setSortOrder] = useState(String(item?.sortOrder ?? 0));
   const [error, setError] = useState<string | null>(null);
+  const [uploadingField, setUploadingField] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+
+  useEffect(() => {
+    return () => {
+      for (const url of [imagePreview, beforePreview, afterPreview]) {
+        if (url?.startsWith("blob:")) URL.revokeObjectURL(url);
+      }
+    };
+  }, [imagePreview, beforePreview, afterPreview]);
 
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -77,13 +99,32 @@ function GalleryItemForm({
 
   const onFile = async (field: "imageUrl" | "beforeUrl" | "afterUrl", file: File | null) => {
     if (!file) return;
+    const localPreview = URL.createObjectURL(file);
+    setUploadingField(field);
+    setError(null);
     try {
-      const key = await uploadImage(file);
-      if (field === "imageUrl") setImageUrl(key);
-      if (field === "beforeUrl") setBeforeUrl(key);
-      if (field === "afterUrl") setAfterUrl(key);
+      const { key, viewUrl } = await uploadImage(file);
+      const preview = viewUrl || localPreview;
+      if (field === "imageUrl") {
+        setImageUrl(key);
+        setImagePreview(preview);
+      }
+      if (field === "beforeUrl") {
+        setBeforeUrl(key);
+        setBeforePreview(preview);
+      }
+      if (field === "afterUrl") {
+        setAfterUrl(key);
+        setAfterPreview(preview);
+      }
+      if (viewUrl && localPreview.startsWith("blob:")) {
+        URL.revokeObjectURL(localPreview);
+      }
     } catch (err) {
+      if (localPreview.startsWith("blob:")) URL.revokeObjectURL(localPreview);
       setError(err instanceof Error ? err.message : "Upload failed.");
+    } finally {
+      setUploadingField(null);
     }
   };
 
@@ -113,20 +154,35 @@ function GalleryItemForm({
       {type === "CARD" ? (
         <div className="space-y-2">
           <Label>Image</Label>
-          <Input value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="S3 key or /images/..." />
-          <Input type="file" accept="image/*" onChange={(e) => onFile("imageUrl", e.target.files?.[0] ?? null)} />
+          <ImagePreview src={imagePreview} label={title || "Gallery image"} />
+          <Input type="file" accept="image/*" disabled={uploadingField === "imageUrl"} onChange={(e) => onFile("imageUrl", e.target.files?.[0] ?? null)} />
+          {uploadingField === "imageUrl" && (
+            <p className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Loader2 className="h-3 w-3 animate-spin" /> Uploading…
+            </p>
+          )}
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
             <Label>Before image</Label>
-            <Input value={beforeUrl} onChange={(e) => setBeforeUrl(e.target.value)} />
-            <Input type="file" accept="image/*" onChange={(e) => onFile("beforeUrl", e.target.files?.[0] ?? null)} />
+            <ImagePreview src={beforePreview} label={`${title} before`} />
+            <Input type="file" accept="image/*" disabled={uploadingField === "beforeUrl"} onChange={(e) => onFile("beforeUrl", e.target.files?.[0] ?? null)} />
+            {uploadingField === "beforeUrl" && (
+              <p className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Loader2 className="h-3 w-3 animate-spin" /> Uploading…
+              </p>
+            )}
           </div>
           <div className="space-y-2">
             <Label>After image</Label>
-            <Input value={afterUrl} onChange={(e) => setAfterUrl(e.target.value)} />
-            <Input type="file" accept="image/*" onChange={(e) => onFile("afterUrl", e.target.files?.[0] ?? null)} />
+            <ImagePreview src={afterPreview} label={`${title} after`} />
+            <Input type="file" accept="image/*" disabled={uploadingField === "afterUrl"} onChange={(e) => onFile("afterUrl", e.target.files?.[0] ?? null)} />
+            {uploadingField === "afterUrl" && (
+              <p className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Loader2 className="h-3 w-3 animate-spin" /> Uploading…
+              </p>
+            )}
           </div>
         </div>
       )}
@@ -141,14 +197,47 @@ function GalleryItemForm({
         </label>
       </div>
       {error && <p className="text-sm text-destructive">{error}</p>}
-      <Button type="submit" disabled={pending}>
+      <Button type="submit" disabled={pending || uploadingField !== null}>
         {pending ? <><Loader2 className="h-4 w-4 animate-spin" /> Saving…</> : item ? "Save" : "Add to gallery"}
       </Button>
     </form>
   );
 }
 
-export function GalleryManager({ items }: { items: GalleryItem[] }) {
+function GalleryItemThumbnail({ item }: { item: AdminGalleryItemRow }) {
+  if (item.type === "CARD" && item.imageDisplayUrl) {
+    return (
+      <div className="relative h-16 w-24 shrink-0 overflow-hidden rounded-lg border border-border">
+        <Image src={item.imageDisplayUrl} alt={item.title} fill className="object-cover" sizes="96px" unoptimized />
+      </div>
+    );
+  }
+
+  if (item.type === "BEFORE_AFTER") {
+    return (
+      <div className="flex shrink-0 gap-1">
+        {item.beforeDisplayUrl && (
+          <div className="relative h-16 w-16 overflow-hidden rounded-lg border border-border">
+            <Image src={item.beforeDisplayUrl} alt={`${item.title} before`} fill className="object-cover" sizes="64px" unoptimized />
+          </div>
+        )}
+        {item.afterDisplayUrl && (
+          <div className="relative h-16 w-16 overflow-hidden rounded-lg border border-border">
+            <Image src={item.afterDisplayUrl} alt={`${item.title} after`} fill className="object-cover" sizes="64px" unoptimized />
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex h-16 w-24 shrink-0 items-center justify-center rounded-lg border border-dashed border-border bg-secondary/30 text-xs text-muted-foreground">
+      No image
+    </div>
+  );
+}
+
+export function GalleryManager({ items }: { items: AdminGalleryItemRow[] }) {
   const router = useRouter();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showNew, setShowNew] = useState(false);
@@ -184,12 +273,15 @@ export function GalleryManager({ items }: { items: GalleryItem[] }) {
       <div className="space-y-3">
         {items.map((item) => (
           <div key={item.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border p-4">
-            <div>
-              <p className="font-medium text-brand-navy">{item.title}</p>
-              <p className="text-xs text-muted-foreground">
-                {item.type === "CARD" ? "Image card" : "Before & after"} · {item.category}
-                {!item.isActive && " · Inactive"}
-              </p>
+            <div className="flex min-w-0 items-center gap-4">
+              <GalleryItemThumbnail item={item} />
+              <div>
+                <p className="font-medium text-brand-navy">{item.title}</p>
+                <p className="text-xs text-muted-foreground">
+                  {item.type === "CARD" ? "Image card" : "Before & after"} · {item.category}
+                  {!item.isActive && " · Inactive"}
+                </p>
+              </div>
             </div>
             <div className="flex gap-2">
               <Button type="button" variant="outline" size="sm" onClick={() => { setEditingId(item.id); setShowNew(false); }}>

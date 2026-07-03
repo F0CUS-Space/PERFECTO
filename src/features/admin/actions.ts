@@ -606,13 +606,27 @@ function revalidateReviewPaths() {
   revalidatePath("/");
 }
 
+const galleryImageRef = z
+  .string()
+  .trim()
+  .refine(
+    (val) => {
+      if (!val) return true;
+      if (val.startsWith("/") || val.startsWith("gallery/")) return true;
+      return z.string().url().safeParse(val).success;
+    },
+    { message: "Enter a valid image path, S3 key, or URL" },
+  )
+  .optional()
+  .or(z.literal(""));
+
 const galleryItemSchema = z.object({
   type: z.enum(["CARD", "BEFORE_AFTER"]),
   title: z.string().trim().min(2).max(120),
   category: z.string().trim().min(2).max(80),
-  imageUrl: z.string().url().optional().or(z.literal("")),
-  beforeUrl: z.string().url().optional().or(z.literal("")),
-  afterUrl: z.string().url().optional().or(z.literal("")),
+  imageUrl: galleryImageRef,
+  beforeUrl: galleryImageRef,
+  afterUrl: galleryImageRef,
   isActive: z.boolean(),
   sortOrder: z.coerce.number().int().min(0).max(999).optional(),
 });

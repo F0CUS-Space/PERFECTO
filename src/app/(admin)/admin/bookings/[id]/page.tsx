@@ -119,10 +119,13 @@ export default async function AdminBookingDetailPage({ params }: PageProps) {
             </CardContent>
           </Card>
 
-          {booking.photos.length > 0 && (
+          {booking.photos.length > 0 ? (
             <Card>
               <CardHeader>
                 <CardTitle className="text-base">Property photos</CardTitle>
+                <CardDescription>
+                  Uploaded by the customer during booking ({booking.photos.length})
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -145,6 +148,17 @@ export default async function AdminBookingDetailPage({ params }: PageProps) {
                     </a>
                   ))}
                 </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Property photos</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">
+                  No photos were uploaded for this booking.
+                </p>
               </CardContent>
             </Card>
           )}

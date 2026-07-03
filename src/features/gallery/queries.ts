@@ -51,9 +51,42 @@ export async function getActiveGalleryItems(): Promise<GalleryItemRow[]> {
   );
 }
 
-export async function getAdminGalleryItems() {
+export interface AdminGalleryItemRow {
+  id: string;
+  type: "CARD" | "BEFORE_AFTER";
+  title: string;
+  category: string;
+  imageUrl: string | null;
+  beforeUrl: string | null;
+  afterUrl: string | null;
+  isActive: boolean;
+  sortOrder: number;
+  imageDisplayUrl: string | null;
+  beforeDisplayUrl: string | null;
+  afterDisplayUrl: string | null;
+}
+
+export async function getAdminGalleryItems(): Promise<AdminGalleryItemRow[]> {
   if (!isDatabaseConfigured()) return [];
-  return prisma.galleryItem.findMany({
+
+  const items = await prisma.galleryItem.findMany({
     orderBy: [{ sortOrder: "asc" }, { title: "asc" }],
   });
+
+  return Promise.all(
+    items.map(async (item) => ({
+      id: item.id,
+      type: item.type,
+      title: item.title,
+      category: item.category,
+      imageUrl: item.imageUrl,
+      beforeUrl: item.beforeUrl,
+      afterUrl: item.afterUrl,
+      isActive: item.isActive,
+      sortOrder: item.sortOrder,
+      imageDisplayUrl: await resolveImageUrl(item.imageUrl),
+      beforeDisplayUrl: await resolveImageUrl(item.beforeUrl),
+      afterDisplayUrl: await resolveImageUrl(item.afterUrl),
+    })),
+  );
 }

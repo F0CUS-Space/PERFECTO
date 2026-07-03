@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 
-import { DashboardNav } from "@/features/dashboard/components/dashboard-nav";
+import { DashboardMobileNav, DashboardSidebar } from "@/features/dashboard/components/dashboard-nav";
 import { getCurrentUser } from "@/server/auth";
 
 export const dynamic = "force-dynamic";
@@ -16,13 +16,19 @@ export default async function DashboardSectionLayout({
   }
 
   return (
-    <>
-      <div className="border-b border-border bg-secondary/30">
-        <div className="container py-3">
-          <DashboardNav />
-        </div>
+    <div className="border-t border-border bg-background">
+      <div className="border-b border-border bg-secondary/30 px-4 py-3 lg:hidden">
+        <DashboardMobileNav />
       </div>
-      {children}
-    </>
+      <div className="flex">
+        <aside className="hidden w-60 shrink-0 border-r border-border/60 bg-secondary/20 lg:block">
+          <div className="sticky top-[var(--navbar-height,4rem)] max-h-[calc(100vh-var(--navbar-height,4rem))] overflow-y-auto p-4">
+            <p className="mb-4 px-3 text-sm font-semibold text-brand-navy">My account</p>
+            <DashboardSidebar />
+          </div>
+        </aside>
+        <div className="min-w-0 flex-1">{children}</div>
+      </div>
+    </div>
   );
 }
