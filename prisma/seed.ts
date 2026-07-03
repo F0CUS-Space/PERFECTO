@@ -75,8 +75,7 @@ async function main() {
 
   for (const service of services) {
     const detail = serviceDetails[service.slug];
-    const payload = {
-      ...service,
+    const marketing = {
       longDescription: detail?.longDescription ?? null,
       includes: detail?.includes ?? [],
       idealFor: detail?.idealFor ?? [],
@@ -85,8 +84,15 @@ async function main() {
     };
     await prisma.service.upsert({
       where: { slug: service.slug },
-      update: payload,
-      create: payload,
+      // Only fill marketing fields on first create — do not overwrite admin edits on redeploy.
+      update: {
+        name: service.name,
+        description: service.description,
+        basePrice: service.basePrice,
+        isPopular: service.isPopular,
+        sortOrder: service.sortOrder,
+      },
+      create: { ...service, ...marketing },
     });
   }
 

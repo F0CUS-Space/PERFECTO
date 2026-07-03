@@ -15,6 +15,8 @@ COPY package.json package-lock.json* ./
 RUN npm ci --no-audit --no-fund
 
 COPY prisma ./prisma
+# seed.ts imports marketing defaults from src/content (docker compose run migrate npx prisma db seed).
+COPY src/content ./src/content
 RUN npx prisma generate
 
 CMD ["npx", "prisma", "migrate", "deploy"]
