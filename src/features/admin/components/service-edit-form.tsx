@@ -9,7 +9,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { updateService } from "@/features/admin/actions";
 import { ServiceImageUpload } from "@/features/admin/components/service-image-upload";
-import { StringListEditor } from "@/features/admin/components/string-list-editor";
+import {
+  cleanStringList,
+  StringListEditor,
+} from "@/features/admin/components/string-list-editor";
 import type { AdminServiceDetail, AdminServiceRow } from "@/features/admin/types";
 import { formatCurrency } from "@/lib/utils";
 
@@ -20,7 +23,6 @@ export function ServiceEditForm({ service }: { service: AdminServiceRow | AdminS
   const [longDescription, setLongDescription] = useState(service.longDescription ?? "");
   const [includes, setIncludes] = useState<string[]>(service.includes ?? []);
   const [idealFor, setIdealFor] = useState<string[]>(service.idealFor ?? []);
-  const [pricingNote, setPricingNote] = useState(service.pricingNote ?? "");
   const [basePriceDollars, setBasePriceDollars] = useState((service.basePrice / 100).toFixed(2));
   const [isActive, setIsActive] = useState(service.isActive);
   const [isPopular, setIsPopular] = useState(service.isPopular);
@@ -39,9 +41,8 @@ export function ServiceEditForm({ service }: { service: AdminServiceRow | AdminS
         name,
         description,
         longDescription: longDescription || undefined,
-        includes,
-        idealFor,
-        pricingNote: pricingNote || undefined,
+        includes: cleanStringList(includes),
+        idealFor: cleanStringList(idealFor),
         basePriceDollars: Number(basePriceDollars),
         isActive,
         isPopular,
@@ -132,27 +133,19 @@ export function ServiceEditForm({ service }: { service: AdminServiceRow | AdminS
         <StringListEditor
           id={`includes-${service.id}`}
           label="What's included"
-          hint="One line per bullet point."
           value={includes}
           onChange={setIncludes}
+          multiline
+          placeholder="Dusting of all accessible surfaces"
         />
         <StringListEditor
           id={`ideal-${service.id}`}
           label="Ideal for"
-          hint="One line per tag."
           value={idealFor}
           onChange={setIdealFor}
-          rows={3}
+          maxItems={15}
+          placeholder="Busy households"
         />
-        <div className="space-y-2">
-          <Label htmlFor={`pricing-${service.id}`}>Pricing note</Label>
-          <Textarea
-            id={`pricing-${service.id}`}
-            value={pricingNote}
-            onChange={(e) => setPricingNote(e.target.value)}
-            rows={3}
-          />
-        </div>
         <ServiceImageUpload
           imageKey={imageUrl}
           previewUrl={imagePreview}

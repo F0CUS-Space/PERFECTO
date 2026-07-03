@@ -10,22 +10,17 @@ export interface ServicePageContent {
   longDescription: string;
   includes: string[];
   idealFor: string[];
-  pricingNote: string;
   accent: string;
 }
 
-const DEFAULT_PRICING_NOTE =
-  "Your final price depends on your space and selected add-ons. Use our instant quote calculator to see an estimate in seconds — no surprises.";
-
-/** Marketing detail for a service page — DB fields with static fallback. */
+/** Marketing detail for a service page — uses DB content; accent from static map only. */
 export function getServicePageContent(service: Service): ServicePageContent {
   const staticDetail = serviceDetails[service.slug] ?? defaultServiceDetail;
 
   return {
-    longDescription: service.longDescription?.trim() || staticDetail.longDescription,
-    includes: service.includes.length > 0 ? service.includes : staticDetail.includes,
-    idealFor: service.idealFor.length > 0 ? service.idealFor : staticDetail.idealFor,
-    pricingNote: service.pricingNote?.trim() || DEFAULT_PRICING_NOTE,
+    longDescription: service.longDescription?.trim() || service.description,
+    includes: service.includes,
+    idealFor: service.idealFor,
     accent: staticDetail.accent,
   };
 }

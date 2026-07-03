@@ -9,7 +9,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { createService } from "@/features/admin/actions";
 import { ServiceImageUpload } from "@/features/admin/components/service-image-upload";
-import { StringListEditor } from "@/features/admin/components/string-list-editor";
+import {
+  cleanStringList,
+  StringListEditor,
+} from "@/features/admin/components/string-list-editor";
 import { slugifyServiceName } from "@/features/admin/service-slug";
 
 export function ServiceCreateForm() {
@@ -20,7 +23,6 @@ export function ServiceCreateForm() {
   const [longDescription, setLongDescription] = useState("");
   const [includes, setIncludes] = useState<string[]>([]);
   const [idealFor, setIdealFor] = useState<string[]>([]);
-  const [pricingNote, setPricingNote] = useState("");
   const [basePriceDollars, setBasePriceDollars] = useState("120.00");
   const [imageUrl, setImageUrl] = useState("");
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -45,9 +47,8 @@ export function ServiceCreateForm() {
         slug: slug || undefined,
         description,
         longDescription: longDescription || undefined,
-        includes,
-        idealFor,
-        pricingNote: pricingNote || undefined,
+        includes: cleanStringList(includes),
+        idealFor: cleanStringList(idealFor),
         basePriceDollars: Number(basePriceDollars),
         imageUrl: imageUrl || undefined,
         isActive,
@@ -127,30 +128,19 @@ export function ServiceCreateForm() {
         <StringListEditor
           id="new-includes"
           label="What's included"
-          hint="One line per bullet point."
           value={includes}
           onChange={setIncludes}
-          placeholder={"Dusting of all accessible surfaces\nVacuuming and mopping of all floors"}
+          multiline
+          placeholder="Dusting of all accessible surfaces"
         />
         <StringListEditor
           id="new-ideal-for"
           label="Ideal for"
-          hint="One line per tag."
           value={idealFor}
           onChange={setIdealFor}
-          placeholder={"Busy households\nWeekly or biweekly upkeep"}
-          rows={3}
+          maxItems={15}
+          placeholder="Busy households"
         />
-        <div className="space-y-2">
-          <Label htmlFor="new-pricing-note">Pricing note (optional)</Label>
-          <Textarea
-            id="new-pricing-note"
-            rows={3}
-            value={pricingNote}
-            onChange={(e) => setPricingNote(e.target.value)}
-            placeholder="Text shown in the Transparent pricing box."
-          />
-        </div>
         <ServiceImageUpload
           imageKey={imageUrl}
           previewUrl={imagePreview}

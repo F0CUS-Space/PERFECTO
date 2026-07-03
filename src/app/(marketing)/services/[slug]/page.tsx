@@ -122,14 +122,6 @@ export default async function ServiceDetailPage({
                 </span>
               ))}
             </div>
-
-            <div className="mt-10 rounded-2xl border border-border bg-card p-6 shadow-card">
-              <h3 className="text-lg font-semibold text-brand-navy">Transparent pricing</h3>
-              <p className="mt-1 text-sm text-muted-foreground">{detail.pricingNote}</p>
-              <Button asChild className="mt-5">
-                <Link href="/book">Calculate my price</Link>
-              </Button>
-            </div>
           </Reveal>
         </div>
       </Section>
