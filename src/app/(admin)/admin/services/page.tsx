@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
-import { AdminServiceCard } from "@/features/admin/components/admin-service-card";
+import { PaginatedServicesGrid } from "@/features/admin/components/paginated-lists";
 import { getAdminServices } from "@/features/admin/queries";
 import { requireAdmin } from "@/server/rbac";
 
@@ -41,10 +41,8 @@ export default async function AdminServicesPage() {
           .
         </p>
       ) : (
-        <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {services.map((service) => (
-            <AdminServiceCard key={service.id} service={service} />
-          ))}
+        <div className="mt-8">
+          <PaginatedServicesGrid services={services} />
         </div>
       )}
     </div>

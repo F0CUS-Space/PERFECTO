@@ -175,6 +175,6 @@ export async function getCustomerDashboardStats(userId: string) {
     upcomingCount: upcoming.length,
     totalBookings: bookings.length,
     pendingDepositCount: pendingDeposit.length,
-    recentBookings: bookings.slice(0, 3),
+    recentBookings: bookings.slice(0, 20),
   };
 }

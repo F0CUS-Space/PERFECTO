@@ -4,11 +4,10 @@ import { ArrowRight } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { AdminStatsCards } from "@/features/admin/components/admin-stats-cards";
+import { PaginatedAdminBookingsPreview } from "@/features/admin/components/paginated-lists";
 import { getAdminBookings, getAdminDashboardStats } from "@/features/admin/queries";
 import { parseAdminStatsPeriod, getPeriodRange } from "@/features/admin/stats-period";
-import { formatCurrency } from "@/lib/utils";
 import { requireAdmin } from "@/server/rbac";
-import { BookingStatusBadge } from "@/features/dashboard/components/booking-status-badge";
 
 export const dynamic = "force-dynamic";
 
@@ -52,54 +51,13 @@ export default async function AdminPage({ searchParams }: PageProps) {
           </Button>
         </div>
 
-        <div className="overflow-x-auto rounded-2xl border border-border">
-          <table className="w-full min-w-[720px] text-sm">
-            <thead className="border-b border-border bg-secondary/40 text-left">
-              <tr>
-                <th className="px-4 py-3 font-medium text-muted-foreground">Customer</th>
-                <th className="px-4 py-3 font-medium text-muted-foreground">Service</th>
-                <th className="px-4 py-3 font-medium text-muted-foreground">Date</th>
-                <th className="px-4 py-3 font-medium text-muted-foreground">Status</th>
-                <th className="px-4 py-3 font-medium text-muted-foreground">Paid</th>
-                <th className="px-4 py-3 font-medium text-muted-foreground" />
-              </tr>
-            </thead>
-            <tbody>
-              {recentBookings.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="px-4 py-10 text-center text-muted-foreground">
-                    No bookings in this period.
-                  </td>
-                </tr>
-              ) : (
-                recentBookings.slice(0, 8).map((booking) => (
-                  <tr key={booking.id} className="border-b border-border/60 last:border-0">
-                    <td className="px-4 py-3 font-medium text-brand-navy">{booking.customerName}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{booking.serviceName}</td>
-                    <td className="px-4 py-3 text-muted-foreground">
-                      {new Date(booking.scheduledDate).toLocaleDateString("en-US", {
-                        month: "short",
-                        day: "numeric",
-                        year: "numeric",
-                      })}
-                    </td>
-                    <td className="px-4 py-3">
-                      <BookingStatusBadge status={booking.status} />
-                    </td>
-                    <td className="px-4 py-3 tabular-nums">
-                      {formatCurrency(booking.amountPaid)} / {formatCurrency(booking.totalAmount)}
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <Link href={`/admin/bookings/${booking.id}`} className="text-brand-blue hover:underline">
-                        View
-                      </Link>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+        {recentBookings.length === 0 ? (
+          <div className="rounded-2xl border border-border px-4 py-10 text-center text-muted-foreground">
+            No bookings in this period.
+          </div>
+        ) : (
+          <PaginatedAdminBookingsPreview bookings={recentBookings} />
+        )}
       </section>
     </div>
   );

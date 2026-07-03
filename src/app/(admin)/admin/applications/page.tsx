@@ -3,8 +3,8 @@ import type { ApplicationStatus } from "@prisma/client";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PaginatedApplicationsTable } from "@/features/admin/components/paginated-lists";
 import { getAdminApplications } from "@/features/admin/queries";
-import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -16,13 +16,6 @@ const STATUSES: ApplicationStatus[] = [
   "ACCEPTED",
   "REJECTED",
 ];
-
-const STATUS_STYLES: Record<ApplicationStatus, string> = {
-  SUBMITTED: "bg-amber-100 text-amber-800",
-  UNDER_REVIEW: "bg-brand-blue/10 text-brand-blue",
-  ACCEPTED: "bg-accent/15 text-brand-green",
-  REJECTED: "bg-destructive/10 text-destructive",
-};
 
 interface PageProps {
   searchParams: Promise<{ status?: string; q?: string }>;
@@ -80,62 +73,14 @@ export default async function AdminApplicationsPage({ searchParams }: PageProps)
         )}
       </form>
 
-      <div className="mt-6 overflow-x-auto rounded-2xl border border-border">
-        <table className="w-full min-w-[820px] text-sm">
-          <thead className="border-b border-border bg-secondary/40 text-left">
-            <tr>
-              <th className="px-4 py-3 font-medium text-muted-foreground">Applicant</th>
-              <th className="px-4 py-3 font-medium text-muted-foreground">Position</th>
-              <th className="px-4 py-3 font-medium text-muted-foreground">Resume</th>
-              <th className="px-4 py-3 font-medium text-muted-foreground">Status</th>
-              <th className="px-4 py-3 font-medium text-muted-foreground">Applied</th>
-              <th className="px-4 py-3 font-medium text-muted-foreground" />
-            </tr>
-          </thead>
-          <tbody>
-            {applications.length === 0 ? (
-              <tr>
-                <td colSpan={6} className="px-4 py-10 text-center text-muted-foreground">
-                  No applications found.
-                </td>
-              </tr>
-            ) : (
-              applications.map((app) => (
-                <tr key={app.id} className="border-b border-border/60 last:border-0">
-                  <td className="px-4 py-3">
-                    <p className="font-medium text-brand-navy">{app.fullName}</p>
-                    <p className="text-xs text-muted-foreground">{app.email}</p>
-                  </td>
-                  <td className="px-4 py-3 text-muted-foreground">{app.position}</td>
-                  <td className="px-4 py-3 text-muted-foreground">
-                    {app.hasResume ? "Yes" : "No"}
-                  </td>
-                  <td className="px-4 py-3">
-                    <span
-                      className={cn(
-                        "inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize",
-                        STATUS_STYLES[app.status],
-                      )}
-                    >
-                      {app.status.replace(/_/g, " ").toLowerCase()}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-muted-foreground">
-                    {new Date(app.createdAt).toLocaleDateString()}
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <Link
-                      href={`/admin/applications/${app.id}`}
-                      className="font-medium text-brand-blue hover:underline"
-                    >
-                      Review
-                    </Link>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+      <div className="mt-6">
+        {applications.length === 0 ? (
+          <div className="rounded-2xl border border-border px-4 py-10 text-center text-muted-foreground">
+            No applications found.
+          </div>
+        ) : (
+          <PaginatedApplicationsTable applications={applications} />
+        )}
       </div>
     </div>
   );

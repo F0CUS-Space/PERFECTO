@@ -2,7 +2,7 @@ import Link from "next/link";
 import { AlertTriangle, Calendar, CreditCard } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { BookingCard } from "@/features/dashboard/components/booking-card";
+import { DashboardRecentBookings } from "@/features/dashboard/components/dashboard-recent-bookings";
 import { getCustomerDashboardStats } from "@/features/dashboard/queries";
 import { getCurrentUser } from "@/server/auth";
 
@@ -108,9 +108,7 @@ export default async function DashboardPage() {
             </Button>
           </div>
           <div className="grid gap-4">
-            {stats.recentBookings.map((booking) => (
-              <BookingCard key={booking.id} booking={booking} />
-            ))}
+            <DashboardRecentBookings bookings={stats.recentBookings} />
           </div>
         </section>
       ) : (

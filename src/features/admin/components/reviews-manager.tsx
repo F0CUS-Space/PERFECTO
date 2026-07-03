@@ -6,6 +6,8 @@ import type { ReviewStatus } from "@prisma/client";
 import { Star, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { LIST_LOAD_MORE, LIST_PAGE_SIZE } from "@/config/list-display";
+import { ViewMoreButton, useViewMore } from "@/components/shared/view-more";
 import { deleteReview, updateReviewStatus } from "@/features/admin/actions";
 import { cn } from "@/lib/utils";
 
@@ -30,13 +32,23 @@ export function ReviewsManager({ reviews }: { reviews: AdminReview[] }) {
     });
   };
 
+  const {
+    visibleItems,
+    hasMore,
+    remaining,
+    total,
+    visibleCount,
+    showMore,
+    loadIncrement,
+  } = useViewMore(reviews, LIST_PAGE_SIZE.STACK, LIST_LOAD_MORE.STACK);
+
   if (reviews.length === 0) {
     return <p className="text-muted-foreground">No customer reviews yet.</p>;
   }
 
   return (
     <div className="space-y-4">
-      {reviews.map((review) => {
+      {visibleItems.map((review) => {
         const name = [review.user.firstName, review.user.lastName].filter(Boolean).join(" ").trim() || review.user.phone;
         return (
           <div key={review.id} className="rounded-2xl border border-border bg-card p-5">
@@ -93,6 +105,15 @@ export function ReviewsManager({ reviews }: { reviews: AdminReview[] }) {
           </div>
         );
       })}
+      <ViewMoreButton
+        hasMore={hasMore}
+        remaining={remaining}
+        total={total}
+        visibleCount={visibleCount}
+        onShowMore={showMore}
+        itemLabel="reviews"
+        loadIncrement={loadIncrement}
+      />
     </div>
   );
 }

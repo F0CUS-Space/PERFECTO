@@ -2,9 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
+import { PaginatedCustomerBookingsTable } from "@/features/admin/components/paginated-lists";
 import { getAdminCustomerById } from "@/features/admin/queries";
-import { BookingStatusBadge } from "@/features/dashboard/components/booking-status-badge";
-import { formatCurrency } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -57,51 +56,15 @@ export default async function AdminCustomerDetailPage({ params }: PageProps) {
 
       <section className="mt-10">
         <h2 className="text-xl font-semibold text-brand-navy">Bookings</h2>
-        <div className="mt-4 overflow-x-auto rounded-2xl border border-border">
-          <table className="w-full min-w-[640px] text-sm">
-            <thead className="border-b border-border bg-secondary/40 text-left">
-              <tr>
-                <th className="px-4 py-3 font-medium text-muted-foreground">Service</th>
-                <th className="px-4 py-3 font-medium text-muted-foreground">Date</th>
-                <th className="px-4 py-3 font-medium text-muted-foreground">Status</th>
-                <th className="px-4 py-3 font-medium text-muted-foreground">Paid</th>
-                <th className="px-4 py-3 font-medium text-muted-foreground" />
-              </tr>
-            </thead>
-            <tbody>
-              {customer.bookings.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="px-4 py-10 text-center text-muted-foreground">
-                    No bookings yet.
-                  </td>
-                </tr>
-              ) : (
-                customer.bookings.map((booking) => (
-                  <tr key={booking.id} className="border-b border-border/60 last:border-0">
-                    <td className="px-4 py-3 font-medium text-brand-navy">{booking.serviceName}</td>
-                    <td className="px-4 py-3 text-muted-foreground">
-                      {new Date(booking.scheduledDate).toLocaleDateString()}
-                    </td>
-                    <td className="px-4 py-3">
-                      <BookingStatusBadge status={booking.status} />
-                    </td>
-                    <td className="px-4 py-3 tabular-nums">
-                      {formatCurrency(booking.amountPaid)} / {formatCurrency(booking.totalAmount)}
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <Link
-                        href={`/admin/bookings/${booking.id}`}
-                        className="text-brand-blue hover:underline"
-                      >
-                        View
-                      </Link>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+        {customer.bookings.length === 0 ? (
+          <div className="mt-4 rounded-2xl border border-border px-4 py-10 text-center text-muted-foreground">
+            No bookings yet.
+          </div>
+        ) : (
+          <div className="mt-4">
+            <PaginatedCustomerBookingsTable bookings={customer.bookings} />
+          </div>
+        )}
       </section>
     </div>
   );

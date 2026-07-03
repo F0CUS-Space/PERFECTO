@@ -8,6 +8,8 @@ import { Loader2, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { LIST_LOAD_MORE, LIST_PAGE_SIZE } from "@/config/list-display";
+import { ViewMoreButton, useViewMore } from "@/components/shared/view-more";
 import {
   createGalleryItem,
   deleteGalleryItem,
@@ -252,6 +254,15 @@ export function GalleryManager({ items }: { items: AdminGalleryItemRow[] }) {
   };
 
   const editing = items.find((i) => i.id === editingId);
+  const {
+    visibleItems,
+    hasMore,
+    remaining,
+    total,
+    visibleCount,
+    showMore,
+    loadIncrement,
+  } = useViewMore(items, LIST_PAGE_SIZE.STACK, LIST_LOAD_MORE.STACK);
 
   return (
     <div className="space-y-8">
@@ -271,7 +282,7 @@ export function GalleryManager({ items }: { items: AdminGalleryItemRow[] }) {
       )}
 
       <div className="space-y-3">
-        {items.map((item) => (
+        {visibleItems.map((item) => (
           <div key={item.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border p-4">
             <div className="flex min-w-0 items-center gap-4">
               <GalleryItemThumbnail item={item} />
@@ -294,6 +305,15 @@ export function GalleryManager({ items }: { items: AdminGalleryItemRow[] }) {
           </div>
         ))}
       </div>
+      <ViewMoreButton
+        hasMore={hasMore}
+        remaining={remaining}
+        total={total}
+        visibleCount={visibleCount}
+        onShowMore={showMore}
+        itemLabel="items"
+        loadIncrement={loadIncrement}
+      />
     </div>
   );
 }

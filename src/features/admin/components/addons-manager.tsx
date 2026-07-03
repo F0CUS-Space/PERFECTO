@@ -6,6 +6,8 @@ import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { LIST_LOAD_MORE, LIST_PAGE_SIZE } from "@/config/list-display";
+import { ViewMoreButton, useViewMore } from "@/components/shared/view-more";
 import { createAddOn, deleteAddOn, updateAddOn } from "@/features/admin/actions";
 import type { AdminAddOnRow } from "@/features/admin/types";
 import { formatCurrency } from "@/lib/utils";
@@ -127,6 +129,16 @@ export function AddOnsManager({ addOns }: { addOns: AdminAddOnRow[] }) {
     });
   };
 
+  const {
+    visibleItems,
+    hasMore,
+    remaining,
+    total,
+    visibleCount,
+    showMore,
+    loadIncrement,
+  } = useViewMore(addOns, LIST_PAGE_SIZE.STACK, LIST_LOAD_MORE.STACK);
+
   return (
     <div className="space-y-8">
       <form onSubmit={onCreate} className="space-y-4 rounded-2xl border border-dashed border-primary/30 bg-primary/5 p-5">
@@ -166,7 +178,20 @@ export function AddOnsManager({ addOns }: { addOns: AdminAddOnRow[] }) {
         {addOns.length === 0 ? (
           <p className="text-sm text-muted-foreground">No add-ons yet.</p>
         ) : (
-          addOns.map((addOn) => <AddOnEditor key={addOn.id} addOn={addOn} />)
+          <>
+            {visibleItems.map((addOn) => (
+              <AddOnEditor key={addOn.id} addOn={addOn} />
+            ))}
+            <ViewMoreButton
+              hasMore={hasMore}
+              remaining={remaining}
+              total={total}
+              visibleCount={visibleCount}
+              onShowMore={showMore}
+              itemLabel="add-ons"
+              loadIncrement={loadIncrement}
+            />
+          </>
         )}
       </div>
     </div>
