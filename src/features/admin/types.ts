@@ -1,4 +1,4 @@
-import type { ApplicationStatus, BookingStatus, PaymentStatus, PaymentType, Role } from "@prisma/client";
+import type { ApplicationStatus, BookingStatus, PaymentStatus, PaymentType, Role, AdminAuditAction } from "@prisma/client";
 
 import type { AdminStatsPeriod } from "./stats-period";
 
@@ -156,4 +156,18 @@ export interface AdminDashboardStats {
   customers: AdminStatMetric;
   openApplications: AdminStatMetric;
   revenue: AdminStatMetric;
+}
+
+export interface AdminAuditLogRow {
+  id: string;
+  action: AdminAuditAction;
+  actionLabel: string;
+  entityType: string;
+  entityId: string | null;
+  entityHref: string | null;
+  summary: string;
+  actorId: string;
+  actorName: string;
+  actorPhone: string;
+  createdAt: string;
 }

@@ -66,6 +66,28 @@ enum ReviewStatus {
   REJECTED
 }
 
+enum AdminAuditAction {
+  BOOKING_STATUS_UPDATE
+  SERVICE_CREATE
+  SERVICE_UPDATE
+  SERVICE_DELETE
+  SERVICE_ADDONS_UPDATE
+  ADDON_CREATE
+  ADDON_UPDATE
+  ADDON_DELETE
+  APPLICATION_STATUS_UPDATE
+  JOB_CREATE
+  JOB_UPDATE
+  JOB_DELETE
+  USER_PROMOTE_ADMIN
+  USER_DEMOTE_ADMIN
+  GALLERY_CREATE
+  GALLERY_UPDATE
+  GALLERY_DELETE
+  REVIEW_UPDATE
+  REVIEW_DELETE
+}
+
 // ---------------------------------------------------------------------------
 // Users & Auth (phone-first; email verification optional)
 // ---------------------------------------------------------------------------
@@ -90,6 +112,7 @@ model User {
   agreements   Agreement[]
   addresses    Address[]
   reviews      Review[]
+  auditLogs    AdminAuditLog[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -406,4 +429,26 @@ model Promotion {
   isActive    Boolean  @default(true)
 
   createdAt DateTime @default(now())
+}
+
+// ---------------------------------------------------------------------------
+// Admin audit log
+// ---------------------------------------------------------------------------
+
+model AdminAuditLog {
+  id         String           @id @default(cuid())
+  actorId    String
+  actor      User             @relation(fields: [actorId], references: [id], onDelete: Restrict)
+  action     AdminAuditAction
+  entityType String
+  entityId   String?
+  summary    String
+  metadata   Json?
+
+  createdAt DateTime @default(now())
+
+  @@index([createdAt(sort: Desc)])
+  @@index([actorId])
+  @@index([action])
+  @@index([entityType, entityId])
 }

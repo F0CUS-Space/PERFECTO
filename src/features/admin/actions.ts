@@ -17,6 +17,7 @@ import {
   applicationUnderReviewEmail,
 } from "@/features/recruitment/emails";
 import { requireAdmin } from "@/server/rbac";
+import { logAdminAction } from "@/features/admin/audit-log";
 import { slugifyServiceName } from "@/features/admin/service-slug";
 import { EMPLOYMENT_TYPES, JOB_LOCATIONS } from "@/features/recruitment/job-options";
 
@@ -77,6 +78,10 @@ const addOnSchema = z.object({
   priceDollars: z.coerce.number().min(0).max(10000),
   isActive: z.boolean(),
 });
+
+function revalidateAuditLogPath() {
+  revalidatePath("/admin/audit-log");
+}
 
 function revalidateCatalogPaths(serviceId?: string, slug?: string) {
   revalidatePath("/admin/services");
@@ -252,7 +257,7 @@ export async function updateBookingStatus(
   bookingId: string,
   status: BookingStatus,
 ): Promise<AdminActionResult> {
-  await requireAdmin();
+  const admin = await requireAdmin();
 
   const parsed = bookingStatusSchema.safeParse(status);
   if (!parsed.success) {
@@ -284,6 +289,16 @@ export async function updateBookingStatus(
   revalidatePath(`/admin/bookings/${bookingId}`);
   revalidatePath("/dashboard");
 
+  await logAdminAction({
+    actorId: admin.id,
+    action: "BOOKING_STATUS_UPDATE",
+    entityType: "booking",
+    entityId: bookingId,
+    summary: `Changed booking status from ${previousStatus.replace(/_/g, " ").toLowerCase()} to ${parsed.data.replace(/_/g, " ").toLowerCase()}`,
+    metadata: { previousStatus, newStatus: parsed.data },
+  });
+  revalidateAuditLogPath();
+
   return { ok: true, notified: parsed.data === "COMPLETED", emailFailed };
 }
 
@@ -291,7 +306,7 @@ export async function updateService(
   serviceId: string,
   input: z.infer<typeof serviceUpdateSchema>,
 ): Promise<AdminActionResult> {
-  await requireAdmin();
+  const admin = await requireAdmin();
 
   const parsed = serviceUpdateSchema.safeParse(input);
   if (!parsed.success) {
@@ -325,13 +340,23 @@ export async function updateService(
 
   revalidateCatalogPaths(serviceId, service.slug);
 
+  await logAdminAction({
+    actorId: admin.id,
+    action: "SERVICE_UPDATE",
+    entityType: "service",
+    entityId: serviceId,
+    summary: `Updated service "${name}"`,
+    metadata: { slug: service.slug },
+  });
+  revalidateAuditLogPath();
+
   return { ok: true };
 }
 
 export async function createService(
   input: z.infer<typeof serviceCreateSchema>,
 ): Promise<AdminActionResult> {
-  await requireAdmin();
+  const admin = await requireAdmin();
 
   const parsed = serviceCreateSchema.safeParse(input);
   if (!parsed.success) {
@@ -370,11 +395,21 @@ export async function createService(
 
   revalidateCatalogPaths(service.id, service.slug);
 
+  await logAdminAction({
+    actorId: admin.id,
+    action: "SERVICE_CREATE",
+    entityType: "service",
+    entityId: service.id,
+    summary: `Created service "${service.name}"`,
+    metadata: { slug: service.slug },
+  });
+  revalidateAuditLogPath();
+
   return { ok: true, serviceId: service.id };
 }
 
 export async function deleteService(serviceId: string): Promise<AdminActionResult> {
-  await requireAdmin();
+  const admin = await requireAdmin();
 
   const service = await prisma.service.findUnique({
     where: { id: serviceId },
@@ -393,11 +428,29 @@ export async function deleteService(serviceId: string): Promise<AdminActionResul
       data: { isActive: false, isPopular: false },
     });
     revalidateCatalogPaths(serviceId);
+    await logAdminAction({
+      actorId: admin.id,
+      action: "SERVICE_DELETE",
+      entityType: "service",
+      entityId: serviceId,
+      summary: `Deactivated service "${service.name}" (has booking history)`,
+      metadata: { slug: service.slug, deactivated: true },
+    });
+    revalidateAuditLogPath();
     return { ok: true, deactivated: true };
   }
 
   await prisma.service.delete({ where: { id: serviceId } });
   revalidateCatalogPaths();
+  await logAdminAction({
+    actorId: admin.id,
+    action: "SERVICE_DELETE",
+    entityType: "service",
+    entityId: serviceId,
+    summary: `Deleted service "${service.name}"`,
+    metadata: { slug: service.slug },
+  });
+  revalidateAuditLogPath();
   return { ok: true };
 }
 
@@ -405,7 +458,7 @@ export async function setServiceAddOns(
   serviceId: string,
   addOnIds: string[],
 ): Promise<AdminActionResult> {
-  await requireAdmin();
+  const admin = await requireAdmin();
 
   const service = await prisma.service.findUnique({ where: { id: serviceId } });
   if (!service) {
@@ -426,13 +479,24 @@ export async function setServiceAddOns(
   ]);
 
   revalidateCatalogPaths(serviceId);
+
+  await logAdminAction({
+    actorId: admin.id,
+    action: "SERVICE_ADDONS_UPDATE",
+    entityType: "service",
+    entityId: serviceId,
+    summary: `Updated add-ons for "${service.name}" (${validIds.length} linked)`,
+    metadata: { addOnIds: validIds },
+  });
+  revalidateAuditLogPath();
+
   return { ok: true };
 }
 
 export async function createAddOn(
   input: z.infer<typeof addOnSchema>,
 ): Promise<AdminActionResult> {
-  await requireAdmin();
+  const admin = await requireAdmin();
 
   const parsed = addOnSchema.safeParse(input);
   if (!parsed.success) {
@@ -453,6 +517,14 @@ export async function createAddOn(
   });
 
   revalidateCatalogPaths();
+  await logAdminAction({
+    actorId: admin.id,
+    action: "ADDON_CREATE",
+    entityType: "addon",
+    summary: `Created add-on "${parsed.data.name}"`,
+    metadata: { name: parsed.data.name },
+  });
+  revalidateAuditLogPath();
   return { ok: true };
 }
 
@@ -460,7 +532,7 @@ export async function updateAddOn(
   addOnId: string,
   input: z.infer<typeof addOnSchema>,
 ): Promise<AdminActionResult> {
-  await requireAdmin();
+  const admin = await requireAdmin();
 
   const parsed = addOnSchema.safeParse(input);
   if (!parsed.success) {
@@ -489,11 +561,19 @@ export async function updateAddOn(
   });
 
   revalidateCatalogPaths();
+  await logAdminAction({
+    actorId: admin.id,
+    action: "ADDON_UPDATE",
+    entityType: "addon",
+    entityId: addOnId,
+    summary: `Updated add-on "${parsed.data.name}"`,
+  });
+  revalidateAuditLogPath();
   return { ok: true };
 }
 
 export async function deleteAddOn(addOnId: string): Promise<AdminActionResult> {
-  await requireAdmin();
+  const admin = await requireAdmin();
 
   const addOn = await prisma.addOn.findUnique({
     where: { id: addOnId },
@@ -512,11 +592,28 @@ export async function deleteAddOn(addOnId: string): Promise<AdminActionResult> {
       data: { isActive: false },
     });
     revalidateCatalogPaths();
+    await logAdminAction({
+      actorId: admin.id,
+      action: "ADDON_DELETE",
+      entityType: "addon",
+      entityId: addOnId,
+      summary: `Deactivated add-on "${addOn.name}" (in use)`,
+      metadata: { deactivated: true },
+    });
+    revalidateAuditLogPath();
     return { ok: true, deactivated: true };
   }
 
   await prisma.addOn.delete({ where: { id: addOnId } });
   revalidateCatalogPaths();
+  await logAdminAction({
+    actorId: admin.id,
+    action: "ADDON_DELETE",
+    entityType: "addon",
+    entityId: addOnId,
+    summary: `Deleted add-on "${addOn.name}"`,
+  });
+  revalidateAuditLogPath();
   return { ok: true };
 }
 
@@ -528,7 +625,7 @@ export async function updateApplicationStatus(
   applicationId: string,
   status: ApplicationStatus,
 ): Promise<AdminActionResult> {
-  await requireAdmin();
+  const admin = await requireAdmin();
 
   const parsed = applicationStatusSchema.safeParse(status);
   if (!parsed.success) {
@@ -596,6 +693,16 @@ export async function updateApplicationStatus(
   revalidatePath("/admin/applications");
   revalidatePath(`/admin/applications/${applicationId}`);
 
+  await logAdminAction({
+    actorId: admin.id,
+    action: "APPLICATION_STATUS_UPDATE",
+    entityType: "application",
+    entityId: applicationId,
+    summary: `Changed application for ${application.fullName} to ${status.replace(/_/g, " ").toLowerCase()}`,
+    metadata: { previousStatus: application.status, newStatus: status, position: application.position },
+  });
+  revalidateAuditLogPath();
+
   return {
     ok: true,
     notified: status !== "SUBMITTED",
@@ -629,7 +736,7 @@ const jobPostingCreateSchema = jobPostingSchema
 export async function createJobPosting(
   input: z.infer<typeof jobPostingCreateSchema>,
 ): Promise<AdminActionResult> {
-  await requireAdmin();
+  const admin = await requireAdmin();
 
   const parsed = jobPostingCreateSchema.safeParse(input);
   if (!parsed.success) {
@@ -659,6 +766,15 @@ export async function createJobPosting(
   });
 
   revalidateJobPaths(job.id);
+  await logAdminAction({
+    actorId: admin.id,
+    action: "JOB_CREATE",
+    entityType: "job",
+    entityId: job.id,
+    summary: `Created job posting "${job.title}"`,
+    metadata: { slug: job.slug },
+  });
+  revalidateAuditLogPath();
   return { ok: true, serviceId: job.id };
 }
 
@@ -666,7 +782,7 @@ export async function updateJobPosting(
   jobId: string,
   input: z.infer<typeof jobPostingSchema>,
 ): Promise<AdminActionResult> {
-  await requireAdmin();
+  const admin = await requireAdmin();
 
   const parsed = jobPostingSchema.safeParse(input);
   if (!parsed.success) {
@@ -686,11 +802,19 @@ export async function updateJobPosting(
   });
 
   revalidateJobPaths(jobId);
+  await logAdminAction({
+    actorId: admin.id,
+    action: "JOB_UPDATE",
+    entityType: "job",
+    entityId: jobId,
+    summary: `Updated job posting "${title}"`,
+  });
+  revalidateAuditLogPath();
   return { ok: true };
 }
 
 export async function deleteJobPosting(jobId: string): Promise<AdminActionResult> {
-  await requireAdmin();
+  const admin = await requireAdmin();
 
   const job = await prisma.jobPosting.findUnique({ where: { id: jobId } });
   if (!job) {
@@ -707,11 +831,28 @@ export async function deleteJobPosting(jobId: string): Promise<AdminActionResult
       data: { isActive: false },
     });
     revalidateJobPaths(jobId);
+    await logAdminAction({
+      actorId: admin.id,
+      action: "JOB_DELETE",
+      entityType: "job",
+      entityId: jobId,
+      summary: `Deactivated job posting "${job.title}" (has applications)`,
+      metadata: { deactivated: true },
+    });
+    revalidateAuditLogPath();
     return { ok: true, deactivated: true };
   }
 
   await prisma.jobPosting.delete({ where: { id: jobId } });
   revalidateJobPaths();
+  await logAdminAction({
+    actorId: admin.id,
+    action: "JOB_DELETE",
+    entityType: "job",
+    entityId: jobId,
+    summary: `Deleted job posting "${job.title}"`,
+  });
+  revalidateAuditLogPath();
   return { ok: true };
 }
 
@@ -724,7 +865,7 @@ const userIdSchema = z.object({
 });
 
 export async function promoteUserToAdminById(userId: string): Promise<AdminActionResult> {
-  await requireAdmin();
+  const admin = await requireAdmin();
 
   const parsed = userIdSchema.safeParse({ userId });
   if (!parsed.success) {
@@ -752,6 +893,16 @@ export async function promoteUserToAdminById(userId: string): Promise<AdminActio
 
   revalidatePath("/admin/team");
   revalidatePath("/admin/customers");
+
+  await logAdminAction({
+    actorId: admin.id,
+    action: "USER_PROMOTE_ADMIN",
+    entityType: "user",
+    entityId: user.id,
+    summary: `Granted admin access to ${user.phone}`,
+    metadata: { phone: user.phone, email: user.email },
+  });
+  revalidateAuditLogPath();
 
   return { ok: true, emailed };
 }
@@ -791,6 +942,16 @@ export async function demoteUserFromAdmin(userId: string): Promise<AdminActionRe
 
   revalidatePath("/admin/team");
   revalidatePath("/admin/customers");
+
+  await logAdminAction({
+    actorId: admin.id,
+    action: "USER_DEMOTE_ADMIN",
+    entityType: "user",
+    entityId: user.id,
+    summary: `Revoked admin access from ${user.phone}`,
+    metadata: { phone: user.phone, email: user.email },
+  });
+  revalidateAuditLogPath();
 
   return { ok: true, emailed };
 }
@@ -853,7 +1014,7 @@ const galleryItemSchema = z.object({
 export async function createGalleryItem(
   input: z.infer<typeof galleryItemSchema>,
 ): Promise<AdminActionResult> {
-  await requireAdmin();
+  const admin = await requireAdmin();
   const parsed = galleryItemSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.errors[0]?.message ?? "Invalid input." };
@@ -868,7 +1029,7 @@ export async function createGalleryItem(
   }
 
   const maxSort = await prisma.galleryItem.aggregate({ _max: { sortOrder: true } });
-  await prisma.galleryItem.create({
+  const item = await prisma.galleryItem.create({
     data: {
       type,
       title,
@@ -882,6 +1043,15 @@ export async function createGalleryItem(
   });
 
   revalidateGalleryPaths();
+  await logAdminAction({
+    actorId: admin.id,
+    action: "GALLERY_CREATE",
+    entityType: "gallery",
+    entityId: item.id,
+    summary: `Created gallery item "${title}"`,
+    metadata: { type, category },
+  });
+  revalidateAuditLogPath();
   return { ok: true };
 }
 
@@ -889,7 +1059,7 @@ export async function updateGalleryItem(
   id: string,
   input: z.infer<typeof galleryItemSchema>,
 ): Promise<AdminActionResult> {
-  await requireAdmin();
+  const admin = await requireAdmin();
   const parsed = galleryItemSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.errors[0]?.message ?? "Invalid input." };
@@ -915,13 +1085,33 @@ export async function updateGalleryItem(
   });
 
   revalidateGalleryPaths();
+  await logAdminAction({
+    actorId: admin.id,
+    action: "GALLERY_UPDATE",
+    entityType: "gallery",
+    entityId: id,
+    summary: `Updated gallery item "${title}"`,
+  });
+  revalidateAuditLogPath();
   return { ok: true };
 }
 
 export async function deleteGalleryItem(id: string): Promise<AdminActionResult> {
-  await requireAdmin();
+  const admin = await requireAdmin();
+
+  const item = await prisma.galleryItem.findUnique({ where: { id } });
+  if (!item) return { ok: false, error: "Gallery item not found." };
+
   await prisma.galleryItem.delete({ where: { id } });
   revalidateGalleryPaths();
+  await logAdminAction({
+    actorId: admin.id,
+    action: "GALLERY_DELETE",
+    entityType: "gallery",
+    entityId: id,
+    summary: `Deleted gallery item "${item.title}"`,
+  });
+  revalidateAuditLogPath();
   return { ok: true };
 }
 
@@ -929,7 +1119,7 @@ export async function updateReviewStatus(
   reviewId: string,
   data: { status: "APPROVED" | "REJECTED" | "PENDING"; featured: boolean },
 ): Promise<AdminActionResult> {
-  await requireAdmin();
+  const admin = await requireAdmin();
 
   await prisma.review.update({
     where: { id: reviewId },
@@ -940,12 +1130,29 @@ export async function updateReviewStatus(
   });
 
   revalidateReviewPaths();
+  await logAdminAction({
+    actorId: admin.id,
+    action: "REVIEW_UPDATE",
+    entityType: "review",
+    entityId: reviewId,
+    summary: `Set review to ${data.status.toLowerCase()}${data.featured && data.status === "APPROVED" ? " (featured)" : ""}`,
+    metadata: { status: data.status, featured: data.featured },
+  });
+  revalidateAuditLogPath();
   return { ok: true };
 }
 
 export async function deleteReview(reviewId: string): Promise<AdminActionResult> {
-  await requireAdmin();
+  const admin = await requireAdmin();
   await prisma.review.delete({ where: { id: reviewId } });
   revalidateReviewPaths();
+  await logAdminAction({
+    actorId: admin.id,
+    action: "REVIEW_DELETE",
+    entityType: "review",
+    entityId: reviewId,
+    summary: "Deleted a customer review",
+  });
+  revalidateAuditLogPath();
   return { ok: true };
 }

@@ -6,6 +6,7 @@ import type { ApplicationStatus } from "@prisma/client";
 import { AdminServiceCard } from "@/features/admin/components/admin-service-card";
 import type {
   AdminApplicationRow,
+  AdminAuditLogRow,
   AdminBookingRow,
   AdminCustomerRow,
   AdminJobPostingRow,
@@ -527,6 +528,63 @@ export function PaginatedAdminBookingsPreview({
                     >
                       View
                     </Link>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </ViewMoreSection>
+  );
+}
+
+export function PaginatedAuditLogTable({ logs }: { logs: AdminAuditLogRow[] }) {
+  return (
+    <ViewMoreSection
+      items={logs}
+      initialCount={LIST_PAGE_SIZE.TABLE}
+      step={LIST_LOAD_MORE.TABLE}
+      itemLabel="entries"
+    >
+      {(visible) => (
+        <div className="overflow-x-auto rounded-2xl border border-border">
+          <table className="w-full min-w-[920px] text-sm">
+            <thead className="border-b border-border bg-secondary/40 text-left">
+              <tr>
+                <th className="px-4 py-3 font-medium text-muted-foreground">When</th>
+                <th className="px-4 py-3 font-medium text-muted-foreground">Admin</th>
+                <th className="px-4 py-3 font-medium text-muted-foreground">Action</th>
+                <th className="px-4 py-3 font-medium text-muted-foreground">Details</th>
+                <th className="px-4 py-3 font-medium text-muted-foreground" />
+              </tr>
+            </thead>
+            <tbody>
+              {visible.map((log) => (
+                <tr key={log.id} className="border-b border-border/60 last:border-0">
+                  <td className="px-4 py-3 whitespace-nowrap text-muted-foreground">
+                    {new Date(log.createdAt).toLocaleString("en-US", {
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
+                      hour: "numeric",
+                      minute: "2-digit",
+                    })}
+                  </td>
+                  <td className="px-4 py-3">
+                    <p className="font-medium text-brand-navy">{log.actorName}</p>
+                    <p className="text-xs text-muted-foreground">{log.actorPhone}</p>
+                  </td>
+                  <td className="px-4 py-3 text-muted-foreground">{log.actionLabel}</td>
+                  <td className="px-4 py-3 text-foreground/80">{log.summary}</td>
+                  <td className="px-4 py-3 text-right">
+                    {log.entityHref ? (
+                      <Link href={log.entityHref} className="text-brand-blue hover:underline">
+                        View
+                      </Link>
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
                   </td>
                 </tr>
               ))}

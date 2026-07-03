@@ -1,6 +1,6 @@
 import "server-only";
 
-import type { ApplicationStatus, BookingStatus } from "@prisma/client";
+import type { ApplicationStatus, BookingStatus, AdminAuditAction } from "@prisma/client";
 
 import { reconcileBookingPayments } from "@/features/payments/services/reconcile-payments";
 import { prisma } from "@/lib/prisma";
@@ -13,6 +13,7 @@ import type {
   AdminAddOnRow,
   AdminApplicationDetail,
   AdminApplicationRow,
+  AdminAuditLogRow,
   AdminBookingDetail,
   AdminBookingRow,
   AdminCustomerDetail,
@@ -31,6 +32,11 @@ import {
   percentChange,
   type AdminStatsPeriod,
 } from "./stats-period";
+import {
+  adminDisplayName,
+  auditEntityHref,
+  formatAuditAction,
+} from "./audit-log";
 
 function customerDisplayName(user: {
   firstName: string | null;
@@ -657,4 +663,69 @@ export async function getAdminTeamMembers(options?: {
 /** @deprecated Use getAdminTeamMembers */
 export async function getAdminUsers(): Promise<AdminCustomerRow[]> {
   return getAdminTeamMembers();
+}
+
+export async function getAdminAuditLogs(options?: {
+  action?: AdminAuditAction;
+  actorId?: string;
+  q?: string;
+  limit?: number;
+}): Promise<AdminAuditLogRow[]> {
+  if (!isDatabaseConfigured()) return [];
+
+  const search = options?.q?.trim();
+
+  const logs = await prisma.adminAuditLog.findMany({
+    where: {
+      ...(options?.action ? { action: options.action } : {}),
+      ...(options?.actorId ? { actorId: options.actorId } : {}),
+      ...(search
+        ? {
+            OR: [
+              { summary: { contains: search, mode: "insensitive" } },
+              { entityId: { contains: search, mode: "insensitive" } },
+              { actor: { phone: { contains: search } } },
+              { actor: { firstName: { contains: search, mode: "insensitive" } } },
+              { actor: { lastName: { contains: search, mode: "insensitive" } } },
+            ],
+          }
+        : {}),
+    },
+    include: {
+      actor: {
+        select: { id: true, firstName: true, lastName: true, phone: true },
+      },
+    },
+    orderBy: { createdAt: "desc" },
+    take: options?.limit ?? 200,
+  });
+
+  return logs.map((log) => ({
+    id: log.id,
+    action: log.action,
+    actionLabel: formatAuditAction(log.action),
+    entityType: log.entityType,
+    entityId: log.entityId,
+    entityHref: auditEntityHref(log.entityType, log.entityId),
+    summary: log.summary,
+    actorId: log.actor.id,
+    actorName: adminDisplayName(log.actor),
+    actorPhone: log.actor.phone,
+    createdAt: log.createdAt.toISOString(),
+  }));
+}
+
+export async function getAdminAuditActors(): Promise<{ id: string; name: string }[]> {
+  if (!isDatabaseConfigured()) return [];
+
+  const admins = await prisma.user.findMany({
+    where: { role: "ADMIN" },
+    select: { id: true, firstName: true, lastName: true, phone: true },
+    orderBy: [{ firstName: "asc" }, { lastName: "asc" }],
+  });
+
+  return admins.map((admin) => ({
+    id: admin.id,
+    name: adminDisplayName(admin),
+  }));
 }
