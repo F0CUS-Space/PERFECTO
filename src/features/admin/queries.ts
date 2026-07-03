@@ -729,3 +729,19 @@ export async function getAdminAuditActors(): Promise<{ id: string; name: string 
     name: adminDisplayName(admin),
   }));
 }
+
+export async function getAdminPromotions() {
+  if (!isDatabaseConfigured()) return [];
+
+  const promotions = await prisma.promotion.findMany({
+    orderBy: { createdAt: "desc" },
+  });
+
+  return promotions.map((promotion) => ({
+    id: promotion.id,
+    title: promotion.title,
+    description: promotion.description,
+    isActive: promotion.isActive,
+    createdAt: promotion.createdAt.toISOString(),
+  }));
+}

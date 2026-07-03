@@ -18,6 +18,10 @@ import {
 } from "@/features/recruitment/emails";
 import { requireAdmin } from "@/server/rbac";
 import { logAdminAction } from "@/features/admin/audit-log";
+import {
+  notifyCustomersPromotion,
+  notifyCustomersServiceUpdate,
+} from "@/features/notifications/create-notifications";
 import { slugifyServiceName } from "@/features/admin/service-slug";
 import { EMPLOYMENT_TYPES, JOB_LOCATIONS } from "@/features/recruitment/job-options";
 
@@ -350,6 +354,13 @@ export async function updateService(
   });
   revalidateAuditLogPath();
 
+  if (isActive) {
+    await notifyCustomersServiceUpdate({
+      serviceName: name,
+      slug: service.slug,
+    });
+  }
+
   return { ok: true };
 }
 
@@ -404,6 +415,12 @@ export async function createService(
     metadata: { slug: service.slug },
   });
   revalidateAuditLogPath();
+
+  await notifyCustomersServiceUpdate({
+    serviceName: service.name,
+    slug: service.slug,
+    created: true,
+  });
 
   return { ok: true, serviceId: service.id };
 }
@@ -1154,5 +1171,91 @@ export async function deleteReview(reviewId: string): Promise<AdminActionResult>
     summary: "Deleted a customer review",
   });
   revalidateAuditLogPath();
+  return { ok: true };
+}
+
+const promotionSchema = z.object({
+  title: z.string().trim().min(2, "Enter a title").max(120),
+  description: z.string().trim().min(10, "Enter a description").max(2000),
+  isActive: z.boolean(),
+});
+
+function revalidatePromotionPaths() {
+  revalidatePath("/admin/promotions");
+  revalidatePath("/promotions");
+}
+
+export async function createPromotion(
+  input: z.infer<typeof promotionSchema>,
+): Promise<AdminActionResult> {
+  const admin = await requireAdmin();
+  const parsed = promotionSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.errors[0]?.message ?? "Invalid input." };
+  }
+
+  const promotion = await prisma.promotion.create({
+    data: parsed.data,
+  });
+
+  revalidatePromotionPaths();
+  await logAdminAction({
+    actorId: admin.id,
+    action: "SERVICE_CREATE",
+    entityType: "promotion",
+    entityId: promotion.id,
+    summary: `Created promotion "${promotion.title}"`,
+  });
+  revalidateAuditLogPath();
+
+  if (promotion.isActive) {
+    await notifyCustomersPromotion({
+      title: promotion.title,
+      description: promotion.description,
+      created: true,
+    });
+  }
+
+  return { ok: true };
+}
+
+export async function updatePromotion(
+  promotionId: string,
+  input: z.infer<typeof promotionSchema>,
+): Promise<AdminActionResult> {
+  const admin = await requireAdmin();
+  const parsed = promotionSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.errors[0]?.message ?? "Invalid input." };
+  }
+
+  const existing = await prisma.promotion.findUnique({ where: { id: promotionId } });
+  if (!existing) {
+    return { ok: false, error: "Promotion not found." };
+  }
+
+  const promotion = await prisma.promotion.update({
+    where: { id: promotionId },
+    data: parsed.data,
+  });
+
+  revalidatePromotionPaths();
+  await logAdminAction({
+    actorId: admin.id,
+    action: "SERVICE_UPDATE",
+    entityType: "promotion",
+    entityId: promotion.id,
+    summary: `Updated promotion "${promotion.title}"`,
+  });
+  revalidateAuditLogPath();
+
+  if (promotion.isActive) {
+    await notifyCustomersPromotion({
+      title: promotion.title,
+      description: promotion.description,
+      created: !existing.isActive,
+    });
+  }
+
   return { ok: true };
 }

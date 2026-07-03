@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { BrandLogo } from "@/components/shared/brand-logo";
+import { NotificationBell } from "@/components/shared/notification-bell";
 import { LogoutButton } from "@/features/auth/logout-button";
 import { AdminMobileNav, AdminSidebar } from "@/features/admin/components/admin-nav";
 import { ForbiddenError, requireAdmin } from "@/server/rbac";
@@ -27,6 +28,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             >
               Website
             </Link>
+            <NotificationBell />
             <LogoutButton variant="ghost" />
           </div>
         </div>

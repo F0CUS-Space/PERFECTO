@@ -6,6 +6,7 @@ import { LogoutButton } from "@/features/auth/logout-button";
 import { useAuthUser } from "@/features/auth/use-auth-user";
 import type { PublicUser } from "@/features/auth/types";
 import { Button } from "@/components/ui/button";
+import { NotificationBell } from "@/components/shared/notification-bell";
 
 export function AuthNavActions({ initialUser }: { initialUser?: PublicUser | null }) {
   const user = useAuthUser(initialUser);
@@ -34,6 +35,7 @@ export function AuthNavActions({ initialUser }: { initialUser?: PublicUser | nul
 
   return (
     <div className="hidden items-center gap-3 lg:flex">
+      <NotificationBell />
       <Button asChild variant="ghost" size="sm">
         <Link href={dashboardHref}>{user.role === "ADMIN" ? "Admin" : "Dashboard"}</Link>
       </Button>

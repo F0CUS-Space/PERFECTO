@@ -5,6 +5,7 @@ import {
   Calendar,
   ClipboardList,
   CreditCard,
+  Gift,
   History,
   Images,
   LayoutDashboard,
@@ -48,6 +49,7 @@ export const ADMIN_NAV_GROUPS: PortalNavGroup[] = [
     links: [
       { href: "/admin/gallery", label: "Gallery", icon: Images },
       { href: "/admin/reviews", label: "Reviews", icon: MessageSquare },
+      { href: "/admin/promotions", label: "Promotions", icon: Gift },
     ],
   },
   {

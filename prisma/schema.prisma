@@ -88,6 +88,15 @@ enum AdminAuditAction {
   REVIEW_DELETE
 }
 
+enum NotificationType {
+  ADMIN_NEW_BOOKING
+  ADMIN_BOOKING_CANCELLED
+  ADMIN_BOOKING_RESCHEDULED
+  CUSTOMER_SERVICE_UPDATE
+  CUSTOMER_PROMOTION
+  CUSTOMER_GENERAL_UPDATE
+}
+
 // ---------------------------------------------------------------------------
 // Users & Auth (phone-first; email verification optional)
 // ---------------------------------------------------------------------------
@@ -113,6 +122,7 @@ model User {
   addresses    Address[]
   reviews      Review[]
   auditLogs    AdminAuditLog[]
+  notifications Notification[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -453,4 +463,23 @@ model AdminAuditLog {
   @@index([actorId])
   @@index([action])
   @@index([entityType, entityId])
+}
+
+// ---------------------------------------------------------------------------
+// In-app notifications
+// ---------------------------------------------------------------------------
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      NotificationType
+  title     String
+  body      String
+  href      String?
+  readAt    DateTime?
+  createdAt DateTime         @default(now())
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([userId, readAt])
 }

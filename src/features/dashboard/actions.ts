@@ -8,6 +8,10 @@ import {
   canCustomerCancelBooking,
   canCustomerRescheduleBooking,
 } from "@/features/dashboard/booking-rules";
+import {
+  notifyAdminsBookingCancelled,
+  notifyAdminsBookingRescheduled,
+} from "@/features/notifications/create-notifications";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/server/rbac";
 
@@ -58,6 +62,8 @@ export async function cancelCustomerBooking(
     data: { status: "CANCELLED" },
   });
 
+  await notifyAdminsBookingCancelled(booking.id);
+
   revalidatePath("/dashboard/bookings");
   revalidatePath(`/dashboard/bookings/${booking.id}`);
   revalidatePath("/admin/bookings");
@@ -92,6 +98,9 @@ export async function rescheduleCustomerBooking(
     return { ok: false, error: "Choose a different date or arrival time." };
   }
 
+  const previousDate = booking.scheduledDate;
+  const previousArrivalWindow = booking.arrivalWindow;
+
   await prisma.booking.update({
     where: { id: booking.id },
     data: {
@@ -101,6 +110,8 @@ export async function rescheduleCustomerBooking(
       rescheduleCount: { increment: 1 },
     },
   });
+
+  await notifyAdminsBookingRescheduled(booking.id, previousDate, previousArrivalWindow);
 
   revalidatePath("/dashboard/bookings");
   revalidatePath(`/dashboard/bookings/${booking.id}`);
