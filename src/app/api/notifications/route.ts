@@ -10,5 +10,9 @@ export async function GET() {
   }
 
   const data = await getUserNotifications(user.id);
-  return NextResponse.json(data);
+  return NextResponse.json(data, {
+    headers: {
+      "Cache-Control": "no-store, max-age=0",
+    },
+  });
 }

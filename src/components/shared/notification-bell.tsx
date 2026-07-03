@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Bell, Check, Loader2 } from "lucide-react";
 
@@ -20,16 +21,24 @@ interface NotificationItem {
   createdAt: string;
 }
 
+const POLL_VISIBLE_MS = 8_000;
+const POLL_OPEN_MS = 4_000;
+
 export function NotificationBell({ className }: { className?: string }) {
+  const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const panelRef = useRef<HTMLDivElement>(null);
+  const loadRef = useRef<() => Promise<void>>(async () => {});
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (options?: { silent?: boolean }) => {
     try {
-      const response = await fetch("/api/notifications", { cache: "no-store" });
+      const response = await fetch("/api/notifications", {
+        cache: "no-store",
+        headers: { "Cache-Control": "no-cache" },
+      });
       if (!response.ok) return;
       const data = (await response.json()) as {
         notifications: NotificationItem[];
@@ -40,15 +49,52 @@ export function NotificationBell({ className }: { className?: string }) {
     } catch {
       // ignore
     } finally {
-      setLoading(false);
+      if (!options?.silent) {
+        setLoading(false);
+      }
     }
   }, []);
 
+  loadRef.current = load;
+
   useEffect(() => {
     void load();
-    const interval = setInterval(() => void load(), 60_000);
-    return () => clearInterval(interval);
+
+    const poll = () => {
+      if (document.visibilityState !== "visible") return;
+      void loadRef.current({ silent: true });
+    };
+
+    const interval = window.setInterval(poll, POLL_VISIBLE_MS);
+
+    const onVisible = () => {
+      if (document.visibilityState === "visible") {
+        void loadRef.current({ silent: true });
+      }
+    };
+
+    window.addEventListener("focus", onVisible);
+    document.addEventListener("visibilitychange", onVisible);
+
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener("focus", onVisible);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
   }, [load]);
+
+  // Refresh after in-app navigation without a full page reload.
+  useEffect(() => {
+    void loadRef.current({ silent: true });
+  }, [pathname]);
+
+  // Poll faster while the panel is open.
+  useEffect(() => {
+    if (!open) return;
+    void load({ silent: true });
+    const interval = window.setInterval(() => void loadRef.current({ silent: true }), POLL_OPEN_MS);
+    return () => window.clearInterval(interval);
+  }, [open, load]);
 
   useEffect(() => {
     if (!open) return;
