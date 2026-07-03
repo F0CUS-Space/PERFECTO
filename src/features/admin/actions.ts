@@ -6,6 +6,11 @@ import type { ApplicationStatus, BookingStatus } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
 import { sendEmail } from "@/lib/email";
+import { env } from "@/env";
+import {
+  adminAccessGrantedEmail,
+  adminAccessRevokedEmail,
+} from "@/features/admin/emails/role-change-emails";
 import {
   applicationAcceptedEmail,
   applicationRejectedEmail,
@@ -98,8 +103,134 @@ async function resolveUniqueSlug(preferred: string): Promise<string> {
 import { maybeSendBookingCompletionEmail } from "@/features/notifications/send-booking-completion";
 
 export type AdminActionResult =
-  | { ok: true; serviceId?: string; deactivated?: boolean; notified?: boolean; emailFailed?: boolean }
+  | { ok: true; serviceId?: string; deactivated?: boolean; notified?: boolean; emailFailed?: boolean; emailed?: boolean }
   | { ok: false; error: string };
+
+export interface TeamMemberLookup {
+  id: string;
+  firstName: string | null;
+  lastName: string | null;
+  phone: string;
+  email: string | null;
+  role: "ADMIN" | "CUSTOMER";
+  bookingCount: number;
+  createdAt: string;
+}
+
+export type TeamLookupResult =
+  | { ok: true; status: "found"; user: TeamMemberLookup }
+  | { ok: true; status: "not_found" }
+  | { ok: false; error: string };
+
+function phoneDigits(value: string): string {
+  return value.replace(/\D/g, "");
+}
+
+function toTeamMemberLookup(user: {
+  id: string;
+  firstName: string | null;
+  lastName: string | null;
+  phone: string;
+  email: string | null;
+  role: "ADMIN" | "CUSTOMER";
+  createdAt: Date;
+  _count: { bookings: number };
+}): TeamMemberLookup {
+  return {
+    id: user.id,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    phone: user.phone,
+    email: user.email,
+    role: user.role,
+    bookingCount: user._count.bookings,
+    createdAt: user.createdAt.toISOString(),
+  };
+}
+
+function pickBestPhoneMatch(
+  users: {
+    id: string;
+    firstName: string | null;
+    lastName: string | null;
+    phone: string;
+    email: string | null;
+    role: "ADMIN" | "CUSTOMER";
+    createdAt: Date;
+    _count: { bookings: number };
+  }[],
+  digits: string,
+  trimmedQuery: string,
+): TeamMemberLookup | null {
+  if (users.length === 0) return null;
+
+  const ranked = [...users].sort((a, b) => {
+    const da = phoneDigits(a.phone);
+    const db = phoneDigits(b.phone);
+    if (a.phone === trimmedQuery || da === digits) return -1;
+    if (b.phone === trimmedQuery || db === digits) return 1;
+    if (da.startsWith(digits) && !db.startsWith(digits)) return -1;
+    if (db.startsWith(digits) && !da.startsWith(digits)) return 1;
+    return da.length - db.length;
+  });
+
+  return toTeamMemberLookup(ranked[0]!);
+}
+
+async function sendRoleChangeEmail(
+  user: { email: string | null; firstName: string | null; lastName: string | null },
+  granted: boolean,
+): Promise<boolean> {
+  if (!user.email) return false;
+
+  const name = [user.firstName, user.lastName].filter(Boolean).join(" ") || "there";
+  const appUrl = env.NEXT_PUBLIC_APP_URL;
+
+  try {
+    const result = await sendEmail({
+      to: user.email,
+      subject: granted
+        ? "You now have admin access — Perfecto Cleaning Services"
+        : "Your admin access has been updated — Perfecto Cleaning Services",
+      html: granted
+        ? adminAccessGrantedEmail({ name, appUrl })
+        : adminAccessRevokedEmail({ name, appUrl }),
+    });
+    return !result.skipped;
+  } catch (error) {
+    console.error("[team] role change email failed", error);
+    return false;
+  }
+}
+
+/** Live lookup while admin types a phone number. */
+export async function lookupUserForTeamAccess(phoneQuery: string): Promise<TeamLookupResult> {
+  await requireAdmin();
+
+  const trimmed = phoneQuery.trim();
+  const digits = phoneDigits(trimmed);
+  if (digits.length < 4) {
+    return { ok: true, status: "not_found" };
+  }
+
+  const users = await prisma.user.findMany({
+    where: {
+      OR: [
+        { phone: { contains: trimmed } },
+        { phone: { contains: digits } },
+      ],
+    },
+    include: { _count: { select: { bookings: true } } },
+    take: 10,
+  });
+
+  const match = pickBestPhoneMatch(users, digits, trimmed);
+  if (!match) {
+    return { ok: true, status: "not_found" };
+  }
+
+  return { ok: true, status: "found", user: match };
+}
 
 export async function updateBookingStatus(
   bookingId: string,
@@ -593,10 +724,12 @@ export async function promoteUserToAdminById(userId: string): Promise<AdminActio
     data: { role: "ADMIN" },
   });
 
+  const emailed = await sendRoleChangeEmail(user, true);
+
   revalidatePath("/admin/team");
   revalidatePath("/admin/customers");
 
-  return { ok: true };
+  return { ok: true, emailed };
 }
 
 export async function demoteUserFromAdmin(userId: string): Promise<AdminActionResult> {
@@ -630,10 +763,12 @@ export async function demoteUserFromAdmin(userId: string): Promise<AdminActionRe
     data: { role: "CUSTOMER" },
   });
 
+  const emailed = await sendRoleChangeEmail(user, false);
+
   revalidatePath("/admin/team");
   revalidatePath("/admin/customers");
 
-  return { ok: true };
+  return { ok: true, emailed };
 }
 
 export async function promoteUserToAdmin(phone: string): Promise<AdminActionResult> {
