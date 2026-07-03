@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { updateService } from "@/features/admin/actions";
+import { ServiceImageUpload } from "@/features/admin/components/service-image-upload";
+import { StringListEditor } from "@/features/admin/components/string-list-editor";
 import type { AdminServiceDetail, AdminServiceRow } from "@/features/admin/types";
 import { formatCurrency } from "@/lib/utils";
 
@@ -15,11 +17,16 @@ export function ServiceEditForm({ service }: { service: AdminServiceRow | AdminS
   const router = useRouter();
   const [name, setName] = useState(service.name);
   const [description, setDescription] = useState(service.description);
+  const [longDescription, setLongDescription] = useState(service.longDescription ?? "");
+  const [includes, setIncludes] = useState<string[]>(service.includes ?? []);
+  const [idealFor, setIdealFor] = useState<string[]>(service.idealFor ?? []);
+  const [pricingNote, setPricingNote] = useState(service.pricingNote ?? "");
   const [basePriceDollars, setBasePriceDollars] = useState((service.basePrice / 100).toFixed(2));
   const [isActive, setIsActive] = useState(service.isActive);
   const [isPopular, setIsPopular] = useState(service.isPopular);
   const [sortOrder, setSortOrder] = useState(String(service.sortOrder));
   const [imageUrl, setImageUrl] = useState(service.imageUrl ?? "");
+  const [imagePreview, setImagePreview] = useState<string | null>(service.image);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [pending, startTransition] = useTransition();
@@ -31,6 +38,10 @@ export function ServiceEditForm({ service }: { service: AdminServiceRow | AdminS
       const result = await updateService(service.id, {
         name,
         description,
+        longDescription: longDescription || undefined,
+        includes,
+        idealFor,
+        pricingNote: pricingNote || undefined,
         basePriceDollars: Number(basePriceDollars),
         isActive,
         isPopular,
@@ -47,7 +58,7 @@ export function ServiceEditForm({ service }: { service: AdminServiceRow | AdminS
   };
 
   return (
-    <div className="space-y-4 rounded-2xl border border-border bg-card p-5">
+    <div className="space-y-6 rounded-2xl border border-border bg-card p-5">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
           <p className="font-semibold text-brand-navy">{service.slug}</p>
@@ -76,7 +87,7 @@ export function ServiceEditForm({ service }: { service: AdminServiceRow | AdminS
           />
         </div>
         <div className="space-y-2 sm:col-span-2">
-          <Label htmlFor={`desc-${service.id}`}>Description</Label>
+          <Label htmlFor={`desc-${service.id}`}>Short description</Label>
           <Textarea
             id={`desc-${service.id}`}
             value={description}
@@ -105,18 +116,51 @@ export function ServiceEditForm({ service }: { service: AdminServiceRow | AdminS
             onChange={(e) => setSortOrder(e.target.value)}
           />
         </div>
-        <div className="space-y-2 sm:col-span-2">
-          <Label htmlFor={`image-${service.id}`}>Image URL</Label>
-          <Input
-            id={`image-${service.id}`}
-            value={imageUrl}
-            onChange={(e) => setImageUrl(e.target.value)}
-            placeholder="/images/service-residential.png"
+      </div>
+
+      <div className="space-y-4 border-t border-border pt-4">
+        <h3 className="font-semibold text-brand-navy">Service page content</h3>
+        <div className="space-y-2">
+          <Label htmlFor={`long-${service.id}`}>Long description</Label>
+          <Textarea
+            id={`long-${service.id}`}
+            value={longDescription}
+            onChange={(e) => setLongDescription(e.target.value)}
+            rows={4}
           />
-          <p className="text-xs text-muted-foreground">
-            Leave blank to use the default image for this service slug.
-          </p>
         </div>
+        <StringListEditor
+          id={`includes-${service.id}`}
+          label="What's included"
+          hint="One line per bullet point."
+          value={includes}
+          onChange={setIncludes}
+        />
+        <StringListEditor
+          id={`ideal-${service.id}`}
+          label="Ideal for"
+          hint="One line per tag."
+          value={idealFor}
+          onChange={setIdealFor}
+          rows={3}
+        />
+        <div className="space-y-2">
+          <Label htmlFor={`pricing-${service.id}`}>Pricing note</Label>
+          <Textarea
+            id={`pricing-${service.id}`}
+            value={pricingNote}
+            onChange={(e) => setPricingNote(e.target.value)}
+            rows={3}
+          />
+        </div>
+        <ServiceImageUpload
+          imageKey={imageUrl}
+          previewUrl={imagePreview}
+          onChange={(key, preview) => {
+            setImageUrl(key);
+            setImagePreview(preview);
+          }}
+        />
       </div>
 
       <label className="flex items-center gap-2 text-sm">

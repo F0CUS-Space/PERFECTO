@@ -28,19 +28,34 @@ const bookingStatusSchema = z.enum([
   "CANCELLED",
 ]);
 
+const serviceImageRef = z
+  .string()
+  .trim()
+  .refine(
+    (val) => {
+      if (!val) return true;
+      if (val.startsWith("/") || val.startsWith("services/") || val.startsWith("gallery/")) {
+        return true;
+      }
+      return z.string().url().safeParse(val).success;
+    },
+    { message: "Invalid image reference." },
+  )
+  .optional()
+  .or(z.literal(""));
+
 const serviceUpdateSchema = z.object({
   name: z.string().min(2).max(120),
   description: z.string().min(10).max(2000),
+  longDescription: z.string().max(5000).optional().or(z.literal("")),
+  includes: z.array(z.string().trim().min(1).max(200)).max(25).default([]),
+  idealFor: z.array(z.string().trim().min(1).max(100)).max(15).default([]),
+  pricingNote: z.string().max(1000).optional().or(z.literal("")),
   basePriceDollars: z.coerce.number().min(0).max(100000),
   isActive: z.boolean(),
   isPopular: z.boolean(),
   sortOrder: z.coerce.number().int().min(0).max(999),
-  imageUrl: z
-    .string()
-    .trim()
-    .url("Enter a valid image URL")
-    .optional()
-    .or(z.literal("")),
+  imageUrl: serviceImageRef,
 });
 
 const serviceCreateSchema = serviceUpdateSchema
@@ -63,11 +78,12 @@ const addOnSchema = z.object({
   isActive: z.boolean(),
 });
 
-function revalidateCatalogPaths(serviceId?: string) {
+function revalidateCatalogPaths(serviceId?: string, slug?: string) {
   revalidatePath("/admin/services");
   if (serviceId) revalidatePath(`/admin/services/${serviceId}`);
   revalidatePath("/admin/add-ons");
   revalidatePath("/services");
+  if (slug) revalidatePath(`/services/${slug}`);
   revalidatePath("/book");
 }
 
@@ -287,7 +303,7 @@ export async function updateService(
     return { ok: false, error: "Service not found." };
   }
 
-  const { name, description, basePriceDollars, isActive, isPopular, sortOrder, imageUrl } =
+  const { name, description, longDescription, includes, idealFor, pricingNote, basePriceDollars, isActive, isPopular, sortOrder, imageUrl } =
     parsed.data;
 
   await prisma.service.update({
@@ -295,6 +311,10 @@ export async function updateService(
     data: {
       name,
       description,
+      longDescription: longDescription?.trim() || null,
+      includes,
+      idealFor,
+      pricingNote: pricingNote?.trim() || null,
       basePrice: Math.round(basePriceDollars * 100),
       isActive,
       isPopular,
@@ -303,7 +323,7 @@ export async function updateService(
     },
   });
 
-  revalidateCatalogPaths(serviceId);
+  revalidateCatalogPaths(serviceId, service.slug);
 
   return { ok: true };
 }
@@ -318,7 +338,7 @@ export async function createService(
     return { ok: false, error: parsed.error.errors[0]?.message ?? "Invalid input." };
   }
 
-  const { name, description, basePriceDollars, isActive, isPopular, sortOrder, imageUrl, slug } =
+  const { name, description, longDescription, includes, idealFor, pricingNote, basePriceDollars, isActive, isPopular, sortOrder, imageUrl, slug } =
     parsed.data;
 
   const baseSlug = slug?.trim() || slugifyServiceName(name);
@@ -336,6 +356,10 @@ export async function createService(
       slug: uniqueSlug,
       name,
       description,
+      longDescription: longDescription?.trim() || null,
+      includes,
+      idealFor,
+      pricingNote: pricingNote?.trim() || null,
       basePrice: Math.round(basePriceDollars * 100),
       isActive,
       isPopular,
@@ -344,7 +368,7 @@ export async function createService(
     },
   });
 
-  revalidateCatalogPaths(service.id);
+  revalidateCatalogPaths(service.id, service.slug);
 
   return { ok: true, serviceId: service.id };
 }

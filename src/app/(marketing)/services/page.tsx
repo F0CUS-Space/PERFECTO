@@ -7,6 +7,7 @@ import { Section, SectionHeading } from "@/components/shared/section";
 import { ServiceCard } from "@/components/shared/service-card";
 import { PageHero } from "@/components/shared/page-hero";
 import { Reveal } from "@/components/shared/reveal";
+import { resolveServiceImageUrl } from "@/features/services-catalog/display";
 import { getActiveServices } from "@/features/services-catalog/queries";
 
 export const metadata: Metadata = {
@@ -21,6 +22,12 @@ export const dynamic = "force-dynamic";
 
 export default async function ServicesPage() {
   const services = await getActiveServices();
+  const servicesWithImages = await Promise.all(
+    services.map(async (service) => ({
+      service,
+      imageSrc: await resolveServiceImageUrl(service.imageUrl, service.slug),
+    })),
+  );
 
   return (
     <>
@@ -36,9 +43,9 @@ export default async function ServicesPage() {
 
       <Section>
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {services.map((service, i) => (
+          {servicesWithImages.map(({ service, imageSrc }, i) => (
             <Reveal key={service.id} delay={(i % 3) * 80}>
-              <ServiceCard service={service} />
+              <ServiceCard service={service} imageSrc={imageSrc} />
             </Reveal>
           ))}
         </div>

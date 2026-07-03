@@ -10,10 +10,12 @@ import { Section } from "@/components/shared/section";
 import { PageHero } from "@/components/shared/page-hero";
 import { Tilt } from "@/components/shared/tilt";
 import { Reveal } from "@/components/shared/reveal";
+import {
+  getServicePageContent,
+  resolveServiceImageUrl,
+} from "@/features/services-catalog/display";
 import { getServiceBySlug, getServiceSlugs } from "@/features/services-catalog/queries";
-import { serviceDetails, defaultServiceDetail } from "@/content/services-detail";
 
-// Runtime SSR — catalog comes from PostgreSQL; no DB required at image build time.
 export const dynamic = "force-dynamic";
 
 export async function generateStaticParams() {
@@ -44,7 +46,8 @@ export default async function ServiceDetailPage({
   const service = await getServiceBySlug(slug);
   if (!service) notFound();
 
-  const detail = serviceDetails[service.slug] ?? defaultServiceDetail;
+  const detail = getServicePageContent(service);
+  const heroImage = await resolveServiceImageUrl(service.imageUrl, service.slug);
 
   return (
     <>
@@ -58,27 +61,23 @@ export default async function ServiceDetailPage({
         title={service.name}
         description={detail.longDescription}
         actions={
-          <>
-            <Button asChild size="lg">
-              <Link href="/book">
-                Book Now <ArrowRight className="h-4 w-4" />
-              </Link>
-            </Button>
-            <Button asChild size="lg" variant="outline">
-              <Link href="/book">Book Now</Link>
-            </Button>
-          </>
+          <Button asChild size="lg">
+            <Link href="/book">
+              Book Now <ArrowRight className="h-4 w-4" />
+            </Link>
+          </Button>
         }
         media={
           <Tilt className="relative">
             <div className="relative aspect-[4/3] w-full overflow-hidden rounded-3xl border border-white/60 shadow-soft">
               <Image
-                src={detail.image}
+                src={heroImage}
                 alt={service.name}
                 fill
                 priority
                 sizes="(max-width: 768px) 100vw, 50vw"
                 className="object-cover"
+                unoptimized={heroImage.startsWith("http")}
               />
               <div className={cn("absolute inset-0 bg-gradient-to-tr mix-blend-multiply opacity-40", detail.accent)} />
               <span className="absolute left-6 top-6 inline-flex items-center gap-2 rounded-full bg-card px-4 py-1.5 text-xs font-medium text-brand-green shadow-card">
@@ -126,10 +125,7 @@ export default async function ServiceDetailPage({
 
             <div className="mt-10 rounded-2xl border border-border bg-card p-6 shadow-card">
               <h3 className="text-lg font-semibold text-brand-navy">Transparent pricing</h3>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Your final price depends on your space and selected add-ons. Use our instant quote
-                calculator to see an estimate in seconds — no surprises.
-              </p>
+              <p className="mt-1 text-sm text-muted-foreground">{detail.pricingNote}</p>
               <Button asChild className="mt-5">
                 <Link href="/book">Calculate my price</Link>
               </Button>

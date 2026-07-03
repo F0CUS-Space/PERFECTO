@@ -123,6 +123,10 @@ model Service {
   slug        String  @unique
   name        String
   description String
+  longDescription String? @db.Text
+  includes    String[] @default([])
+  idealFor    String[] @default([])
+  pricingNote String? @db.Text
   // Base price in cents to avoid floating point issues.
   basePrice   Int
   imageUrl    String?

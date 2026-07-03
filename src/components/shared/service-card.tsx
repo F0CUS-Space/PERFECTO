@@ -6,10 +6,17 @@ import type { Service } from "@prisma/client";
 
 import { cn, formatCurrency } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
-import { serviceDetails, defaultServiceDetail } from "@/content/services-detail";
+import { defaultServiceDetail, serviceDetails } from "@/content/services-detail";
 
-export function ServiceCard({ service }: { service: Service }) {
+export function ServiceCard({
+  service,
+  imageSrc,
+}: {
+  service: Service;
+  imageSrc?: string;
+}) {
   const detail = serviceDetails[service.slug] ?? defaultServiceDetail;
+  const src = imageSrc ?? detail.image;
 
   return (
     <Link
@@ -18,11 +25,12 @@ export function ServiceCard({ service }: { service: Service }) {
     >
       <div className="relative aspect-[16/10] w-full overflow-hidden">
         <Image
-          src={detail.image}
+          src={src}
           alt={service.name}
           fill
           sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
           className="object-cover transition-transform duration-500 group-hover:scale-105"
+          unoptimized={src.startsWith("http")}
         />
         <div className={cn("absolute inset-0 bg-gradient-to-tr mix-blend-multiply opacity-50", detail.accent)} />
         {service.isPopular ? (

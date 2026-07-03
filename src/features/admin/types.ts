@@ -80,6 +80,10 @@ export interface AdminServiceRow {
   slug: string;
   name: string;
   description: string;
+  longDescription: string | null;
+  includes: string[];
+  idealFor: string[];
+  pricingNote: string | null;
   basePrice: number;
   isActive: boolean;
   isPopular: boolean;

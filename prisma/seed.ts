@@ -1,5 +1,7 @@
 import { PrismaClient, Role } from "@prisma/client";
 
+import { serviceDetails } from "../src/content/services-detail";
+
 const prisma = new PrismaClient();
 
 async function main() {
@@ -72,10 +74,19 @@ async function main() {
   ];
 
   for (const service of services) {
+    const detail = serviceDetails[service.slug];
+    const payload = {
+      ...service,
+      longDescription: detail?.longDescription ?? null,
+      includes: detail?.includes ?? [],
+      idealFor: detail?.idealFor ?? [],
+      pricingNote: null,
+      imageUrl: detail?.image ?? null,
+    };
     await prisma.service.upsert({
       where: { slug: service.slug },
-      update: service,
-      create: service,
+      update: payload,
+      create: payload,
     });
   }
 

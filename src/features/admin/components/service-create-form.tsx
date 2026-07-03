@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { createService } from "@/features/admin/actions";
+import { ServiceImageUpload } from "@/features/admin/components/service-image-upload";
+import { StringListEditor } from "@/features/admin/components/string-list-editor";
 import { slugifyServiceName } from "@/features/admin/service-slug";
 
 export function ServiceCreateForm() {
@@ -15,8 +17,13 @@ export function ServiceCreateForm() {
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
   const [description, setDescription] = useState("");
+  const [longDescription, setLongDescription] = useState("");
+  const [includes, setIncludes] = useState<string[]>([]);
+  const [idealFor, setIdealFor] = useState<string[]>([]);
+  const [pricingNote, setPricingNote] = useState("");
   const [basePriceDollars, setBasePriceDollars] = useState("120.00");
   const [imageUrl, setImageUrl] = useState("");
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isActive, setIsActive] = useState(true);
   const [isPopular, setIsPopular] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -37,6 +44,10 @@ export function ServiceCreateForm() {
         name,
         slug: slug || undefined,
         description,
+        longDescription: longDescription || undefined,
+        includes,
+        idealFor,
+        pricingNote: pricingNote || undefined,
         basePriceDollars: Number(basePriceDollars),
         imageUrl: imageUrl || undefined,
         isActive,
@@ -54,73 +65,123 @@ export function ServiceCreateForm() {
   };
 
   return (
-    <form onSubmit={onSubmit} className="mx-auto max-w-xl space-y-4 rounded-2xl border border-border bg-card p-5">
-      <div className="space-y-2">
-        <Label htmlFor="new-name">Name</Label>
-        <Input id="new-name" required value={name} onChange={(e) => onNameChange(e.target.value)} />
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="new-slug">URL slug</Label>
-        <Input
-          id="new-slug"
-          value={slug}
-          onChange={(e) => setSlug(e.target.value)}
-          placeholder="residential-cleaning"
-        />
-        <p className="text-xs text-muted-foreground">Lowercase letters, numbers, and hyphens only.</p>
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="new-desc">Description</Label>
-        <Textarea
-          id="new-desc"
-          required
-          rows={4}
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-        />
-      </div>
-      <div className="grid gap-4 sm:grid-cols-2">
+    <form onSubmit={onSubmit} className="mx-auto max-w-2xl space-y-6 rounded-2xl border border-border bg-card p-5">
+      <div className="space-y-4">
+        <h2 className="font-semibold text-brand-navy">Basics</h2>
         <div className="space-y-2">
-          <Label htmlFor="new-price">Base price (USD)</Label>
+          <Label htmlFor="new-name">Name</Label>
+          <Input id="new-name" required value={name} onChange={(e) => onNameChange(e.target.value)} />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="new-slug">URL slug</Label>
           <Input
-            id="new-price"
-            type="number"
-            min={0}
-            step={0.01}
+            id="new-slug"
+            value={slug}
+            onChange={(e) => setSlug(e.target.value)}
+            placeholder="residential-cleaning"
+          />
+          <p className="text-xs text-muted-foreground">Lowercase letters, numbers, and hyphens only.</p>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="new-desc">Short description</Label>
+          <Textarea
+            id="new-desc"
             required
-            value={basePriceDollars}
-            onChange={(e) => setBasePriceDollars(e.target.value)}
+            rows={3}
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Shown on service cards and listings."
           />
         </div>
-        <div className="space-y-2 sm:col-span-2">
-          <Label htmlFor="new-image">Image URL (optional)</Label>
-          <Input
-            id="new-image"
-            type="url"
-            value={imageUrl}
-            onChange={(e) => setImageUrl(e.target.value)}
-            placeholder="/images/service-residential.png"
-          />
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="new-price">Base price (USD)</Label>
+            <Input
+              id="new-price"
+              type="number"
+              min={0}
+              step={0.01}
+              required
+              value={basePriceDollars}
+              onChange={(e) => setBasePriceDollars(e.target.value)}
+            />
+          </div>
         </div>
       </div>
-      <label className="flex items-center gap-2 text-sm">
-        <input
-          type="checkbox"
-          checked={isActive}
-          onChange={(e) => setIsActive(e.target.checked)}
-          className="h-4 w-4 accent-primary"
+
+      <div className="space-y-4 border-t border-border pt-4">
+        <h2 className="font-semibold text-brand-navy">Service page content</h2>
+        <p className="text-sm text-muted-foreground">
+          This appears on the public service detail page (What&apos;s included, Ideal for, etc.).
+        </p>
+        <div className="space-y-2">
+          <Label htmlFor="new-long-desc">Long description</Label>
+          <Textarea
+            id="new-long-desc"
+            rows={4}
+            value={longDescription}
+            onChange={(e) => setLongDescription(e.target.value)}
+            placeholder="Hero paragraph on the service page."
+          />
+        </div>
+        <StringListEditor
+          id="new-includes"
+          label="What's included"
+          hint="One line per bullet point."
+          value={includes}
+          onChange={setIncludes}
+          placeholder={"Dusting of all accessible surfaces\nVacuuming and mopping of all floors"}
         />
-        Active in booking catalog
-      </label>
-      <label className="flex items-center gap-2 text-sm">
-        <input
-          type="checkbox"
-          checked={isPopular}
-          onChange={(e) => setIsPopular(e.target.checked)}
-          className="h-4 w-4 accent-primary"
+        <StringListEditor
+          id="new-ideal-for"
+          label="Ideal for"
+          hint="One line per tag."
+          value={idealFor}
+          onChange={setIdealFor}
+          placeholder={"Busy households\nWeekly or biweekly upkeep"}
+          rows={3}
         />
-        Mark as popular
-      </label>
+        <div className="space-y-2">
+          <Label htmlFor="new-pricing-note">Pricing note (optional)</Label>
+          <Textarea
+            id="new-pricing-note"
+            rows={3}
+            value={pricingNote}
+            onChange={(e) => setPricingNote(e.target.value)}
+            placeholder="Text shown in the Transparent pricing box."
+          />
+        </div>
+        <ServiceImageUpload
+          imageKey={imageUrl}
+          previewUrl={imagePreview}
+          onChange={(key, preview) => {
+            setImageUrl(key);
+            setImagePreview(preview);
+          }}
+        />
+      </div>
+
+      <div className="space-y-3 border-t border-border pt-4">
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={isActive}
+            onChange={(e) => setIsActive(e.target.checked)}
+            className="h-4 w-4 accent-primary"
+          />
+          Active in booking catalog
+        </label>
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={isPopular}
+            onChange={(e) => setIsPopular(e.target.checked)}
+            className="h-4 w-4 accent-primary"
+          />
+          Mark as popular
+        </label>
+      </div>
+
       {error && <p className="text-sm text-destructive">{error}</p>}
       <Button type="submit" disabled={pending}>
         {pending ? "Creating…" : "Create service"}

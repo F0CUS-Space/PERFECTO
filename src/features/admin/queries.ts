@@ -7,7 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { isDatabaseConfigured } from "@/lib/db-ready";
 import { getViewUrl } from "@/lib/s3";
 import { isS3Configured } from "@/lib/s3-ready";
-import { getServiceImage } from "@/lib/service-image";
+import { resolveServiceImageUrl } from "@/features/services-catalog/display";
 
 import type {
   AdminAddOnRow,
@@ -390,28 +390,36 @@ export async function getAdminPayments(): Promise<AdminPaymentRow[]> {
   }));
 }
 
-function mapServiceRow(service: {
+async function mapServiceRow(service: {
   id: string;
   slug: string;
   name: string;
   description: string;
+  longDescription: string | null;
+  includes: string[];
+  idealFor: string[];
+  pricingNote: string | null;
   basePrice: number;
   isActive: boolean;
   isPopular: boolean;
   sortOrder: number;
   imageUrl: string | null;
-}): AdminServiceRow {
+}): Promise<AdminServiceRow> {
   return {
     id: service.id,
     slug: service.slug,
     name: service.name,
     description: service.description,
+    longDescription: service.longDescription,
+    includes: service.includes,
+    idealFor: service.idealFor,
+    pricingNote: service.pricingNote,
     basePrice: service.basePrice,
     isActive: service.isActive,
     isPopular: service.isPopular,
     sortOrder: service.sortOrder,
     imageUrl: service.imageUrl,
-    image: getServiceImage(service.slug, service.imageUrl),
+    image: await resolveServiceImageUrl(service.imageUrl, service.slug),
   };
 }
 
@@ -422,7 +430,7 @@ export async function getAdminServices(): Promise<AdminServiceRow[]> {
     orderBy: { sortOrder: "asc" },
   });
 
-  return services.map(mapServiceRow);
+  return Promise.all(services.map(mapServiceRow));
 }
 
 export async function getAdminServiceById(id: string): Promise<AdminServiceDetail | null> {
@@ -439,7 +447,7 @@ export async function getAdminServiceById(id: string): Promise<AdminServiceDetai
   if (!service) return null;
 
   return {
-    ...mapServiceRow(service),
+    ...await mapServiceRow(service),
     linkedAddOnIds: service.addOns.map((link) => link.addOnId),
     bookingCount: service._count.bookings,
   };
