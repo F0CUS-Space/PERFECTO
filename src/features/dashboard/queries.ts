@@ -87,6 +87,7 @@ export async function getCustomerBookingById(
       service: { select: { name: true } },
       invoice: { select: { number: true } },
       agreement: { select: { signatureName: true, signedAt: true } },
+      review: { select: { id: true } },
     },
   });
 
@@ -131,6 +132,7 @@ export async function getCustomerBookingById(
     signedAt: booking.agreement?.signedAt?.toISOString() ?? null,
     fullyPaid,
     depositSatisfied,
+    hasReview: Boolean(booking.review),
   };
 }
 

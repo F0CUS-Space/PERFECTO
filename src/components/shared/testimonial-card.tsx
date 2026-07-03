@@ -1,9 +1,14 @@
-import type { Testimonial } from "@/content/testimonials";
-
 import { Card, CardContent } from "@/components/ui/card";
 import { StarRating } from "@/components/shared/star-rating";
 
-export function TestimonialCard({ testimonial }: { testimonial: Testimonial }) {
+export type TestimonialData = {
+  name: string;
+  location: string;
+  rating: number;
+  quote: string;
+};
+
+export function TestimonialCard({ testimonial }: { testimonial: TestimonialData }) {
   return (
     <Card className="h-full">
       <CardContent className="flex h-full flex-col gap-4 p-6">

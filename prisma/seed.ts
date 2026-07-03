@@ -165,6 +165,56 @@ async function main() {
   }
   console.log(`Seeded ${jobPostings.length} job postings.`);
 
+  const gallerySeed = [
+    {
+      type: "BEFORE_AFTER" as const,
+      title: "Living room reset",
+      category: "Residential",
+      beforeUrl: "/images/gallery-living-before.png",
+      afterUrl: "/images/gallery-living-after.png",
+      sortOrder: 1,
+    },
+    {
+      type: "BEFORE_AFTER" as const,
+      title: "Kitchen deep clean",
+      category: "Deep Clean",
+      beforeUrl: "/images/gallery-kitchen-before.png",
+      afterUrl: "/images/gallery-kitchen-after.png",
+      sortOrder: 2,
+    },
+    {
+      type: "CARD" as const,
+      title: "Sparkling Living Room",
+      category: "Residential",
+      imageUrl: "/images/service-residential.png",
+      sortOrder: 3,
+    },
+    {
+      type: "CARD" as const,
+      title: "Spotless Kitchen",
+      category: "Deep Clean",
+      imageUrl: "/images/service-recurring.png",
+      sortOrder: 4,
+    },
+    {
+      type: "CARD" as const,
+      title: "Polished Office",
+      category: "Office",
+      imageUrl: "/images/service-office.png",
+      sortOrder: 5,
+    },
+  ];
+
+  for (const item of gallerySeed) {
+    const existing = await prisma.galleryItem.findFirst({
+      where: { title: item.title, type: item.type },
+    });
+    if (!existing) {
+      await prisma.galleryItem.create({ data: { ...item, isActive: true } });
+    }
+  }
+  console.log(`Seeded ${gallerySeed.length} gallery items.`);
+
   // --- Promotions (display only in V1.0) ---
   const promo = await prisma.promotion.findFirst({
     where: { title: "First-Time Customer Offer" },

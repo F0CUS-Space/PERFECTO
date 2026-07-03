@@ -11,8 +11,10 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { BookingStatusBadge } from "@/features/dashboard/components/booking-status-badge";
+import { BookingReviewForm } from "@/features/dashboard/components/booking-review-form";
 import { getCustomerBookingById } from "@/features/dashboard/queries";
 import { PayDepositButton } from "@/features/payments/components/pay-deposit-button";
+import { displayArrivalTime } from "@/lib/format-arrival-time";
 import { isStripeConfigured } from "@/lib/stripe-ready";
 import { formatCurrency } from "@/lib/utils";
 import { getCurrentUser } from "@/server/auth";
@@ -21,13 +23,15 @@ export const dynamic = "force-dynamic";
 
 interface PageProps {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ review?: string }>;
 }
 
-export default async function DashboardBookingDetailPage({ params }: PageProps) {
+export default async function DashboardBookingDetailPage({ params, searchParams }: PageProps) {
   const user = await getCurrentUser();
   if (!user) return null;
 
   const { id } = await params;
+  const { review } = await searchParams;
   const booking = await getCustomerBookingById(user.id, id);
 
   if (!booking) {
@@ -37,6 +41,7 @@ export default async function DashboardBookingDetailPage({ params }: PageProps) 
   const amountDue = Math.max(booking.totalAmount - booking.amountPaid, 0);
   const needsPayment = !booking.depositSatisfied && booking.status === "PENDING_PAYMENT";
   const paymentsEnabled = isStripeConfigured();
+  const canReview = booking.status === "COMPLETED" && !booking.hasReview;
 
   return (
     <div className="container py-8 md:py-12">
@@ -69,8 +74,10 @@ export default async function DashboardBookingDetailPage({ params }: PageProps) 
               </dd>
             </div>
             <div>
-              <dt className="text-muted-foreground">Arrival window</dt>
-              <dd className="font-medium text-brand-navy">{booking.arrivalWindow}</dd>
+              <dt className="text-muted-foreground">Arrival time</dt>
+              <dd className="font-medium text-brand-navy">
+                {displayArrivalTime(booking.arrivalWindow)}
+              </dd>
             </div>
             <div className="sm:col-span-2">
               <dt className="text-muted-foreground">Address</dt>
@@ -142,6 +149,20 @@ export default async function DashboardBookingDetailPage({ params }: PageProps) 
           {booking.fullyPaid && (
             <p className="rounded-xl bg-accent/10 px-4 py-3 text-sm text-brand-navy">
               Paid in full — no balance remaining.
+            </p>
+          )}
+
+          {canReview && (
+            <BookingReviewForm
+              bookingId={booking.id}
+              serviceName={booking.serviceName}
+              autoFocus={review === "1"}
+            />
+          )}
+
+          {booking.hasReview && (
+            <p className="rounded-xl bg-secondary/40 px-4 py-3 text-sm text-muted-foreground">
+              Thanks — you already submitted a review for this booking.
             </p>
           )}
 

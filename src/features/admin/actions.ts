@@ -95,6 +95,8 @@ async function resolveUniqueSlug(preferred: string): Promise<string> {
   }
 }
 
+import { maybeSendBookingCompletionEmail } from "@/features/notifications/send-booking-completion";
+
 export type AdminActionResult =
   | { ok: true; serviceId?: string; deactivated?: boolean; notified?: boolean; emailFailed?: boolean }
   | { ok: false; error: string };
@@ -115,17 +117,27 @@ export async function updateBookingStatus(
     return { ok: false, error: "Booking not found." };
   }
 
+  const previousStatus = booking.status;
+
   await prisma.booking.update({
     where: { id: bookingId },
     data: { status: parsed.data },
   });
+
+  let emailFailed = false;
+  if (parsed.data === "COMPLETED" && previousStatus !== "COMPLETED") {
+    const emailResult = await maybeSendBookingCompletionEmail(bookingId);
+    if (!emailResult.sent && emailResult.reason !== "already_sent" && emailResult.reason !== "no_customer_email") {
+      emailFailed = emailResult.reason === "send_failed" || emailResult.reason === "email_not_configured";
+    }
+  }
 
   revalidatePath("/admin");
   revalidatePath("/admin/bookings");
   revalidatePath(`/admin/bookings/${bookingId}`);
   revalidatePath("/dashboard");
 
-  return { ok: true };
+  return { ok: true, notified: parsed.data === "COMPLETED", emailFailed };
 }
 
 export async function updateService(
@@ -580,5 +592,127 @@ export async function promoteUserToAdmin(phone: string): Promise<AdminActionResu
   revalidatePath("/admin/team");
   revalidatePath("/admin/customers");
 
+  return { ok: true };
+}
+
+function revalidateGalleryPaths() {
+  revalidatePath("/admin/gallery");
+  revalidatePath("/gallery");
+}
+
+function revalidateReviewPaths() {
+  revalidatePath("/admin/reviews");
+  revalidatePath("/testimonials");
+  revalidatePath("/");
+}
+
+const galleryItemSchema = z.object({
+  type: z.enum(["CARD", "BEFORE_AFTER"]),
+  title: z.string().trim().min(2).max(120),
+  category: z.string().trim().min(2).max(80),
+  imageUrl: z.string().url().optional().or(z.literal("")),
+  beforeUrl: z.string().url().optional().or(z.literal("")),
+  afterUrl: z.string().url().optional().or(z.literal("")),
+  isActive: z.boolean(),
+  sortOrder: z.coerce.number().int().min(0).max(999).optional(),
+});
+
+export async function createGalleryItem(
+  input: z.infer<typeof galleryItemSchema>,
+): Promise<AdminActionResult> {
+  await requireAdmin();
+  const parsed = galleryItemSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.errors[0]?.message ?? "Invalid input." };
+  }
+
+  const { type, title, category, imageUrl, beforeUrl, afterUrl, isActive, sortOrder } = parsed.data;
+  if (type === "CARD" && !imageUrl) {
+    return { ok: false, error: "Image is required for gallery cards." };
+  }
+  if (type === "BEFORE_AFTER" && (!beforeUrl || !afterUrl)) {
+    return { ok: false, error: "Before and after images are required." };
+  }
+
+  const maxSort = await prisma.galleryItem.aggregate({ _max: { sortOrder: true } });
+  await prisma.galleryItem.create({
+    data: {
+      type,
+      title,
+      category,
+      imageUrl: imageUrl || null,
+      beforeUrl: beforeUrl || null,
+      afterUrl: afterUrl || null,
+      isActive,
+      sortOrder: sortOrder ?? (maxSort._max.sortOrder ?? 0) + 1,
+    },
+  });
+
+  revalidateGalleryPaths();
+  return { ok: true };
+}
+
+export async function updateGalleryItem(
+  id: string,
+  input: z.infer<typeof galleryItemSchema>,
+): Promise<AdminActionResult> {
+  await requireAdmin();
+  const parsed = galleryItemSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.errors[0]?.message ?? "Invalid input." };
+  }
+
+  const item = await prisma.galleryItem.findUnique({ where: { id } });
+  if (!item) return { ok: false, error: "Gallery item not found." };
+
+  const { type, title, category, imageUrl, beforeUrl, afterUrl, isActive, sortOrder } = parsed.data;
+
+  await prisma.galleryItem.update({
+    where: { id },
+    data: {
+      type,
+      title,
+      category,
+      imageUrl: imageUrl || null,
+      beforeUrl: beforeUrl || null,
+      afterUrl: afterUrl || null,
+      isActive,
+      sortOrder: sortOrder ?? item.sortOrder,
+    },
+  });
+
+  revalidateGalleryPaths();
+  return { ok: true };
+}
+
+export async function deleteGalleryItem(id: string): Promise<AdminActionResult> {
+  await requireAdmin();
+  await prisma.galleryItem.delete({ where: { id } });
+  revalidateGalleryPaths();
+  return { ok: true };
+}
+
+export async function updateReviewStatus(
+  reviewId: string,
+  data: { status: "APPROVED" | "REJECTED" | "PENDING"; featured: boolean },
+): Promise<AdminActionResult> {
+  await requireAdmin();
+
+  await prisma.review.update({
+    where: { id: reviewId },
+    data: {
+      status: data.status,
+      featured: data.featured && data.status === "APPROVED",
+    },
+  });
+
+  revalidateReviewPaths();
+  return { ok: true };
+}
+
+export async function deleteReview(reviewId: string): Promise<AdminActionResult> {
+  await requireAdmin();
+  await prisma.review.delete({ where: { id: reviewId } });
+  revalidateReviewPaths();
   return { ok: true };
 }

@@ -3,6 +3,8 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
+import { DEFAULT_ARRIVAL_TIME } from "@/config/booking";
+
 import type {
   AccessStepInput,
   AgreementStepInput,
@@ -31,7 +33,7 @@ const initialState = {
   stepIndex: 0,
   property: {},
   photos: [] as BookingPhotoInput[],
-  schedule: {},
+  schedule: { arrivalWindow: DEFAULT_ARRIVAL_TIME } as Partial<ScheduleStepInput>,
   access: {},
   agreement: {},
 };

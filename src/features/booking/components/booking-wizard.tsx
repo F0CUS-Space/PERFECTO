@@ -4,7 +4,9 @@ import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { LogIn, UserPlus } from "lucide-react";
 
-import { ARRIVAL_WINDOWS, BOOKING_WIZARD_STEPS, minScheduleDateString } from "@/config/booking";
+import { BOOKING_WIZARD_STEPS, DEFAULT_ARRIVAL_TIME, minScheduleDateString } from "@/config/booking";
+import { displayArrivalTime } from "@/lib/format-arrival-time";
+import { createDepositCheckout } from "@/features/payments/actions";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -18,7 +20,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuthUser } from "@/features/auth/use-auth-user";
 import { useQuoteStore } from "@/features/quote/store";
-import { cn, formatCurrency } from "@/lib/utils";
+import { formatCurrency } from "@/lib/utils";
 
 import { createBooking } from "../actions";
 import {
@@ -106,7 +108,7 @@ export function BookingWizard() {
         setStepError(parsed.error.errors[0]?.message ?? "Complete the agreement");
         return;
       }
-      setStepIndex(4);
+      void onSubmitBooking();
     }
   };
 
@@ -142,6 +144,13 @@ export function BookingWizard() {
 
     clearQuote();
     resetWizard();
+
+    const checkout = await createDepositCheckout(result.bookingId);
+    if (checkout.ok) {
+      window.location.href = checkout.url;
+      return;
+    }
+
     window.location.href = `/book/confirmation/${result.bookingId}`;
   };
 
@@ -257,35 +266,18 @@ export function BookingWizard() {
                   </div>
                 </div>
 
-                <div className="space-y-3">
-                  <Label>Arrival window</Label>
-                  <div className="grid gap-2 sm:grid-cols-3">
-                    {ARRIVAL_WINDOWS.map((window) => (
-                      <label
-                        key={window.value}
-                        className={cn(
-                          "cursor-pointer rounded-xl border px-4 py-3 transition-colors",
-                          schedule.arrivalWindow === window.value
-                            ? "border-primary bg-primary/5 ring-1 ring-primary/20"
-                            : "border-border hover:bg-secondary/40",
-                        )}
-                      >
-                        <span className="flex items-center gap-2 text-sm font-medium">
-                          <input
-                            type="radio"
-                            name="arrivalWindow"
-                            className="accent-primary"
-                            checked={schedule.arrivalWindow === window.value}
-                            onChange={() => setSchedule({ arrivalWindow: window.value })}
-                          />
-                          {window.label}
-                        </span>
-                        <span className="mt-1 block pl-6 text-xs text-muted-foreground">
-                          {window.hint}
-                        </span>
-                      </label>
-                    ))}
-                  </div>
+                <div className="space-y-2">
+                  <Label htmlFor="arrivalTime">Preferred arrival time</Label>
+                  <Input
+                    id="arrivalTime"
+                    type="time"
+                    value={schedule.arrivalWindow ?? DEFAULT_ARRIVAL_TIME}
+                    onChange={(e) => setSchedule({ arrivalWindow: e.target.value })}
+                    className="max-w-[200px]"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Choose when you&apos;d like our team to arrive.
+                  </p>
                 </div>
               </>
             )}
@@ -315,6 +307,34 @@ export function BookingWizard() {
 
             {stepIndex === 3 && (
               <>
+                <dl className="mb-4 grid gap-2 rounded-xl bg-secondary/40 px-4 py-3 text-sm sm:grid-cols-2">
+                  <ReviewItem
+                    label="Address"
+                    value={`${property.addressLine ?? "—"}, ${property.city ?? ""} ${property.postalCode ?? ""}`}
+                  />
+                  <ReviewItem
+                    label="Date"
+                    value={
+                      schedule.scheduledDate
+                        ? new Date(schedule.scheduledDate + "T12:00:00").toLocaleDateString("en-US", {
+                            weekday: "short",
+                            month: "short",
+                            day: "numeric",
+                          })
+                        : "—"
+                    }
+                  />
+                  <ReviewItem
+                    label="Arrival"
+                    value={
+                      schedule.arrivalWindow
+                        ? displayArrivalTime(schedule.arrivalWindow)
+                        : "—"
+                    }
+                  />
+                  <ReviewItem label="Total" value={formatCurrency(quote.calculation.estimatedTotalCents)} />
+                </dl>
+
                 <AgreementCheckbox
                   id="acceptedTerms"
                   checked={agreement.acceptedTerms ?? false}
@@ -374,38 +394,6 @@ export function BookingWizard() {
               </>
             )}
 
-            {stepIndex === 4 && (
-              <div className="space-y-4">
-                <dl className="grid gap-3 text-sm sm:grid-cols-2">
-                  <ReviewItem label="Address" value={`${property.addressLine}, ${property.city} ${property.postalCode}`} />
-                  <ReviewItem
-                    label="Date"
-                    value={
-                      schedule.scheduledDate
-                        ? new Date(schedule.scheduledDate + "T12:00:00").toLocaleDateString("en-US", {
-                            weekday: "long",
-                            month: "long",
-                            day: "numeric",
-                          })
-                        : "—"
-                    }
-                  />
-                  <ReviewItem label="Arrival window" value={schedule.arrivalWindow ?? "—"} />
-                  <ReviewItem label="Signed by" value={agreement.signatureName ?? "—"} />
-                  <ReviewItem label="Photos" value={String(photos.length)} />
-                </dl>
-
-                <div className="rounded-xl bg-secondary/40 px-4 py-3 text-sm">
-                  <p className="font-medium text-brand-navy">Payment next</p>
-                  <p className="mt-1 text-muted-foreground">
-                    After confirming, you&apos;ll pay{" "}
-                    {formatCurrency(quote.calculation.estimatedTotalCents)} in full to secure your
-                    booking.
-                  </p>
-                </div>
-              </div>
-            )}
-
             {stepError && (
               <p className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">
                 {stepError}
@@ -418,7 +406,7 @@ export function BookingWizard() {
                   Back
                 </Button>
               )}
-              {stepIndex < 4 ? (
+              {stepIndex < 3 ? (
                 <Button
                   type="button"
                   onClick={goNext}
@@ -434,7 +422,7 @@ export function BookingWizard() {
                   disabled={submitting}
                   className="w-full sm:w-auto"
                 >
-                  {submitting ? "Creating booking…" : "Confirm booking"}
+                  {submitting ? "Processing…" : "Confirm & pay"}
                 </Button>
               )}
             </div>
@@ -498,8 +486,7 @@ function stepTitle(id: string): string {
     property: "Property details",
     schedule: "Pick a date & time",
     access: "Access & notes",
-    agreement: "Agreements & signature",
-    review: "Review & confirm",
+    agreement: "Confirm & pay",
   };
   return titles[id] ?? "Book";
 }
@@ -509,8 +496,7 @@ function stepDescription(id: string): string {
     property: "Where should we clean? Photos help our team prepare.",
     schedule: "Choose your preferred date and arrival window.",
     access: "Share how we get in and anything we should know.",
-    agreement: "Read and accept our policies, then sign electronically.",
-    review: "Double-check everything before we create your booking.",
+    agreement: "Agreements, review your details, and proceed to secure payment.",
   };
   return descriptions[id] ?? "";
 }

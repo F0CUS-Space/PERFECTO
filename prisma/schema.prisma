@@ -55,6 +55,17 @@ enum ApplicationStatus {
   REJECTED
 }
 
+enum GalleryItemType {
+  CARD
+  BEFORE_AFTER
+}
+
+enum ReviewStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 // ---------------------------------------------------------------------------
 // Users & Auth (phone-first; email verification optional)
 // ---------------------------------------------------------------------------
@@ -78,6 +89,7 @@ model User {
   quotes       Quote[]
   agreements   Agreement[]
   addresses    Address[]
+  reviews      Review[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -223,8 +235,10 @@ model Booking {
   payments  Payment[]
   invoice   Invoice?
   agreement Agreement?
+  review    Review?
 
   confirmationEmailSentAt DateTime?
+  completionEmailSentAt   DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -332,6 +346,48 @@ model JobApplication {
   updatedAt DateTime @updatedAt
 
   @@index([status])
+}
+
+// ---------------------------------------------------------------------------
+// Gallery (marketing)
+// ---------------------------------------------------------------------------
+
+model GalleryItem {
+  id        String          @id @default(cuid())
+  type      GalleryItemType
+  title     String
+  category  String
+  imageUrl  String?
+  beforeUrl String?
+  afterUrl  String?
+  sortOrder Int             @default(0)
+  isActive  Boolean         @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isActive, sortOrder])
+}
+
+// ---------------------------------------------------------------------------
+// Customer reviews (testimonials)
+// ---------------------------------------------------------------------------
+
+model Review {
+  id        String       @id @default(cuid())
+  userId    String
+  user      User         @relation(fields: [userId], references: [id])
+  bookingId String       @unique
+  booking   Booking      @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  rating    Int
+  body      String
+  featured  Boolean      @default(false)
+  status    ReviewStatus @default(PENDING)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status, featured])
 }
 
 // ---------------------------------------------------------------------------

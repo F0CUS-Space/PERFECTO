@@ -17,6 +17,7 @@ import { DepositConfirmationSync } from "@/features/payments/components/deposit-
 import { reconcileBookingPayments } from "@/features/payments/services/reconcile-payments";
 import { maybeSendBookingConfirmationEmail } from "@/features/notifications/send-booking-confirmation";
 import { isStripeConfigured } from "@/lib/stripe-ready";
+import { displayArrivalTime } from "@/lib/format-arrival-time";
 import { formatCurrency } from "@/lib/utils";
 import { prisma } from "@/lib/prisma";
 import { isDatabaseConfigured } from "@/lib/db-ready";
@@ -134,8 +135,8 @@ export default async function BookingConfirmationPage({ params, searchParams }: 
                 </dd>
               </div>
               <div>
-                <dt className="text-muted-foreground">Arrival window</dt>
-                <dd className="font-medium text-brand-navy">{booking.arrivalWindow}</dd>
+                <dt className="text-muted-foreground">Arrival time</dt>
+                <dd className="font-medium text-brand-navy">{displayArrivalTime(booking.arrivalWindow)}</dd>
               </div>
               <div className="sm:col-span-2">
                 <dt className="text-muted-foreground">Address</dt>
@@ -214,7 +215,7 @@ export default async function BookingConfirmationPage({ params, searchParams }: 
                   month: "long",
                   day: "numeric",
                 })}{" "}
-                during {booking.arrivalWindow}.
+                during {displayArrivalTime(booking.arrivalWindow)}.
               </p>
             )}
 
@@ -226,7 +227,7 @@ export default async function BookingConfirmationPage({ params, searchParams }: 
                   month: "long",
                   day: "numeric",
                 })}{" "}
-                during {booking.arrivalWindow}.
+                during {displayArrivalTime(booking.arrivalWindow)}.
               </p>
             )}
 

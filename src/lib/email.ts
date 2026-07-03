@@ -17,15 +17,15 @@ export interface SendEmailParams {
   to: string | string[];
   subject: string;
   html: string;
+  attachments?: { filename: string; content: Buffer | string }[];
 }
 
 /**
  * Transactional email sender. Centralized so templates and provider can evolve
  * (V3.0 may add additional channels) behind a stable interface.
  */
-export async function sendEmail({ to, subject, html }: SendEmailParams) {
+export async function sendEmail({ to, subject, html, attachments }: SendEmailParams) {
   if (!env.RESEND_API_KEY) {
-    // In development without keys, log instead of failing the flow.
     console.warn(`[email] RESEND_API_KEY not set — skipping email "${subject}" to ${to}`);
     return { skipped: true as const };
   }
@@ -35,6 +35,10 @@ export async function sendEmail({ to, subject, html }: SendEmailParams) {
     to,
     subject,
     html,
+    attachments: attachments?.map((file) => ({
+      filename: file.filename,
+      content: file.content,
+    })),
   });
 
   if (error) {

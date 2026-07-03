@@ -1,5 +1,6 @@
 "use client";
 
+import { displayArrivalTime } from "@/lib/format-arrival-time";
 import { formatCurrency } from "@/lib/utils";
 
 import type { QuoteDraft } from "@/features/quote/store";
@@ -56,7 +57,7 @@ export function BookingSummary({ quote, property, schedule, compact }: BookingSu
               day: "numeric",
             })}
             <br />
-            {schedule.arrivalWindow}
+            {displayArrivalTime(schedule.arrivalWindow)}
           </p>
         </div>
       )}

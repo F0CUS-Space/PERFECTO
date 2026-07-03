@@ -7,7 +7,9 @@ import {
   Calendar,
   ClipboardList,
   CreditCard,
+  Images,
   LayoutDashboard,
+  MessageSquare,
   Package,
   Puzzle,
   Shield,
@@ -25,6 +27,8 @@ const LINKS = [
   { href: "/admin/add-ons", label: "Add-ons", icon: Puzzle, exact: false },
   { href: "/admin/jobs", label: "Jobs", icon: ClipboardList, exact: false },
   { href: "/admin/applications", label: "Applications", icon: Briefcase, exact: false },
+  { href: "/admin/gallery", label: "Gallery", icon: Images, exact: false },
+  { href: "/admin/reviews", label: "Reviews", icon: MessageSquare, exact: false },
   { href: "/admin/team", label: "Team", icon: Shield, exact: false },
 ] as const;
 

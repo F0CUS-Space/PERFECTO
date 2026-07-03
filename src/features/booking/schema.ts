@@ -1,9 +1,6 @@
 import { z } from "zod";
 
-import { ARRIVAL_WINDOWS } from "@/config/booking";
 import { minScheduleDateString, parseScheduleDate } from "@/config/booking";
-
-const arrivalValues = ARRIVAL_WINDOWS.map((w) => w.value) as [string, ...string[]];
 
 export const propertyStepSchema = z.object({
   addressLine: z.string().min(5, "Enter a street address"),
@@ -21,7 +18,9 @@ export const scheduleStepSchema = z.object({
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, "Pick a date")
     .refine((val) => val >= minScheduleDateString(), "Date must be at least tomorrow"),
-  arrivalWindow: z.enum(arrivalValues as [string, ...string[]]),
+  arrivalWindow: z
+    .string()
+    .regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Pick a valid arrival time"),
 });
 
 export const accessStepSchema = z.object({

@@ -20,14 +20,15 @@ import { PageHero } from "@/components/shared/page-hero";
 import { Tilt } from "@/components/shared/tilt";
 import { Reveal } from "@/components/shared/reveal";
 import { getActiveServices } from "@/features/services-catalog/queries";
-import { testimonials } from "@/content/testimonials";
+import { getFeaturedTestimonials } from "@/features/reviews/queries";
+import { testimonials as fallbackTestimonials } from "@/content/testimonials";
 
 // Home service cards are loaded from the database at runtime.
 export const dynamic = "force-dynamic";
 
 const steps = [
   { icon: ClipboardList, title: "Choose your service", body: "Tell us about your space for an instant, transparent price." },
-  { icon: CalendarCheck, title: "Book a time", body: "Pick a date and arrival window that works for you." },
+  { icon: CalendarCheck, title: "Book a time", body: "Pick a date and preferred arrival time." },
   { icon: CreditCard, title: "Pay in full", body: "Secure your booking with a simple, safe checkout." },
   { icon: Sparkles, title: "Relax", body: "Our vetted pros arrive and deliver perfect results." },
 ];
@@ -40,6 +41,8 @@ const valueProps = [
 
 export default async function HomePage() {
   const services = await getActiveServices();
+  const featured = await getFeaturedTestimonials();
+  const testimonials = featured.length > 0 ? featured : fallbackTestimonials;
 
   return (
     <>
@@ -184,8 +187,15 @@ export default async function HomePage() {
         </Reveal>
         <div className="mt-12 grid gap-6 md:grid-cols-3">
           {testimonials.slice(0, 3).map((t, i) => (
-            <Reveal key={t.name} delay={i * 90}>
-              <TestimonialCard testimonial={t} />
+            <Reveal key={i} delay={i * 90}>
+              <TestimonialCard
+                testimonial={{
+                  name: t.name,
+                  location: t.location,
+                  rating: t.rating,
+                  quote: t.quote,
+                }}
+              />
             </Reveal>
           ))}
         </div>

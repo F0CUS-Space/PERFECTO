@@ -27,6 +27,7 @@ export type CustomerBookingDetail = CustomerBookingSummary & {
   signedAt: string | null;
   fullyPaid: boolean;
   depositSatisfied: boolean;
+  hasReview: boolean;
 };
 
 export type CustomerPaymentRow = {
