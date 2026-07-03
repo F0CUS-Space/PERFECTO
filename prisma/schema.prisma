@@ -266,6 +266,8 @@ model Booking {
 
   confirmationEmailSentAt DateTime?
   completionEmailSentAt   DateTime?
+  rescheduledAt           DateTime?
+  rescheduleCount         Int       @default(0)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

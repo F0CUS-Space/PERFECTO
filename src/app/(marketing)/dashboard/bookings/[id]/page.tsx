@@ -11,6 +11,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { BookingStatusBadge } from "@/features/dashboard/components/booking-status-badge";
+import { BookingManagePanel } from "@/features/dashboard/components/booking-manage-panel";
 import { BookingReviewForm } from "@/features/dashboard/components/booking-review-form";
 import { getCustomerBookingById } from "@/features/dashboard/queries";
 import { PayDepositButton } from "@/features/payments/components/pay-deposit-button";
@@ -41,7 +42,7 @@ export default async function DashboardBookingDetailPage({ params, searchParams 
   const amountDue = Math.max(booking.totalAmount - booking.amountPaid, 0);
   const needsPayment = !booking.depositSatisfied && booking.status === "PENDING_PAYMENT";
   const paymentsEnabled = isStripeConfigured();
-  const canReview = booking.status === "COMPLETED" && !booking.hasReview;
+  const canReview = booking.canReview;
 
   return (
     <div className="container py-8 md:py-12">
@@ -149,6 +150,20 @@ export default async function DashboardBookingDetailPage({ params, searchParams 
           {booking.fullyPaid && (
             <p className="rounded-xl bg-accent/10 px-4 py-3 text-sm text-brand-navy">
               Paid in full — no balance remaining.
+            </p>
+          )}
+
+          <BookingManagePanel
+            bookingId={booking.id}
+            scheduledDate={booking.scheduledDate}
+            arrivalWindow={booking.arrivalWindow}
+            canCancel={booking.canCancel}
+            canReschedule={booking.canReschedule}
+          />
+
+          {booking.status === "CANCELLED" && (
+            <p className="rounded-xl border border-destructive/20 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+              This booking was cancelled.
             </p>
           )}
 

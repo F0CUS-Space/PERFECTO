@@ -28,6 +28,10 @@ export type CustomerBookingDetail = CustomerBookingSummary & {
   fullyPaid: boolean;
   depositSatisfied: boolean;
   hasReview: boolean;
+  canCancel: boolean;
+  canReschedule: boolean;
+  canReview: boolean;
+  rescheduleCount: number;
 };
 
 export type CustomerPaymentRow = {

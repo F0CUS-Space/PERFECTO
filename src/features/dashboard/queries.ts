@@ -6,6 +6,11 @@ import { reconcileBookingPayments } from "@/features/payments/services/reconcile
 import { prisma } from "@/lib/prisma";
 import { isDatabaseConfigured } from "@/lib/db-ready";
 
+import {
+  canCustomerCancelBooking,
+  canCustomerRescheduleBooking,
+  canCustomerReviewBooking,
+} from "@/features/dashboard/booking-rules";
 import type {
   CustomerBookingDetail,
   CustomerBookingSummary,
@@ -133,6 +138,15 @@ export async function getCustomerBookingById(
     fullyPaid,
     depositSatisfied,
     hasReview: Boolean(booking.review),
+    canCancel: canCustomerCancelBooking(booking),
+    canReschedule: canCustomerRescheduleBooking(booking),
+    canReview: canCustomerReviewBooking({
+      status: booking.status,
+      scheduledDate: booking.scheduledDate,
+      depositSatisfied,
+      hasReview: Boolean(booking.review),
+    }),
+    rescheduleCount: booking.rescheduleCount,
   };
 }
 

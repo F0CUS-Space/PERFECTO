@@ -3,6 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
+import { canCustomerReviewBooking } from "@/features/dashboard/booking-rules";
+import { reconcileBookingPayments } from "@/features/payments/services/reconcile-payments";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/server/rbac";
 
@@ -30,8 +32,26 @@ export async function submitBookingReview(input: z.infer<typeof reviewSchema>): 
     return { ok: false, error: "Booking not found." };
   }
 
-  if (booking.status !== "COMPLETED") {
-    return { ok: false, error: "You can review a booking after the service is completed." };
+  let depositSatisfied = booking.status !== "PENDING_PAYMENT";
+  try {
+    const reconcile = await reconcileBookingPayments(booking.id);
+    depositSatisfied = reconcile.depositSatisfied;
+  } catch {
+    depositSatisfied = booking.status !== "PENDING_PAYMENT";
+  }
+
+  if (
+    !canCustomerReviewBooking({
+      status: booking.status,
+      scheduledDate: booking.scheduledDate,
+      depositSatisfied,
+      hasReview: Boolean(booking.review),
+    })
+  ) {
+    return {
+      ok: false,
+      error: "You can leave a review after your service date, once the appointment has taken place.",
+    };
   }
 
   if (booking.review) {
