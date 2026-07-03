@@ -62,9 +62,9 @@ export default async function GalleryPage() {
               description="Real results from our deep-clean specialists."
             />
           </Reveal>
-          <div className="mt-12 grid gap-8 md:grid-cols-2">
+          <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {beforeAfter.map((pair, i) => (
-              <Reveal key={pair.id ?? pair.title} delay={i * 100}>
+              <Reveal key={pair.id ?? pair.title} delay={(i % 3) * 80}>
                 <BeforeAfter
                   beforeSrc={pair.beforeUrl!}
                   afterSrc={pair.afterUrl!}

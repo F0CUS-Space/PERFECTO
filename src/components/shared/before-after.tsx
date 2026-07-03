@@ -64,7 +64,7 @@ export function BeforeAfter({
           src={afterSrc}
           alt={afterAlt}
           fill
-          sizes="(max-width: 768px) 100vw, 50vw"
+          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
           className="object-cover"
         />
         <span className="absolute right-3 top-3 z-10 rounded-full bg-brand-green px-3 py-1 text-xs font-semibold text-white shadow-sm">
@@ -80,7 +80,7 @@ export function BeforeAfter({
             src={beforeSrc}
             alt={beforeAlt}
             fill
-            sizes="(max-width: 768px) 100vw, 50vw"
+            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
             className="object-cover"
           />
           <span className="absolute left-3 top-3 rounded-full bg-brand-navy px-3 py-1 text-xs font-semibold text-white shadow-sm">

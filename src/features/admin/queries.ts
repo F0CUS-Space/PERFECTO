@@ -554,12 +554,31 @@ export async function getAdminJobPostingById(id: string): Promise<AdminJobPostin
   };
 }
 
-export async function getAdminUsers(): Promise<AdminCustomerRow[]> {
+export async function getAdminTeamMembers(options?: {
+  q?: string;
+  role?: "ALL" | "ADMIN" | "CUSTOMER";
+}): Promise<AdminCustomerRow[]> {
   if (!isDatabaseConfigured()) return [];
 
+  const search = options?.q?.trim();
+  const roleFilter = options?.role ?? "ALL";
+
   const users = await prisma.user.findMany({
+    where: {
+      ...(roleFilter !== "ALL" ? { role: roleFilter } : {}),
+      ...(search
+        ? {
+            OR: [
+              { phone: { contains: search } },
+              { email: { contains: search, mode: "insensitive" } },
+              { firstName: { contains: search, mode: "insensitive" } },
+              { lastName: { contains: search, mode: "insensitive" } },
+            ],
+          }
+        : {}),
+    },
     include: { _count: { select: { bookings: true } } },
-    orderBy: { createdAt: "desc" },
+    orderBy: [{ role: "asc" }, { createdAt: "desc" }],
     take: 200,
   });
 
@@ -573,4 +592,9 @@ export async function getAdminUsers(): Promise<AdminCustomerRow[]> {
     bookingCount: user._count.bookings,
     createdAt: user.createdAt.toISOString(),
   }));
+}
+
+/** @deprecated Use getAdminTeamMembers */
+export async function getAdminUsers(): Promise<AdminCustomerRow[]> {
+  return getAdminTeamMembers();
 }

@@ -564,19 +564,23 @@ const promoteAdminSchema = z.object({
   phone: z.string().min(10, "Enter a valid phone number"),
 });
 
-export async function promoteUserToAdmin(phone: string): Promise<AdminActionResult> {
+const userIdSchema = z.object({
+  userId: z.string().min(1, "User is required."),
+});
+
+export async function promoteUserToAdminById(userId: string): Promise<AdminActionResult> {
   await requireAdmin();
 
-  const parsed = promoteAdminSchema.safeParse({ phone: phone.trim() });
+  const parsed = userIdSchema.safeParse({ userId });
   if (!parsed.success) {
-    return { ok: false, error: parsed.error.errors[0]?.message ?? "Invalid phone." };
+    return { ok: false, error: parsed.error.errors[0]?.message ?? "Invalid user." };
   }
 
-  const user = await prisma.user.findUnique({ where: { phone: parsed.data.phone } });
+  const user = await prisma.user.findUnique({ where: { id: parsed.data.userId } });
   if (!user) {
     return {
       ok: false,
-      error: "No account found with that phone. They must register first.",
+      error: "No account found. They must register and sign in first.",
     };
   }
 
@@ -593,6 +597,62 @@ export async function promoteUserToAdmin(phone: string): Promise<AdminActionResu
   revalidatePath("/admin/customers");
 
   return { ok: true };
+}
+
+export async function demoteUserFromAdmin(userId: string): Promise<AdminActionResult> {
+  const admin = await requireAdmin();
+
+  const parsed = userIdSchema.safeParse({ userId });
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.errors[0]?.message ?? "Invalid user." };
+  }
+
+  if (admin.id === parsed.data.userId) {
+    return { ok: false, error: "You cannot remove your own admin access." };
+  }
+
+  const user = await prisma.user.findUnique({ where: { id: parsed.data.userId } });
+  if (!user) {
+    return { ok: false, error: "User not found." };
+  }
+
+  if (user.role !== "ADMIN") {
+    return { ok: false, error: "This user is not an admin." };
+  }
+
+  const adminCount = await prisma.user.count({ where: { role: "ADMIN" } });
+  if (adminCount <= 1) {
+    return { ok: false, error: "Cannot remove the last admin account." };
+  }
+
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { role: "CUSTOMER" },
+  });
+
+  revalidatePath("/admin/team");
+  revalidatePath("/admin/customers");
+
+  return { ok: true };
+}
+
+export async function promoteUserToAdmin(phone: string): Promise<AdminActionResult> {
+  await requireAdmin();
+
+  const parsed = promoteAdminSchema.safeParse({ phone: phone.trim() });
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.errors[0]?.message ?? "Invalid phone." };
+  }
+
+  const user = await prisma.user.findUnique({ where: { phone: parsed.data.phone } });
+  if (!user) {
+    return {
+      ok: false,
+      error: "No account found with that phone. They must register and sign in first.",
+    };
+  }
+
+  return promoteUserToAdminById(user.id);
 }
 
 function revalidateGalleryPaths() {
