@@ -31,7 +31,7 @@ export function NotificationBell({ className }: { className?: string }) {
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const panelRef = useRef<HTMLDivElement>(null);
-  const loadRef = useRef<() => Promise<void>>(async () => {});
+  const loadRef = useRef<(options?: { silent?: boolean }) => Promise<void>>(async () => {});
 
   const load = useCallback(async (options?: { silent?: boolean }) => {
     try {
