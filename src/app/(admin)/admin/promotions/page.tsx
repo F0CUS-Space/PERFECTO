@@ -14,7 +14,8 @@ export default async function AdminPromotionsPage() {
     <div className="container py-8 md:py-12">
       <h1 className="text-3xl font-bold text-brand-navy">Promotions</h1>
       <p className="mt-2 text-muted-foreground">
-        Publish offers — customers get an in-app notification when a promotion goes live.
+        Create, publish, edit, deactivate, or delete offers. Customers are notified when a
+        promotion is published or re-activated.
       </p>
       <div className="mt-8">
         <PromotionsManager promotions={promotions} />

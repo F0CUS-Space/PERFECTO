@@ -17,9 +17,10 @@ import { Section, SectionHeading } from "@/components/shared/section";
 import { ServiceCard } from "@/components/shared/service-card";
 import { TestimonialCard } from "@/components/shared/testimonial-card";
 import { PageHero } from "@/components/shared/page-hero";
+import { HomeAboutSection } from "@/components/marketing/home-about-section";
 import { Tilt } from "@/components/shared/tilt";
 import { Reveal } from "@/components/shared/reveal";
-import { getActiveServices } from "@/features/services-catalog/queries";
+import { getHomeFeaturedServices } from "@/features/services-catalog/queries";
 import { getFeaturedTestimonials } from "@/features/reviews/queries";
 import { testimonials as fallbackTestimonials } from "@/content/testimonials";
 
@@ -40,7 +41,7 @@ const valueProps = [
 ];
 
 export default async function HomePage() {
-  const services = await getActiveServices();
+  const services = await getHomeFeaturedServices(3);
   const featured = await getFeaturedTestimonials();
   const testimonials = featured.length > 0 ? featured : fallbackTestimonials;
 
@@ -116,7 +117,7 @@ export default async function HomePage() {
           <SectionHeading
             eyebrow="Our Services"
             title="Elevated standards for every space"
-            description="From routine upkeep to deep restorations, choose the service that fits your home or office."
+            description="A preview of our most popular services — see the full catalog for every option."
           />
         </Reveal>
         <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -179,6 +180,8 @@ export default async function HomePage() {
           ))}
         </div>
       </Section>
+
+      <HomeAboutSection />
 
       {/* Testimonials */}
       <Section muted>

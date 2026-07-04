@@ -18,14 +18,13 @@ const MAIN_LINKS = [
   { label: "Services", href: "/services" },
   { label: "Book Now", href: "/book" },
   { label: "Gallery", href: "/gallery" },
-  { label: "About", href: "/about" },
+  { label: "Promotions", href: "/promotions" },
   { label: "Contact", href: "/contact" },
 ];
 
 const MORE_LINKS = [
   { label: "Testimonials", href: "/testimonials" },
   { label: "FAQ", href: "/faq" },
-  { label: "Promotions", href: "/promotions" },
   { label: "Careers", href: "/careers" },
 ];
 
@@ -63,6 +62,7 @@ export function Navbar({ initialUser }: { initialUser?: PublicUser | null }) {
 
   const isActive = (href: string) => {
     if (href === "/") return pathname === "/";
+    if (href.startsWith("/#")) return pathname === "/";
     return pathname === href || pathname.startsWith(`${href}/`);
   };
 

@@ -3,6 +3,20 @@ import "server-only";
 import { prisma } from "@/lib/prisma";
 import { isDatabaseConfigured } from "@/lib/db-ready";
 
+/** Active services for the home page preview (popular first, then sort order). */
+export async function getHomeFeaturedServices(limit = 3) {
+  if (!isDatabaseConfigured()) return [];
+  try {
+    return await prisma.service.findMany({
+      where: { isActive: true },
+      orderBy: [{ isPopular: "desc" }, { sortOrder: "asc" }],
+      take: limit,
+    });
+  } catch {
+    return [];
+  }
+}
+
 /** All active services, ordered for display. */
 export async function getActiveServices() {
   if (!isDatabaseConfigured()) return [];

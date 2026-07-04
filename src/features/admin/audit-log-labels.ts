@@ -22,6 +22,9 @@ export const AUDIT_ACTION_LABELS: Record<AdminAuditAction, string> = {
   REVIEW_DELETE: "Review deleted",
   SCHEDULE_BLOCK_CREATE: "Schedule block created",
   SCHEDULE_BLOCK_DELETE: "Schedule block removed",
+  PROMOTION_CREATE: "Promotion created",
+  PROMOTION_UPDATE: "Promotion updated",
+  PROMOTION_DELETE: "Promotion deleted",
 };
 
 export const AUDIT_ACTIONS = Object.keys(AUDIT_ACTION_LABELS) as AdminAuditAction[];
@@ -52,6 +55,8 @@ export function auditEntityHref(entityType: string, entityId: string | null): st
       return "/admin/reviews";
     case "schedule_block":
       return "/admin/schedule";
+    case "promotion":
+      return "/admin/promotions";
     default:
       return null;
   }

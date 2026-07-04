@@ -1202,7 +1202,7 @@ export async function createPromotion(
   revalidatePromotionPaths();
   await logAdminAction({
     actorId: admin.id,
-    action: "SERVICE_CREATE",
+    action: "PROMOTION_CREATE",
     entityType: "promotion",
     entityId: promotion.id,
     summary: `Created promotion "${promotion.title}"`,
@@ -1243,20 +1243,45 @@ export async function updatePromotion(
   revalidatePromotionPaths();
   await logAdminAction({
     actorId: admin.id,
-    action: "SERVICE_UPDATE",
+    action: "PROMOTION_UPDATE",
     entityType: "promotion",
     entityId: promotion.id,
     summary: `Updated promotion "${promotion.title}"`,
+    metadata: { isActive: promotion.isActive },
   });
   revalidateAuditLogPath();
 
-  if (promotion.isActive) {
+  const wasActivated = !existing.isActive && promotion.isActive;
+  if (wasActivated) {
     await notifyCustomersPromotion({
       title: promotion.title,
       description: promotion.description,
-      created: !existing.isActive,
+      created: true,
     });
   }
+
+  return { ok: true };
+}
+
+export async function deletePromotion(promotionId: string): Promise<AdminActionResult> {
+  const admin = await requireAdmin();
+
+  const promotion = await prisma.promotion.findUnique({ where: { id: promotionId } });
+  if (!promotion) {
+    return { ok: false, error: "Promotion not found." };
+  }
+
+  await prisma.promotion.delete({ where: { id: promotionId } });
+
+  revalidatePromotionPaths();
+  await logAdminAction({
+    actorId: admin.id,
+    action: "PROMOTION_DELETE",
+    entityType: "promotion",
+    entityId: promotionId,
+    summary: `Deleted promotion "${promotion.title}"`,
+  });
+  revalidateAuditLogPath();
 
   return { ok: true };
 }
