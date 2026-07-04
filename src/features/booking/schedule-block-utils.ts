@@ -47,14 +47,22 @@ export function getScheduleBlockMessage(
     const start = timeToMinutes(block.startTime);
     const end = timeToMinutes(block.endTime);
     if (arrivalMinutes >= start && arrivalMinutes < end) {
-      const windowLabel = `${formatMinutesAsTime(start)} – ${formatMinutesAsTime(end)}`;
       return block.reason
-        ? `Arrival times between ${windowLabel} are unavailable: ${block.reason}`
-        : `Arrival times between ${windowLabel} are unavailable on this date.`;
+        ? `This arrival time is not available. ${block.reason}`
+        : "This arrival time is not available. Please choose another time.";
     }
   }
 
   return null;
+}
+
+export function isScheduleSlotBlocked(
+  scheduledDate: string,
+  arrivalWindow: string,
+  blocks: ScheduleBlockSnapshot[],
+): boolean {
+  if (!scheduledDate || !arrivalWindow) return false;
+  return getScheduleBlockMessage(arrivalWindow, blocksForDate(blocks, scheduledDate)) !== null;
 }
 
 export function blocksForDate(

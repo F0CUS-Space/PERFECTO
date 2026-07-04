@@ -35,6 +35,7 @@ import { BookingSummary } from "./booking-summary";
 import { PhotoUploader } from "./photo-uploader";
 import { SchedulePicker } from "./schedule-picker";
 import { useScheduleBlocks } from "../hooks/use-schedule-blocks";
+import { getScheduleBlockMessage, blocksForDate, isScheduleSlotBlocked } from "../schedule-block-utils";
 
 export function BookingWizard() {
   const authUser = useAuthUser();
@@ -58,6 +59,13 @@ export function BookingWizard() {
   const [stepError, setStepError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const { blocks: scheduleBlocks } = useScheduleBlocks();
+
+  const scheduleBlocked =
+    isScheduleSlotBlocked(
+      schedule.scheduledDate ?? "",
+      schedule.arrivalWindow ?? DEFAULT_ARRIVAL_TIME,
+      scheduleBlocks,
+    );
 
   useEffect(() => {
     if (!quote) resetWizard();
@@ -91,6 +99,14 @@ export function BookingWizard() {
         setStepError(parsed.error.errors[0]?.message ?? "Check schedule details");
         return;
       }
+      const blockMessage = getScheduleBlockMessage(
+        parsed.data.arrivalWindow,
+        blocksForDate(scheduleBlocks, parsed.data.scheduledDate),
+      );
+      if (blockMessage) {
+        setStepError(blockMessage);
+        return;
+      }
       setStepIndex(2);
       return;
     }
@@ -122,6 +138,16 @@ export function BookingWizard() {
 
   const onSubmitBooking = async () => {
     setStepError(null);
+
+    if (scheduleBlocked) {
+      const blockMessage = getScheduleBlockMessage(
+        schedule.arrivalWindow ?? DEFAULT_ARRIVAL_TIME,
+        blocksForDate(scheduleBlocks, schedule.scheduledDate ?? ""),
+      );
+      setStepError(blockMessage ?? "This schedule is no longer available.");
+      return;
+    }
+
     setSubmitting(true);
 
     const result = await createBooking({
@@ -392,7 +418,11 @@ export function BookingWizard() {
                 <Button
                   type="button"
                   onClick={goNext}
-                  disabled={authUser === undefined || (stepIndex === 0 && authUser === null)}
+                  disabled={
+                    authUser === undefined ||
+                    (stepIndex === 0 && authUser === null) ||
+                    (stepIndex === 1 && scheduleBlocked)
+                  }
                   className="w-full sm:w-auto"
                 >
                   Continue
@@ -401,7 +431,7 @@ export function BookingWizard() {
                 <Button
                   type="button"
                   onClick={onSubmitBooking}
-                  disabled={submitting}
+                  disabled={submitting || scheduleBlocked}
                   className="w-full sm:w-auto"
                 >
                   {submitting ? "Processing…" : "Confirm & pay"}

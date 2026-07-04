@@ -1,30 +1,23 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
-import {
-  BOOKING_ARRIVAL_END,
-  BOOKING_ARRIVAL_INTERVAL_MINUTES,
-  BOOKING_ARRIVAL_START,
-  BOOKING_SCHEDULE_HORIZON_DAYS,
-  DEFAULT_ARRIVAL_TIME,
-  minScheduleDateString,
-} from "@/config/booking";
+import { BOOKING_SCHEDULE_HORIZON_DAYS, minScheduleDateString } from "@/config/booking";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { displayArrivalTime } from "@/lib/format-arrival-time";
 import { cn } from "@/lib/utils";
 
 import {
-  firstSelectableDate,
   getFullyBlockedReason,
   isDateSelectable,
-  listAvailableArrivalTimes,
   maxSelectableDate,
   parseDateString,
   toDateString,
   type ScheduleBlockSnapshot,
 } from "../schedule-block-utils";
+import { ScheduleAvailabilityNotice } from "./schedule-availability-notice";
 
 const WEEKDAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -74,49 +67,6 @@ export function SchedulePicker({
     () => new Date(initialMonth.getFullYear(), initialMonth.getMonth(), 1),
   );
 
-  const availableTimes = useMemo(
-    () =>
-      scheduledDate
-        ? listAvailableArrivalTimes(scheduledDate, blocks, {
-            startTime: BOOKING_ARRIVAL_START,
-            endTime: BOOKING_ARRIVAL_END,
-            intervalMinutes: BOOKING_ARRIVAL_INTERVAL_MINUTES,
-          })
-        : [],
-    [scheduledDate, blocks],
-  );
-
-  useEffect(() => {
-    const fallbackDate = firstSelectableDate(minDate, BOOKING_SCHEDULE_HORIZON_DAYS, blocks);
-    if (!fallbackDate) return;
-
-    if (
-      !scheduledDate ||
-      !isDateSelectable(scheduledDate, minDate, maxDate, blocks)
-    ) {
-      onDateChange(fallbackDate);
-      return;
-    }
-
-    if (availableTimes.length === 0) {
-      onDateChange(fallbackDate);
-      return;
-    }
-
-    if (!availableTimes.includes(arrivalWindow)) {
-      onTimeChange(availableTimes[0] ?? DEFAULT_ARRIVAL_TIME);
-    }
-  }, [
-    scheduledDate,
-    arrivalWindow,
-    blocks,
-    minDate,
-    maxDate,
-    availableTimes,
-    onDateChange,
-    onTimeChange,
-  ]);
-
   const monthLabel = visibleMonth.toLocaleDateString("en-US", {
     month: "long",
     year: "numeric",
@@ -138,18 +88,6 @@ export function SchedulePicker({
     (visibleMonth.getFullYear() === maxMonth.getFullYear() &&
       visibleMonth.getMonth() < maxMonth.getMonth());
 
-  const goPrevMonth = () => {
-    setVisibleMonth((current) => new Date(current.getFullYear(), current.getMonth() - 1, 1));
-  };
-
-  const goNextMonth = () => {
-    setVisibleMonth((current) => new Date(current.getFullYear(), current.getMonth() + 1, 1));
-  };
-
-  const partialBlocks = scheduledDate
-    ? blocks.filter((block) => block.date === scheduledDate && !block.allDay)
-    : [];
-
   return (
     <div className="space-y-5">
       <div className="space-y-2">
@@ -158,7 +96,11 @@ export function SchedulePicker({
           <div className="mb-3 flex items-center justify-between">
             <button
               type="button"
-              onClick={goPrevMonth}
+              onClick={() =>
+                setVisibleMonth(
+                  (current) => new Date(current.getFullYear(), current.getMonth() - 1, 1),
+                )
+              }
               disabled={!canGoPrev}
               className="rounded-lg p-2 text-muted-foreground hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-40"
               aria-label="Previous month"
@@ -168,7 +110,11 @@ export function SchedulePicker({
             <p className="font-medium text-brand-navy">{monthLabel}</p>
             <button
               type="button"
-              onClick={goNextMonth}
+              onClick={() =>
+                setVisibleMonth(
+                  (current) => new Date(current.getFullYear(), current.getMonth() + 1, 1),
+                )
+              }
               disabled={!canGoNext}
               className="rounded-lg p-2 text-muted-foreground hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-40"
               aria-label="Next month"
@@ -201,18 +147,12 @@ export function SchedulePicker({
                   key={dateStr}
                   type="button"
                   disabled={!selectable}
-                  title={
-                    !selectable
-                      ? blockedReason ?? "Unavailable"
-                      : undefined
-                  }
+                  title={!selectable ? (blockedReason ?? "Unavailable") : undefined}
                   onClick={() => onDateChange(dateStr)}
                   className={cn(
                     "h-10 rounded-lg text-sm transition-colors",
                     selected && "bg-primary text-primary-foreground font-semibold",
-                    !selected &&
-                      selectable &&
-                      "hover:bg-secondary text-brand-navy",
+                    !selected && selectable && "hover:bg-secondary text-brand-navy",
                     !selectable &&
                       "cursor-not-allowed text-muted-foreground/50 line-through decoration-muted-foreground/40",
                   )}
@@ -232,32 +172,27 @@ export function SchedulePicker({
 
       <div className="space-y-2">
         <Label htmlFor={`${idPrefix}-time`}>Preferred arrival time</Label>
-        <select
+        <Input
           id={`${idPrefix}-time`}
-          value={availableTimes.includes(arrivalWindow) ? arrivalWindow : ""}
+          type="time"
+          value={arrivalWindow}
           onChange={(event) => onTimeChange(event.target.value)}
-          disabled={!scheduledDate || availableTimes.length === 0}
-          className="flex h-10 w-full max-w-xs rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {availableTimes.length === 0 ? (
-            <option value="">No times available</option>
-          ) : (
-            availableTimes.map((slot) => (
-              <option key={slot} value={slot}>
-                {displayArrivalTime(slot)}
-              </option>
-            ))
-          )}
-        </select>
-        <p className="text-xs text-muted-foreground">
-          Only available arrival times are shown.
-        </p>
-        {partialBlocks.length > 0 && (
-          <p className="text-xs text-muted-foreground">
-            Some times on this date are blocked by the team schedule.
-          </p>
+          disabled={!scheduledDate}
+          className="max-w-[200px]"
+        />
+        {arrivalWindow && (
+          <p className="text-xs text-muted-foreground">{displayArrivalTime(arrivalWindow)}</p>
         )}
+        <p className="text-xs text-muted-foreground">
+          Choose when you&apos;d like our team to arrive.
+        </p>
       </div>
+
+      <ScheduleAvailabilityNotice
+        blocks={blocks}
+        scheduledDate={scheduledDate}
+        arrivalWindow={arrivalWindow}
+      />
     </div>
   );
 }

@@ -24,6 +24,7 @@ import {
 } from "@/features/dashboard/actions";
 import { SchedulePicker } from "@/features/booking/components/schedule-picker";
 import { useScheduleBlocks } from "@/features/booking/hooks/use-schedule-blocks";
+import { isScheduleSlotBlocked } from "@/features/booking/schedule-block-utils";
 import { isWithinLateChangeWindow } from "@/features/dashboard/booking-rules";
 import { cn } from "@/lib/utils";
 
@@ -50,6 +51,10 @@ export function BookingManagePanel({
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const { blocks: scheduleBlocks } = useScheduleBlocks();
+
+  const rescheduleBlocked =
+    mode === "reschedule" &&
+    isScheduleSlotBlocked(newDate, newTime, scheduleBlocks);
 
   if (!canCancel && !canReschedule) return null;
 
@@ -191,7 +196,11 @@ export function BookingManagePanel({
             <Button
               type="button"
               variant={mode === "cancel" ? "destructive" : "default"}
-              disabled={!acknowledged || pending || (mode === "reschedule" && (!newDate || !newTime))}
+              disabled={
+                !acknowledged ||
+                pending ||
+                (mode === "reschedule" && (!newDate || !newTime || rescheduleBlocked))
+              }
               onClick={onConfirm}
               className={cn(mode === "cancel" && "bg-destructive text-destructive-foreground hover:bg-destructive/90")}
             >
