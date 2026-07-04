@@ -38,6 +38,7 @@ export function buildQuoteSchema(profile: ServiceQuoteProfile) {
     serviceId: z.string().min(1, "Select a service"),
     addOnIds: z.array(z.string()).default([]),
     clientTotalCents: z.number().int().optional(),
+    promotionId: z.string().optional(),
   };
 
   if (profile.showBedrooms) {
@@ -95,6 +96,7 @@ export type QuoteFormValues = {
   frequency: z.infer<typeof frequencySchema>;
   addOnIds: string[];
   clientTotalCents?: number;
+  promotionId?: string;
 };
 
 /** Validates quote input for a known service slug (server-side). */

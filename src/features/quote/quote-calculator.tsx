@@ -27,6 +27,8 @@ import { cn, formatCurrency } from "@/lib/utils";
 
 import { saveQuote } from "./actions";
 import type { QuoteCatalogService } from "./queries";
+import type { ClaimablePromotion } from "@/features/promotions/queries";
+import { promotionAppliesToService } from "@/features/promotions/services/promotion-discount";
 import { buildQuoteSchema, type QuoteFormValues } from "./schema";
 import { calculateQuote } from "./services/pricing";
 import { useQuoteStore } from "./store";
@@ -38,10 +40,19 @@ interface QuoteCalculatorProps {
   catalog: QuoteCatalogService[];
   /** When true, stays on /book instead of navigating away after save. */
   embedded?: boolean;
+  /** Promotion claimed from the promotions page. */
+  claimPromotion?: ClaimablePromotion | null;
 }
 
-export function QuoteCalculator({ catalog, embedded }: QuoteCalculatorProps) {
-  const [selectedServiceId, setSelectedServiceId] = useState(catalog[0]?.id ?? "");
+export function QuoteCalculator({ catalog, embedded, claimPromotion }: QuoteCalculatorProps) {
+  const initialServiceId =
+    claimPromotion && claimPromotion.serviceIds.length > 0
+      ? catalog.find((service) => claimPromotion.serviceIds.includes(service.id))?.id ??
+        catalog[0]?.id ??
+        ""
+      : catalog[0]?.id ?? "";
+
+  const [selectedServiceId, setSelectedServiceId] = useState(initialServiceId);
   const selectedService = catalog.find((s) => s.id === selectedServiceId);
 
   if (catalog.length === 0) {
@@ -91,7 +102,12 @@ export function QuoteCalculator({ catalog, embedded }: QuoteCalculatorProps) {
       </Card>
 
       {selectedService && (
-        <QuoteServiceForm key={selectedService.slug} service={selectedService} embedded={embedded} />
+        <QuoteServiceForm
+          key={selectedService.slug}
+          service={selectedService}
+          embedded={embedded}
+          claimPromotion={claimPromotion}
+        />
       )}
     </div>
   );
@@ -100,14 +116,21 @@ export function QuoteCalculator({ catalog, embedded }: QuoteCalculatorProps) {
 function QuoteServiceForm({
   service,
   embedded,
+  claimPromotion,
 }: {
   service: QuoteCatalogService;
   embedded?: boolean;
+  claimPromotion?: ClaimablePromotion | null;
 }) {
   const router = useRouter();
   const setDraft = useQuoteStore((s) => s.setDraft);
   const profile = getServiceQuoteProfile(service.slug);
   const schema = useMemo(() => buildQuoteSchema(profile), [profile]);
+
+  const promotionApplies = claimPromotion
+    ? promotionAppliesToService(claimPromotion.serviceIds, service.id)
+    : false;
+  const activePromotion = promotionApplies ? claimPromotion : null;
 
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -142,8 +165,15 @@ function QuoteServiceForm({
       frequency: watched.frequency,
       addOns: selectedAddOns,
       sqftIncluded: profile.sqftIncluded,
+      promotion: activePromotion
+        ? {
+            title: activePromotion.title,
+            discountType: activePromotion.discountType,
+            discountValue: activePromotion.discountValue,
+          }
+        : undefined,
     });
-  }, [service, profile, watched]);
+  }, [service, profile, watched, activePromotion]);
 
   const toggleAddOn = (addOnId: string) => {
     const current = form.getValues("addOnIds");
@@ -160,6 +190,7 @@ function QuoteServiceForm({
     const result = await saveQuote({
       ...values,
       clientTotalCents: calculation.estimatedTotalCents,
+      promotionId: activePromotion?.id,
     });
 
     setIsSubmitting(false);
@@ -183,6 +214,8 @@ function QuoteServiceForm({
       frequency: values.frequency,
       addOnIds: values.addOnIds,
       calculation: result.calculation,
+      promotionId: activePromotion?.id,
+      promotionTitle: result.calculation.promotionTitle,
     });
 
     if (embedded) {
@@ -201,6 +234,36 @@ function QuoteServiceForm({
           <CardDescription>{profile.formDescription}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
+          {claimPromotion && (
+            <div
+              className={
+                activePromotion
+                  ? "rounded-xl border border-accent/30 bg-accent/5 px-4 py-3 text-sm"
+                  : "rounded-xl border border-dashed border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive"
+              }
+            >
+              {activePromotion ? (
+                <>
+                  <p className="font-medium text-brand-navy">
+                    Promotion applied: {activePromotion.title}
+                  </p>
+                  <p className="mt-1 text-muted-foreground">
+                    {activePromotion.discountLabel} will be deducted from your total.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="font-medium">Promotion not available for this service</p>
+                  <p className="mt-1">
+                    {claimPromotion.appliesToAllServices
+                      ? "This promotion is no longer active."
+                      : `Select one of: ${claimPromotion.serviceNames.join(", ")}.`}
+                  </p>
+                </>
+              )}
+            </div>
+          )}
+
           {(profile.showBedrooms || profile.showBathrooms) && (
             <div
               className={cn(

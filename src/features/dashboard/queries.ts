@@ -147,6 +147,8 @@ export async function getCustomerBookingById(
       hasReview: Boolean(booking.review),
     }),
     rescheduleCount: booking.rescheduleCount,
+    promotionTitle: booking.promotionTitle,
+    promotionDiscountCents: booking.promotionDiscountCents,
   };
 }
 

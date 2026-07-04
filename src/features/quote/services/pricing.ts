@@ -1,7 +1,8 @@
-import type { Frequency } from "@prisma/client";
+import type { Frequency, PromotionDiscountType } from "@prisma/client";
 
 import type { FurnishedStatus, PricingMode } from "@/config/service-quote-profiles";
 import { PRICING_CONFIG } from "@/config/pricing";
+import { computePromotionDiscountCents } from "@/features/promotions/services/promotion-discount";
 
 export interface QuoteAddOnInput {
   id: string;
@@ -23,6 +24,11 @@ export interface CalculateQuoteInput {
   addOns: QuoteAddOnInput[];
   /** Per-service sq ft included in base (overrides global default). */
   sqftIncluded?: number;
+  promotion?: {
+    title: string;
+    discountType: PromotionDiscountType;
+    discountValue: number;
+  };
 }
 
 export interface QuoteSummaryItem {
@@ -40,6 +46,8 @@ export interface QuoteCalculation {
   subtotalCents: number;
   addOnsTotalCents: number;
   frequencyDiscountCents: number;
+  promotionDiscountCents: number;
+  promotionTitle?: string;
   estimatedTotalCents: number;
   depositCents: number;
   balanceCents: number;
@@ -84,6 +92,7 @@ export function calculateQuote(input: CalculateQuoteInput): QuoteCalculation {
     frequency,
     addOns,
     sqftIncluded = PRICING_CONFIG.sqftIncluded,
+    promotion,
   } = input;
 
   const lines: QuoteBreakdownLine[] = [
@@ -214,7 +223,27 @@ export function calculateQuote(input: CalculateQuoteInput): QuoteCalculation {
   };
   summary.push({ label: "Frequency", value: frequencyLabels[frequency] });
 
-  const estimatedTotalCents = beforeDiscountCents - frequencyDiscountCents;
+  const afterFrequencyCents = beforeDiscountCents - frequencyDiscountCents;
+  let promotionDiscountCents = 0;
+  let promotionTitle: string | undefined;
+
+  if (promotion) {
+    promotionDiscountCents = computePromotionDiscountCents(
+      afterFrequencyCents,
+      promotion.discountType,
+      promotion.discountValue,
+    );
+    if (promotionDiscountCents > 0) {
+      promotionTitle = promotion.title;
+      lines.push({
+        label: `Promotion: ${promotion.title}`,
+        amountCents: -promotionDiscountCents,
+      });
+      summary.push({ label: "Promotion", value: promotion.title });
+    }
+  }
+
+  const estimatedTotalCents = afterFrequencyCents - promotionDiscountCents;
   const depositCents = Math.round(estimatedTotalCents * PRICING_CONFIG.depositPercent);
   const balanceCents = estimatedTotalCents - depositCents;
 
@@ -223,6 +252,8 @@ export function calculateQuote(input: CalculateQuoteInput): QuoteCalculation {
     subtotalCents,
     addOnsTotalCents,
     frequencyDiscountCents,
+    promotionDiscountCents,
+    promotionTitle,
     estimatedTotalCents,
     depositCents,
     balanceCents,

@@ -3,6 +3,7 @@
 import { displayArrivalTime } from "@/lib/format-arrival-time";
 import { formatCurrency } from "@/lib/utils";
 
+import { AppliedPromotionSummary } from "@/features/promotions/components/applied-promotion-summary";
 import type { QuoteDraft } from "@/features/quote/store";
 import type { PropertyStepInput, ScheduleStepInput } from "../schema";
 
@@ -60,6 +61,14 @@ export function BookingSummary({ quote, property, schedule, compact }: BookingSu
             {displayArrivalTime(schedule.arrivalWindow)}
           </p>
         </div>
+      )}
+
+      {quote.promotionTitle && calculation.promotionDiscountCents > 0 && (
+        <AppliedPromotionSummary
+          title={quote.promotionTitle}
+          discountCents={calculation.promotionDiscountCents}
+          compact
+        />
       )}
 
       <div className="border-t border-border pt-3">

@@ -22,6 +22,8 @@ export interface QuoteDraft {
   frequency: QuoteFrequency;
   addOnIds: string[];
   calculation: QuoteCalculation;
+  promotionId?: string;
+  promotionTitle?: string;
 }
 
 interface QuoteStore {

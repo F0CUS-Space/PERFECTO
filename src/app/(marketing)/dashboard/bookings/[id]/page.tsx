@@ -11,6 +11,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { BookingStatusBadge } from "@/features/dashboard/components/booking-status-badge";
+import { AppliedPromotionSummary } from "@/features/promotions/components/applied-promotion-summary";
 import { BookingManagePanel } from "@/features/dashboard/components/booking-manage-panel";
 import { BookingReviewForm } from "@/features/dashboard/components/booking-review-form";
 import { EmailInvoiceButton } from "@/features/dashboard/components/email-invoice-button";
@@ -102,6 +103,14 @@ export default async function DashboardBookingDetailPage({ params, searchParams 
                 {formatCurrency(booking.totalAmount)}
               </dd>
             </div>
+            {booking.promotionTitle && booking.promotionDiscountCents > 0 && (
+              <div className="sm:col-span-2">
+                <AppliedPromotionSummary
+                  title={booking.promotionTitle}
+                  discountCents={booking.promotionDiscountCents}
+                />
+              </div>
+            )}
             <div>
               <dt className="text-muted-foreground">Paid so far</dt>
               <dd className="text-lg font-bold tabular-nums text-primary">

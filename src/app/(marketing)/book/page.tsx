@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { PageHero } from "@/components/shared/page-hero";
 import { Section } from "@/components/shared/section";
 import { BookFlow } from "@/features/booking/components/book-flow";
+import { getClaimablePromotionById } from "@/features/promotions/queries";
 import { getQuoteCatalog } from "@/features/quote/queries";
 
 export const metadata: Metadata = {
@@ -12,8 +13,16 @@ export const metadata: Metadata = {
 
 export const dynamic = "force-dynamic";
 
-export default async function BookPage() {
-  const catalog = await getQuoteCatalog();
+interface BookPageProps {
+  searchParams: Promise<{ promotion?: string }>;
+}
+
+export default async function BookPage({ searchParams }: BookPageProps) {
+  const { promotion: promotionId } = await searchParams;
+  const [catalog, claimPromotion] = await Promise.all([
+    getQuoteCatalog(),
+    promotionId ? getClaimablePromotionById(promotionId) : Promise.resolve(null),
+  ]);
 
   return (
     <>
@@ -23,7 +32,7 @@ export default async function BookPage() {
         containerClassName="py-12 md:py-20"
       />
       <Section className="[&>div]:py-10 md:[&>div]:py-16">
-        <BookFlow catalog={catalog} />
+        <BookFlow catalog={catalog} claimPromotion={claimPromotion} />
       </Section>
     </>
   );

@@ -263,6 +263,8 @@ export async function getAdminBookingById(id: string): Promise<AdminBookingDetai
     accessInfo: booking.accessInfo,
     specialInstructions: booking.specialInstructions,
     invoiceNumber: booking.invoice?.number ?? null,
+    promotionTitle: booking.promotionTitle,
+    promotionDiscountCents: booking.promotionDiscountCents,
     createdAt: booking.createdAt.toISOString(),
     agreement: booking.agreement
       ? {
@@ -734,6 +736,11 @@ export async function getAdminPromotions() {
   if (!isDatabaseConfigured()) return [];
 
   const promotions = await prisma.promotion.findMany({
+    include: {
+      services: {
+        include: { service: { select: { id: true, name: true } } },
+      },
+    },
     orderBy: { createdAt: "desc" },
   });
 
@@ -742,6 +749,10 @@ export async function getAdminPromotions() {
     title: promotion.title,
     description: promotion.description,
     isActive: promotion.isActive,
+    discountType: promotion.discountType,
+    discountValue: promotion.discountValue,
+    serviceIds: promotion.services.map((link) => link.serviceId),
+    serviceNames: promotion.services.map((link) => link.service.name),
     createdAt: promotion.createdAt.toISOString(),
   }));
 }

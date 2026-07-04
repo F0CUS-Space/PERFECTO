@@ -8,19 +8,51 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { formatPromotionDiscountLabel } from "@/features/promotions/services/promotion-discount";
 import {
   createPromotion,
   deletePromotion,
   updatePromotion,
 } from "@/features/admin/actions";
 
+type ServiceOption = { id: string; name: string };
+
 type PromotionRow = {
   id: string;
   title: string;
   description: string;
   isActive: boolean;
+  discountType: "FLAT" | "PERCENTAGE";
+  discountValue: number;
+  serviceIds: string[];
+  serviceNames: string[];
   createdAt: string;
 };
+
+type PromotionFormValues = {
+  title: string;
+  description: string;
+  discountType: "FLAT" | "PERCENTAGE";
+  flatAmountDollars: string;
+  discountPercent: string;
+  serviceIds: string[];
+};
+
+const selectClass =
+  "flex h-11 w-full rounded-xl border border-input bg-background px-4 text-sm";
+
+function defaultFormValues(promotion?: PromotionRow): PromotionFormValues {
+  return {
+    title: promotion?.title ?? "",
+    description: promotion?.description ?? "",
+    discountType: promotion?.discountType ?? "FLAT",
+    flatAmountDollars:
+      promotion?.discountType === "FLAT" ? String(promotion.discountValue / 100) : "30",
+    discountPercent:
+      promotion?.discountType === "PERCENTAGE" ? String(promotion.discountValue) : "10",
+    serviceIds: promotion?.serviceIds ?? [],
+  };
+}
 
 function StatusBadge({ isActive }: { isActive: boolean }) {
   return (
@@ -36,74 +68,140 @@ function StatusBadge({ isActive }: { isActive: boolean }) {
   );
 }
 
-function PromotionEditForm({
-  promotion,
-  onDone,
-  onError,
+function PromotionFormFields({
+  values,
+  onChange,
+  services,
 }: {
-  promotion: PromotionRow;
-  onDone: () => void;
-  onError: (message: string) => void;
+  values: PromotionFormValues;
+  onChange: (next: PromotionFormValues) => void;
+  services: ServiceOption[];
 }) {
-  const [title, setTitle] = useState(promotion.title);
-  const [description, setDescription] = useState(promotion.description);
-  const [pending, startTransition] = useTransition();
-
-  const onSave = (e: React.FormEvent) => {
-    e.preventDefault();
-    startTransition(async () => {
-      const result = await updatePromotion(promotion.id, {
-        title,
-        description,
-        isActive: promotion.isActive,
-      });
-      if (!result.ok) {
-        onError(result.error);
-        return;
-      }
-      onDone();
-    });
+  const toggleService = (serviceId: string) => {
+    const next = values.serviceIds.includes(serviceId)
+      ? values.serviceIds.filter((id) => id !== serviceId)
+      : [...values.serviceIds, serviceId];
+    onChange({ ...values, serviceIds: next });
   };
 
   return (
-    <form onSubmit={onSave} className="mt-4 space-y-3 border-t border-border pt-4">
+    <>
       <div className="space-y-2">
-        <Label htmlFor={`edit-title-${promotion.id}`}>Title</Label>
+        <Label>Title</Label>
         <Input
-          id={`edit-title-${promotion.id}`}
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
+          value={values.title}
+          onChange={(e) => onChange({ ...values, title: e.target.value })}
+          placeholder="e.g. Spring cleaning special"
           required
         />
       </div>
       <div className="space-y-2">
-        <Label htmlFor={`edit-desc-${promotion.id}`}>Description</Label>
+        <Label>Description</Label>
         <Textarea
-          id={`edit-desc-${promotion.id}`}
           rows={3}
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
+          value={values.description}
+          onChange={(e) => onChange({ ...values, description: e.target.value })}
+          placeholder="Describe the offer and any terms…"
           required
         />
       </div>
-      <div className="flex flex-wrap gap-2">
-        <Button type="submit" size="sm" disabled={pending}>
-          {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save changes"}
-        </Button>
-        <Button type="button" size="sm" variant="ghost" disabled={pending} onClick={onDone}>
-          Cancel
-        </Button>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="space-y-2">
+          <Label>Discount type</Label>
+          <select
+            className={selectClass}
+            value={values.discountType}
+            onChange={(e) =>
+              onChange({
+                ...values,
+                discountType: e.target.value as "FLAT" | "PERCENTAGE",
+              })
+            }
+          >
+            <option value="FLAT">Flat amount ($)</option>
+            <option value="PERCENTAGE">Percentage (%)</option>
+          </select>
+        </div>
+        <div className="space-y-2">
+          <Label>
+            {values.discountType === "FLAT" ? "Discount amount ($)" : "Discount percent (%)"}
+          </Label>
+          {values.discountType === "FLAT" ? (
+            <Input
+              type="number"
+              min={0.01}
+              step={0.01}
+              value={values.flatAmountDollars}
+              onChange={(e) => onChange({ ...values, flatAmountDollars: e.target.value })}
+              required
+            />
+          ) : (
+            <Input
+              type="number"
+              min={1}
+              max={100}
+              value={values.discountPercent}
+              onChange={(e) => onChange({ ...values, discountPercent: e.target.value })}
+              required
+            />
+          )}
+        </div>
       </div>
-    </form>
+      <div className="space-y-2">
+        <Label>Applies to services</Label>
+        <p className="text-xs text-muted-foreground">
+          Leave all unchecked to apply the promotion to every service.
+        </p>
+        <div className="grid gap-2 sm:grid-cols-2">
+          {services.map((service) => {
+            const checked = values.serviceIds.includes(service.id);
+            return (
+              <label
+                key={service.id}
+                className="flex cursor-pointer items-center gap-2 rounded-xl border border-border px-3 py-2 text-sm"
+              >
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 rounded border-input accent-primary"
+                  checked={checked}
+                  onChange={() => toggleService(service.id)}
+                />
+                {service.name}
+              </label>
+            );
+          })}
+        </div>
+      </div>
+    </>
   );
 }
 
-export function PromotionsManager({ promotions }: { promotions: PromotionRow[] }) {
+function buildPayload(values: PromotionFormValues, isActive: boolean) {
+  return {
+    title: values.title.trim(),
+    description: values.description.trim(),
+    isActive,
+    discountType: values.discountType,
+    flatAmountDollars:
+      values.discountType === "FLAT" ? Number(values.flatAmountDollars) : undefined,
+    discountPercent:
+      values.discountType === "PERCENTAGE" ? Number(values.discountPercent) : undefined,
+    serviceIds: values.serviceIds,
+  };
+}
+
+export function PromotionsManager({
+  promotions,
+  services,
+}: {
+  promotions: PromotionRow[];
+  services: ServiceOption[];
+}) {
   const router = useRouter();
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
+  const [formValues, setFormValues] = useState<PromotionFormValues>(defaultFormValues());
   const [error, setError] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [editValues, setEditValues] = useState<PromotionFormValues>(defaultFormValues());
   const [pending, startTransition] = useTransition();
 
   const refresh = () => {
@@ -114,13 +212,27 @@ export function PromotionsManager({ promotions }: { promotions: PromotionRow[] }
   const onCreate = (isActive: boolean) => {
     setError(null);
     startTransition(async () => {
-      const result = await createPromotion({ title, description, isActive });
+      const result = await createPromotion(buildPayload(formValues, isActive));
       if (!result.ok) {
         setError(result.error);
         return;
       }
-      setTitle("");
-      setDescription("");
+      setFormValues(defaultFormValues());
+      refresh();
+    });
+  };
+
+  const onSaveEdit = (promotion: PromotionRow) => {
+    setError(null);
+    startTransition(async () => {
+      const result = await updatePromotion(
+        promotion.id,
+        buildPayload(editValues, promotion.isActive),
+      );
+      if (!result.ok) {
+        setError(result.error);
+        return;
+      }
       refresh();
     });
   };
@@ -132,6 +244,12 @@ export function PromotionsManager({ promotions }: { promotions: PromotionRow[] }
         title: promotion.title,
         description: promotion.description,
         isActive: !promotion.isActive,
+        discountType: promotion.discountType,
+        flatAmountDollars:
+          promotion.discountType === "FLAT" ? promotion.discountValue / 100 : undefined,
+        discountPercent:
+          promotion.discountType === "PERCENTAGE" ? promotion.discountValue : undefined,
+        serviceIds: promotion.serviceIds,
       });
       if (!result.ok) {
         setError(result.error);
@@ -161,42 +279,25 @@ export function PromotionsManager({ promotions }: { promotions: PromotionRow[] }
     });
   };
 
+  const canCreate =
+    formValues.title.trim() &&
+    formValues.description.trim() &&
+    (formValues.discountType === "FLAT"
+      ? Number(formValues.flatAmountDollars) > 0
+      : Number(formValues.discountPercent) >= 1);
+
   return (
     <div className="space-y-8">
       <div className="space-y-4 rounded-2xl border border-border bg-card p-5">
         <h2 className="font-semibold text-brand-navy">Create promotion</h2>
         <p className="text-sm text-muted-foreground">
-          Published promotions appear on the public promotions page and notify customers in their
-          notification bell. Save as draft to prepare an offer before going live.
+          Set a flat or percentage discount. Customers claim offers on the promotions page and the
+          discount is applied to their booking total.
         </p>
-        <div className="space-y-2">
-          <Label htmlFor="promo-title">Title</Label>
-          <Input
-            id="promo-title"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="e.g. Spring cleaning special"
-            required
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="promo-desc">Description</Label>
-          <Textarea
-            id="promo-desc"
-            rows={3}
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder="Describe the offer, discount, or terms…"
-            required
-          />
-        </div>
-        {error && <p className="text-sm text-destructive">{error}</p>}
+        <PromotionFormFields values={formValues} onChange={setFormValues} services={services} />
+        {error && !editingId && <p className="text-sm text-destructive">{error}</p>}
         <div className="flex flex-wrap gap-2">
-          <Button
-            type="button"
-            disabled={pending || !title.trim() || !description.trim()}
-            onClick={() => onCreate(true)}
-          >
+          <Button type="button" disabled={pending || !canCreate} onClick={() => onCreate(true)}>
             {pending ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin" /> Saving…
@@ -208,7 +309,7 @@ export function PromotionsManager({ promotions }: { promotions: PromotionRow[] }
           <Button
             type="button"
             variant="outline"
-            disabled={pending || !title.trim() || !description.trim()}
+            disabled={pending || !canCreate}
             onClick={() => onCreate(false)}
           >
             Save as draft
@@ -229,20 +330,27 @@ export function PromotionsManager({ promotions }: { promotions: PromotionRow[] }
           </p>
         ) : (
           promotions.map((promotion) => (
-            <article
-              key={promotion.id}
-              className="rounded-2xl border border-border bg-card p-4"
-            >
+            <article key={promotion.id} className="rounded-2xl border border-border bg-card p-4">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <p className="font-medium text-brand-navy">{promotion.title}</p>
                     <StatusBadge isActive={promotion.isActive} />
+                    <span className="rounded-full bg-brand-blue/10 px-2.5 py-0.5 text-xs font-medium text-brand-blue">
+                      {formatPromotionDiscountLabel(
+                        promotion.discountType,
+                        promotion.discountValue,
+                      )}
+                    </span>
                   </div>
                   {editingId !== promotion.id && (
                     <>
                       <p className="mt-1 text-sm text-muted-foreground">{promotion.description}</p>
                       <p className="mt-2 text-xs text-muted-foreground">
+                        {promotion.serviceNames.length > 0
+                          ? `Services: ${promotion.serviceNames.join(", ")}`
+                          : "Applies to all services"}
+                        {" · "}
                         Created {new Date(promotion.createdAt).toLocaleDateString("en-US")}
                       </p>
                     </>
@@ -258,6 +366,7 @@ export function PromotionsManager({ promotions }: { promotions: PromotionRow[] }
                       onClick={() => {
                         setError(null);
                         setEditingId(promotion.id);
+                        setEditValues(defaultFormValues(promotion));
                       }}
                     >
                       <Pencil className="h-4 w-4" />
@@ -288,11 +397,36 @@ export function PromotionsManager({ promotions }: { promotions: PromotionRow[] }
               </div>
 
               {editingId === promotion.id && (
-                <PromotionEditForm
-                  promotion={promotion}
-                  onDone={refresh}
-                  onError={setError}
-                />
+                <div className="mt-4 space-y-4 border-t border-border pt-4">
+                  <PromotionFormFields
+                    values={editValues}
+                    onChange={setEditValues}
+                    services={services}
+                  />
+                  {error && <p className="text-sm text-destructive">{error}</p>}
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      disabled={pending}
+                      onClick={() => onSaveEdit(promotion)}
+                    >
+                      {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save changes"}
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      disabled={pending}
+                      onClick={() => {
+                        setEditingId(null);
+                        setError(null);
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
               )}
             </article>
           ))

@@ -93,6 +93,11 @@ enum AdminAuditAction {
   PROMOTION_DELETE
 }
 
+enum PromotionDiscountType {
+  FLAT
+  PERCENTAGE
+}
+
 enum NotificationType {
   ADMIN_NEW_BOOKING
   ADMIN_BOOKING_CANCELLED
@@ -176,6 +181,7 @@ model Service {
   quotes   Quote[]
   bookings Booking[]
   addOns   AddOnOnService[]
+  promotions PromotionOnService[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -223,6 +229,10 @@ model Quote {
   // Computed estimate in cents + JSON breakdown for transparency.
   estimatedTotal Int
   breakdown      Json?
+
+  promotionId            String?
+  promotion              Promotion? @relation(fields: [promotionId], references: [id], onDelete: SetNull)
+  promotionDiscountCents Int        @default(0)
 
   booking Booking?
 
@@ -273,6 +283,11 @@ model Booking {
   totalAmount   Int
   depositAmount Int // 50% of total
   balanceAmount Int
+
+  promotionId            String?
+  promotion              Promotion? @relation(fields: [promotionId], references: [id], onDelete: SetNull)
+  promotionTitle         String?
+  promotionDiscountCents Int        @default(0)
 
   photos    PropertyPhoto[]
   payments  Payment[]
@@ -454,17 +469,36 @@ model ScheduleBlock {
 }
 
 // ---------------------------------------------------------------------------
-// Promotions (display only in V1.0; logic expands in later versions)
+// Promotions (admin-managed; applied when claimed during booking)
 // ---------------------------------------------------------------------------
 
 model Promotion {
-  id          String   @id @default(cuid())
-  title       String
-  description String
-  imageUrl    String?
-  isActive    Boolean  @default(true)
+  id            String                 @id @default(cuid())
+  title         String
+  description   String
+  imageUrl      String?
+  discountType  PromotionDiscountType
+  // FLAT: cents off. PERCENTAGE: whole percent (e.g. 15 = 15% off).
+  discountValue Int
+  isActive      Boolean                @default(true)
+
+  services PromotionOnService[]
+  quotes   Quote[]
+  bookings Booking[]
 
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isActive])
+}
+
+model PromotionOnService {
+  promotionId String
+  serviceId   String
+  promotion   Promotion @relation(fields: [promotionId], references: [id], onDelete: Cascade)
+  service     Service   @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  @@id([promotionId, serviceId])
 }
 
 // ---------------------------------------------------------------------------

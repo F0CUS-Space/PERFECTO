@@ -8,6 +8,7 @@ import { getCurrentUser } from "@/server/auth";
 
 import { parseQuoteInput } from "./schema";
 import { calculateQuote, type QuoteCalculation } from "./services/pricing";
+import { getPromotionForService } from "@/features/promotions/queries";
 
 export type SaveQuoteResult =
   | {
@@ -67,6 +68,29 @@ export async function saveQuote(raw: unknown): Promise<SaveQuoteResult> {
         priceCents: link.addOn.price,
       }));
 
+    let appliedPromotion: {
+      id: string;
+      title: string;
+      discountType: "FLAT" | "PERCENTAGE";
+      discountValue: number;
+    } | null = null;
+
+    if (input.promotionId) {
+      const promotion = await getPromotionForService(input.promotionId, service.id);
+      if (!promotion) {
+        return {
+          ok: false,
+          error: "This promotion is not available for the selected service.",
+        };
+      }
+      appliedPromotion = {
+        id: promotion.id,
+        title: promotion.title,
+        discountType: promotion.discountType,
+        discountValue: promotion.discountValue,
+      };
+    }
+
     const calculation = calculateQuote({
       pricingMode: profile.pricingMode,
       serviceBasePriceCents: service.basePrice,
@@ -80,6 +104,13 @@ export async function saveQuote(raw: unknown): Promise<SaveQuoteResult> {
       frequency: input.frequency,
       addOns: selectedAddOns,
       sqftIncluded: profile.sqftIncluded,
+      promotion: appliedPromotion
+        ? {
+            title: appliedPromotion.title,
+            discountType: appliedPromotion.discountType,
+            discountValue: appliedPromotion.discountValue,
+          }
+        : undefined,
     });
 
     if (
@@ -104,6 +135,8 @@ export async function saveQuote(raw: unknown): Promise<SaveQuoteResult> {
         hasPets: input.hasPets ?? false,
         frequency: input.frequency,
         estimatedTotal: calculation.estimatedTotalCents,
+        promotionId: appliedPromotion?.id ?? null,
+        promotionDiscountCents: calculation.promotionDiscountCents,
         breakdown: JSON.parse(JSON.stringify(calculation)),
         addOns: {
           create: input.addOnIds.map((addOnId) => ({ addOnId })),

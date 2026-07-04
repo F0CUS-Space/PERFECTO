@@ -14,6 +14,7 @@ import {
 import { BookingStatusForm } from "@/features/admin/components/booking-status-form";
 import { getAdminBookingById } from "@/features/admin/queries";
 import { BookingStatusBadge } from "@/features/dashboard/components/booking-status-badge";
+import { AppliedPromotionSummary } from "@/features/promotions/components/applied-promotion-summary";
 import { formatCurrency } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -199,6 +200,13 @@ export default async function AdminBookingDetailPage({ params }: PageProps) {
               <CardTitle className="text-base">Payment</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3 text-sm">
+              {booking.promotionTitle && booking.promotionDiscountCents > 0 && (
+                <AppliedPromotionSummary
+                  title={booking.promotionTitle}
+                  discountCents={booking.promotionDiscountCents}
+                  compact
+                />
+              )}
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Total</span>
                 <span className="font-semibold">{formatCurrency(booking.totalAmount)}</span>

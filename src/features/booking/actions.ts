@@ -40,6 +40,7 @@ export async function createBooking(raw: unknown): Promise<CreateBookingResult> 
       where: { id: input.quoteId },
       include: {
         service: true,
+        promotion: { select: { id: true, title: true } },
         addOns: { include: { addOn: true } },
         booking: { select: { id: true } },
       },
@@ -101,6 +102,9 @@ export async function createBooking(raw: unknown): Promise<CreateBookingResult> 
           totalAmount: quote.estimatedTotal,
           depositAmount,
           balanceAmount,
+          promotionId: quote.promotionId,
+          promotionTitle: quote.promotion?.title ?? null,
+          promotionDiscountCents: quote.promotionDiscountCents,
         },
       });
 

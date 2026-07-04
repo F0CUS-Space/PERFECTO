@@ -241,6 +241,8 @@ async function main() {
       data: {
         title: "First-Time Customer Offer",
         description: "Enjoy $30 off your first booking with Perfecto. Welcome to a cleaner home!",
+        discountType: "FLAT",
+        discountValue: 3000,
         isActive: true,
       },
     });

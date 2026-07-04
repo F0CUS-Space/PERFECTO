@@ -1,13 +1,13 @@
-import type { Metadata } from "next";
 import Link from "next/link";
 import { Tag, Sparkles } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Section } from "@/components/shared/section";
 import { PageHero } from "@/components/shared/page-hero";
 import { getActivePromotions } from "@/features/promotions/queries";
 
-export const metadata: Metadata = {
+export const metadata = {
   title: "Promotions",
   description: "Current offers and promotions from Perfecto Cleaning Services.",
 };
@@ -26,7 +26,7 @@ export default async function PromotionsPage() {
           </>
         }
         title="Offers & promotions"
-        description="Make a spotless home even more rewarding with our latest deals."
+        description="Claim an offer and the discount is applied automatically when you book."
       />
 
       <Section>
@@ -48,14 +48,24 @@ export default async function PromotionsPage() {
                 key={promo.id}
                 className="flex flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-card"
               >
-                <div className="flex items-center gap-3 bg-brand-navy px-6 py-4 text-white">
-                  <Tag className="h-5 w-5 text-brand-mint" />
-                  <h2 className="text-lg font-semibold">{promo.title}</h2>
+                <div className="flex items-center justify-between gap-3 bg-brand-navy px-6 py-4 text-white">
+                  <div className="flex items-center gap-3">
+                    <Tag className="h-5 w-5 text-brand-mint" />
+                    <h2 className="text-lg font-semibold">{promo.title}</h2>
+                  </div>
+                  <Badge variant="secondary" className="bg-white/15 text-white hover:bg-white/15">
+                    {promo.discountLabel}
+                  </Badge>
                 </div>
                 <div className="flex flex-1 flex-col p-6">
                   <p className="flex-1 text-sm text-muted-foreground">{promo.description}</p>
+                  <p className="mt-3 text-xs text-muted-foreground">
+                    {promo.appliesToAllServices
+                      ? "Applies to all services"
+                      : `Applies to: ${promo.serviceNames.join(", ")}`}
+                  </p>
                   <Button asChild className="mt-5 w-fit">
-                    <Link href="/book">Claim this offer</Link>
+                    <Link href={`/book?promotion=${promo.id}`}>Claim this offer</Link>
                   </Button>
                 </div>
               </div>

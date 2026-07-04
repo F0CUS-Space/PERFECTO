@@ -14,6 +14,7 @@ import { PageHero } from "@/components/shared/page-hero";
 import { Section } from "@/components/shared/section";
 import { PayDepositButton } from "@/features/payments/components/pay-deposit-button";
 import { DepositConfirmationSync } from "@/features/payments/components/deposit-confirmation-sync";
+import { AppliedPromotionSummary } from "@/features/promotions/components/applied-promotion-summary";
 import { reconcileBookingPayments } from "@/features/payments/services/reconcile-payments";
 import { isStripeConfigured } from "@/lib/stripe-ready";
 import { displayArrivalTime } from "@/lib/format-arrival-time";
@@ -148,6 +149,15 @@ export default async function BookingConfirmationPage({ params, searchParams }: 
                   {formatCurrency(booking.totalAmount)}
                 </dd>
               </div>
+              {booking.promotionTitle && booking.promotionDiscountCents > 0 && (
+                <div className="sm:col-span-2">
+                  <AppliedPromotionSummary
+                    title={booking.promotionTitle}
+                    discountCents={booking.promotionDiscountCents}
+                    compact
+                  />
+                </div>
+              )}
               <div>
                 <dt className="text-muted-foreground">Paid so far</dt>
                 <dd className="text-lg font-bold tabular-nums text-primary">

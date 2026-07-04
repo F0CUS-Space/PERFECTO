@@ -32,6 +32,8 @@ export type CustomerBookingDetail = CustomerBookingSummary & {
   canReschedule: boolean;
   canReview: boolean;
   rescheduleCount: number;
+  promotionTitle: string | null;
+  promotionDiscountCents: number;
 };
 
 export type CustomerPaymentRow = {

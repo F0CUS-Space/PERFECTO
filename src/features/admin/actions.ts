@@ -1175,11 +1175,48 @@ export async function deleteReview(reviewId: string): Promise<AdminActionResult>
   return { ok: true };
 }
 
-const promotionSchema = z.object({
-  title: z.string().trim().min(2, "Enter a title").max(120),
-  description: z.string().trim().min(10, "Enter a description").max(2000),
-  isActive: z.boolean(),
-});
+const promotionSchema = z
+  .object({
+    title: z.string().trim().min(2, "Enter a title").max(120),
+    description: z.string().trim().min(10, "Enter a description").max(2000),
+    isActive: z.boolean(),
+    discountType: z.enum(["FLAT", "PERCENTAGE"]),
+    flatAmountDollars: z.coerce.number().optional(),
+    discountPercent: z.coerce.number().optional(),
+    serviceIds: z.array(z.string()).default([]),
+  })
+  .superRefine((data, ctx) => {
+    if (data.discountType === "FLAT") {
+      if (!data.flatAmountDollars || data.flatAmountDollars <= 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Enter a discount amount greater than zero.",
+          path: ["flatAmountDollars"],
+        });
+      }
+    } else if (!data.discountPercent || data.discountPercent < 1 || data.discountPercent > 100) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Enter a percentage between 1 and 100.",
+        path: ["discountPercent"],
+      });
+    }
+  });
+
+function promotionDiscountValueFromInput(input: z.infer<typeof promotionSchema>) {
+  if (input.discountType === "FLAT") {
+    return Math.round((input.flatAmountDollars ?? 0) * 100);
+  }
+  return Math.round(input.discountPercent ?? 0);
+}
+
+async function syncPromotionServices(promotionId: string, serviceIds: string[]) {
+  await prisma.promotionOnService.deleteMany({ where: { promotionId } });
+  if (serviceIds.length === 0) return;
+  await prisma.promotionOnService.createMany({
+    data: serviceIds.map((serviceId) => ({ promotionId, serviceId })),
+  });
+}
 
 function revalidatePromotionPaths() {
   revalidatePath("/admin/promotions");
@@ -1196,8 +1233,16 @@ export async function createPromotion(
   }
 
   const promotion = await prisma.promotion.create({
-    data: parsed.data,
+    data: {
+      title: parsed.data.title,
+      description: parsed.data.description,
+      isActive: parsed.data.isActive,
+      discountType: parsed.data.discountType,
+      discountValue: promotionDiscountValueFromInput(parsed.data),
+    },
   });
+
+  await syncPromotionServices(promotion.id, parsed.data.serviceIds);
 
   revalidatePromotionPaths();
   await logAdminAction({
@@ -1237,8 +1282,16 @@ export async function updatePromotion(
 
   const promotion = await prisma.promotion.update({
     where: { id: promotionId },
-    data: parsed.data,
+    data: {
+      title: parsed.data.title,
+      description: parsed.data.description,
+      isActive: parsed.data.isActive,
+      discountType: parsed.data.discountType,
+      discountValue: promotionDiscountValueFromInput(parsed.data),
+    },
   });
+
+  await syncPromotionServices(promotion.id, parsed.data.serviceIds);
 
   revalidatePromotionPaths();
   await logAdminAction({

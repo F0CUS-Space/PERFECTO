@@ -31,6 +31,8 @@ export interface AdminBookingDetail extends AdminBookingRow {
   balanceAmount: number;
   fullyPaid: boolean;
   invoiceNumber: string | null;
+  promotionTitle: string | null;
+  promotionDiscountCents: number;
   agreement: {
     signatureName: string;
     signedAt: string;

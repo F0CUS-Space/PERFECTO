@@ -19,6 +19,8 @@ export type InvoiceData = {
   addressLine: string;
   city: string;
   postalCode: string;
+  promotionTitle?: string | null;
+  promotionDiscountCents?: number;
 };
 
 type BookingWithInvoice = {
@@ -28,6 +30,8 @@ type BookingWithInvoice = {
     amountDue: number;
     amountPaid: number;
   } | null;
+  promotionTitle: string | null;
+  promotionDiscountCents: number;
   user: {
     firstName: string | null;
     lastName: string | null;
@@ -64,6 +68,8 @@ export function buildInvoiceData(booking: BookingWithInvoice): InvoiceData | nul
     addressLine: booking.addressLine,
     city: booking.city,
     postalCode: booking.postalCode,
+    promotionTitle: booking.promotionTitle,
+    promotionDiscountCents: booking.promotionDiscountCents,
   };
 }
 
@@ -166,7 +172,17 @@ export async function renderInvoicePdf(invoice: InvoiceData): Promise<Buffer> {
   y -= 18;
   drawText(invoice.serviceName, margin, y);
   drawText(formatScheduledDate(invoice.scheduledDate), colDate, y);
-  drawRight(formatCurrency(invoice.amountDue), y);
+  const serviceLineAmount =
+    invoice.promotionDiscountCents && invoice.promotionDiscountCents > 0
+      ? invoice.amountDue + invoice.promotionDiscountCents
+      : invoice.amountDue;
+  drawRight(formatCurrency(serviceLineAmount), y);
+
+  if (invoice.promotionDiscountCents && invoice.promotionDiscountCents > 0 && invoice.promotionTitle) {
+    y -= 16;
+    drawText(`Promotion: ${invoice.promotionTitle}`, margin, y);
+    drawRight(`-${formatCurrency(invoice.promotionDiscountCents)}`, y, { color: muted });
+  }
 
   y -= 10;
   page.drawLine({
