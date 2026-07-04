@@ -25,6 +25,8 @@ import {
   cancelCustomerBooking,
   rescheduleCustomerBooking,
 } from "@/features/dashboard/actions";
+import { ScheduleAvailabilityNotice } from "@/features/booking/components/schedule-availability-notice";
+import { useScheduleBlocks } from "@/features/booking/hooks/use-schedule-blocks";
 import { isWithinLateChangeWindow } from "@/features/dashboard/booking-rules";
 import { displayArrivalTime } from "@/lib/format-arrival-time";
 import { cn } from "@/lib/utils";
@@ -51,6 +53,7 @@ export function BookingManagePanel({
   const [newTime, setNewTime] = useState(arrivalWindow.match(/^\d{2}:\d{2}$/) ? arrivalWindow : "09:00");
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const { blocks: scheduleBlocks } = useScheduleBlocks();
 
   if (!canCancel && !canReschedule) return null;
 
@@ -186,6 +189,14 @@ export function BookingManagePanel({
                   )}
                 </div>
               </div>
+            )}
+
+            {mode === "reschedule" && (
+              <ScheduleAvailabilityNotice
+                blocks={scheduleBlocks}
+                scheduledDate={newDate}
+                arrivalWindow={newTime}
+              />
             )}
 
             <label className="flex items-start gap-3 text-sm">

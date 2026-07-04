@@ -33,6 +33,12 @@ import { useBookingWizardStore } from "../store";
 import { BookingProgress } from "./booking-progress";
 import { BookingSummary } from "./booking-summary";
 import { PhotoUploader } from "./photo-uploader";
+import { ScheduleAvailabilityNotice } from "./schedule-availability-notice";
+import { useScheduleBlocks } from "../hooks/use-schedule-blocks";
+import {
+  blocksForDate,
+  getScheduleBlockMessage,
+} from "../schedule-block-utils";
 
 export function BookingWizard() {
   const authUser = useAuthUser();
@@ -55,6 +61,7 @@ export function BookingWizard() {
 
   const [stepError, setStepError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const { blocks: scheduleBlocks } = useScheduleBlocks();
 
   useEffect(() => {
     if (!quote) resetWizard();
@@ -86,6 +93,14 @@ export function BookingWizard() {
       const parsed = scheduleStepSchema.safeParse(schedule);
       if (!parsed.success) {
         setStepError(parsed.error.errors[0]?.message ?? "Check schedule details");
+        return;
+      }
+      const blockMessage = getScheduleBlockMessage(
+        parsed.data.arrivalWindow,
+        blocksForDate(scheduleBlocks, parsed.data.scheduledDate),
+      );
+      if (blockMessage) {
+        setStepError(blockMessage);
         return;
       }
       setStepIndex(2);
@@ -279,6 +294,11 @@ export function BookingWizard() {
                     Choose when you&apos;d like our team to arrive.
                   </p>
                 </div>
+                <ScheduleAvailabilityNotice
+                  blocks={scheduleBlocks}
+                  scheduledDate={schedule.scheduledDate ?? ""}
+                  arrivalWindow={schedule.arrivalWindow ?? DEFAULT_ARRIVAL_TIME}
+                />
               </>
             )}
 

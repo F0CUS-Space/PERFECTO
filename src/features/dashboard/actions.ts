@@ -8,6 +8,7 @@ import {
   canCustomerCancelBooking,
   canCustomerRescheduleBooking,
 } from "@/features/dashboard/booking-rules";
+import { getScheduleAvailabilityError } from "@/features/booking/services/schedule-availability";
 import {
   notifyAdminsBookingCancelled,
   notifyAdminsBookingRescheduled,
@@ -91,6 +92,14 @@ export async function rescheduleCustomerBooking(
 
   if (!canCustomerRescheduleBooking(booking)) {
     return { ok: false, error: "This booking can no longer be rescheduled." };
+  }
+
+  const availabilityError = await getScheduleAvailabilityError(
+    parsed.data.scheduledDate,
+    parsed.data.arrivalWindow,
+  );
+  if (availabilityError) {
+    return { ok: false, error: availabilityError };
   }
 
   const newDate = parseScheduleDate(parsed.data.scheduledDate);

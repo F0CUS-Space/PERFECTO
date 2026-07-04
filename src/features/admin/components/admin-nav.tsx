@@ -3,6 +3,7 @@
 import {
   Briefcase,
   Calendar,
+  CalendarOff,
   ClipboardList,
   CreditCard,
   Gift,
@@ -33,6 +34,7 @@ export const ADMIN_NAV_GROUPS: PortalNavGroup[] = [
     label: "Operations",
     links: [
       { href: "/admin/bookings", label: "Bookings", icon: Calendar },
+      { href: "/admin/schedule", label: "Availability", icon: CalendarOff },
       { href: "/admin/customers", label: "Customers", icon: Users },
       { href: "/admin/payments", label: "Payments", icon: CreditCard },
     ],

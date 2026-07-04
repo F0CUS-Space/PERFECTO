@@ -7,6 +7,7 @@ import type { ApplicationStatus, BookingStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { sendEmail } from "@/lib/email";
 import { env } from "@/env";
+import { parseScheduleDate } from "@/config/booking";
 import {
   adminAccessGrantedEmail,
   adminAccessRevokedEmail,
@@ -1256,6 +1257,104 @@ export async function updatePromotion(
       created: !existing.isActive,
     });
   }
+
+  return { ok: true };
+}
+
+const scheduleBlockSchema = z
+  .object({
+    blockDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Pick a date"),
+    allDay: z.boolean(),
+    startTime: z
+      .string()
+      .regex(/^([01]\d|2[0-3]):[0-5]\d$/)
+      .optional(),
+    endTime: z
+      .string()
+      .regex(/^([01]\d|2[0-3]):[0-5]\d$/)
+      .optional(),
+    reason: z.string().max(500).optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (!data.allDay) {
+      if (!data.startTime || !data.endTime) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Start and end times are required for a partial-day block.",
+        });
+        return;
+      }
+      if (data.startTime >= data.endTime) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "End time must be after start time.",
+        });
+      }
+    }
+  });
+
+function revalidateSchedulePaths() {
+  revalidatePath("/admin/schedule");
+  revalidatePath("/book");
+  revalidatePath("/dashboard/bookings");
+}
+
+export async function createScheduleBlock(
+  input: z.infer<typeof scheduleBlockSchema>,
+): Promise<AdminActionResult> {
+  const admin = await requireAdmin();
+  const parsed = scheduleBlockSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.errors[0]?.message ?? "Invalid input." };
+  }
+
+  const block = await prisma.scheduleBlock.create({
+    data: {
+      blockDate: parseScheduleDate(parsed.data.blockDate),
+      allDay: parsed.data.allDay,
+      startTime: parsed.data.allDay ? null : parsed.data.startTime,
+      endTime: parsed.data.allDay ? null : parsed.data.endTime,
+      reason: parsed.data.reason?.trim() || null,
+      createdById: admin.id,
+    },
+  });
+
+  revalidateSchedulePaths();
+  await logAdminAction({
+    actorId: admin.id,
+    action: "SCHEDULE_BLOCK_CREATE",
+    entityType: "schedule_block",
+    entityId: block.id,
+    summary: parsed.data.allDay
+      ? `Blocked ${parsed.data.blockDate} (all day)`
+      : `Blocked ${parsed.data.blockDate} ${parsed.data.startTime}-${parsed.data.endTime}`,
+  });
+  revalidateAuditLogPath();
+
+  return { ok: true };
+}
+
+export async function deleteScheduleBlock(blockId: string): Promise<AdminActionResult> {
+  const admin = await requireAdmin();
+
+  const block = await prisma.scheduleBlock.findUnique({ where: { id: blockId } });
+  if (!block) {
+    return { ok: false, error: "Schedule block not found." };
+  }
+
+  await prisma.scheduleBlock.delete({ where: { id: blockId } });
+
+  revalidateSchedulePaths();
+  await logAdminAction({
+    actorId: admin.id,
+    action: "SCHEDULE_BLOCK_DELETE",
+    entityType: "schedule_block",
+    entityId: block.id,
+    summary: block.allDay
+      ? `Removed all-day block on ${block.blockDate.toISOString().slice(0, 10)}`
+      : `Removed time block on ${block.blockDate.toISOString().slice(0, 10)}`,
+  });
+  revalidateAuditLogPath();
 
   return { ok: true };
 }

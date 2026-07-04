@@ -745,3 +745,33 @@ export async function getAdminPromotions() {
     createdAt: promotion.createdAt.toISOString(),
   }));
 }
+
+export async function getAdminScheduleBlocks() {
+  if (!isDatabaseConfigured()) return [];
+
+  const rows = await prisma.scheduleBlock.findMany({
+    where: {
+      blockDate: {
+        gte: (() => {
+          const today = new Date();
+          return new Date(today.getFullYear(), today.getMonth(), today.getDate(), 12, 0, 0, 0);
+        })(),
+      },
+    },
+    include: {
+      createdBy: { select: { firstName: true, lastName: true, phone: true } },
+    },
+    orderBy: [{ blockDate: "asc" }, { allDay: "desc" }, { startTime: "asc" }],
+  });
+
+  return rows.map((row) => ({
+    id: row.id,
+    blockDate: row.blockDate.toISOString().slice(0, 10),
+    allDay: row.allDay,
+    startTime: row.startTime,
+    endTime: row.endTime,
+    reason: row.reason,
+    createdAt: row.createdAt.toISOString(),
+    createdByLabel: adminDisplayName(row.createdBy),
+  }));
+}

@@ -6,6 +6,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/server/rbac";
 
+import { getScheduleAvailabilityError, toScheduleDateString } from "@/features/booking/services/schedule-availability";
 import { createBookingSchema } from "./schema";
 
 export type CreateBookingResult =
@@ -26,6 +27,14 @@ export async function createBooking(raw: unknown): Promise<CreateBookingResult> 
   try {
     const user = await requireUser();
     const input = createBookingSchema.parse(raw);
+
+    const availabilityError = await getScheduleAvailabilityError(
+      toScheduleDateString(input.scheduledDate),
+      input.arrivalWindow,
+    );
+    if (availabilityError) {
+      return { ok: false, error: availabilityError };
+    }
 
     const quote = await prisma.quote.findUnique({
       where: { id: input.quoteId },
