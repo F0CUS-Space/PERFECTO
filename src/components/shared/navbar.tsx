@@ -16,7 +16,6 @@ import type { PublicUser } from "@/features/auth/types";
 const MAIN_LINKS = [
   { label: "Home", href: "/" },
   { label: "Services", href: "/services" },
-  { label: "Book Now", href: "/book" },
   { label: "Gallery", href: "/gallery" },
   { label: "Promotions", href: "/promotions" },
   { label: "Contact", href: "/contact" },
