@@ -133,6 +133,9 @@ export async function notifyAdminsNewBooking(bookingId: string): Promise<void> {
     serviceName: booking.service.name,
     scheduledDate: booking.scheduledDate,
     arrivalWindow: booking.arrivalWindow,
+    addressLine: booking.addressLine,
+    city: booking.city,
+    postalCode: booking.postalCode,
     bookingId: booking.id,
     appUrl,
   });
@@ -212,6 +215,9 @@ export async function notifyAdminsBookingRescheduled(
     previousArrivalWindow,
     scheduledDate: booking.scheduledDate,
     arrivalWindow: booking.arrivalWindow,
+    addressLine: booking.addressLine,
+    city: booking.city,
+    postalCode: booking.postalCode,
     bookingId: booking.id,
     appUrl,
   });

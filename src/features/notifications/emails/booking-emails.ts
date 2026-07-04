@@ -10,14 +10,28 @@ const BRAND = {
   light: "#f8fafc",
 };
 
+function brandAssetUrl(appUrl: string, file: string): string {
+  return `${appUrl.replace(/\/$/, "")}/brand/${file}`;
+}
+
 export function emailLayout(body: string, appUrl: string): string {
-  const logoUrl = `${appUrl.replace(/\/$/, "")}/brand/perfecto-wordmark.png`;
+  const iconUrl = brandAssetUrl(appUrl, "perfecto-icon.png");
+  const wordmarkUrl = brandAssetUrl(appUrl, "perfecto-wordmark.png");
 
   return `
     <div style="font-family: system-ui, -apple-system, sans-serif; max-width: 560px; margin: 0 auto; background: ${BRAND.light}; padding: 24px;">
       <div style="background: #ffffff; border-radius: 16px; overflow: hidden; border: 1px solid #e2e8f0;">
-        <div style="background: ${BRAND.navy}; padding: 24px; text-align: center;">
-          <img src="${logoUrl}" alt="${escapeHtml(siteConfig.name)}" width="180" style="max-width: 180px; height: auto;" />
+        <div style="background: ${BRAND.navy}; padding: 28px 24px; text-align: center;">
+          <table role="presentation" cellpadding="0" cellspacing="0" align="center" style="margin: 0 auto; background: #ffffff; border-radius: 14px; box-shadow: 0 2px 10px rgba(0,0,0,0.15);">
+            <tr>
+              <td style="padding: 14px 0 14px 18px; vertical-align: middle;">
+                <img src="${iconUrl}" alt="" width="52" height="52" style="display: block; width: 52px; height: 52px;" />
+              </td>
+              <td style="padding: 14px 18px 14px 10px; vertical-align: middle;">
+                <img src="${wordmarkUrl}" alt="${escapeHtml(siteConfig.name)}" width="170" style="display: block; max-width: 170px; height: auto;" />
+              </td>
+            </tr>
+          </table>
         </div>
         <div style="padding: 28px 24px; color: #334155; line-height: 1.6;">
           ${body}
@@ -38,11 +52,11 @@ function formatMoney(cents: number): string {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(cents / 100);
 }
 
-function primaryButton(href: string, label: string): string {
+export function primaryButton(href: string, label: string): string {
   return `<a href="${href}" style="display: inline-block; margin-top: 16px; padding: 12px 20px; background: ${BRAND.blue}; color: #ffffff; text-decoration: none; border-radius: 10px; font-weight: 600;">${escapeHtml(label)}</a>`;
 }
 
-function outlineButton(href: string, label: string): string {
+export function outlineButton(href: string, label: string): string {
   return `<a href="${href}" style="display: inline-block; margin-top: 12px; margin-left: 8px; padding: 12px 20px; background: #ffffff; color: ${BRAND.blue}; text-decoration: none; border-radius: 10px; font-weight: 600; border: 1px solid ${BRAND.blue};">${escapeHtml(label)}</a>`;
 }
 
@@ -75,8 +89,18 @@ export function bookingConfirmationEmail(params: {
   const location = `${params.addressLine}, ${params.city} ${params.postalCode}`;
   const amountPaid = escapeHtml(formatMoney(params.amountPaid));
   const total = escapeHtml(formatMoney(params.totalAmount));
+  const bookingUrl = `${params.appUrl.replace(/\/$/, "")}/dashboard/bookings/${params.bookingId}`;
+
   const invoiceLine = params.invoiceNumber
-    ? `<tr><td style="padding: 6px 0; color: #64748b;">Invoice</td><td style="padding: 6px 0; font-weight: 600;">${escapeHtml(params.invoiceNumber)} (PDF attached)</td></tr>`
+    ? `<tr><td style="padding: 6px 0; color: #64748b;">Invoice</td><td style="padding: 6px 0; font-weight: 600;">${escapeHtml(params.invoiceNumber)}</td></tr>`
+    : "";
+
+  const invoiceNote = params.invoiceNumber
+    ? `<p style="margin: 16px 0 0; padding: 12px 14px; background: ${BRAND.light}; border-radius: 10px; font-size: 14px;">
+        Your invoice <strong>${escapeHtml(params.invoiceNumber)}</strong> is ready.
+        Download the PDF anytime from your
+        <a href="${bookingUrl}" style="color: ${BRAND.blue}; font-weight: 600;">booking dashboard</a>.
+      </p>`
     : "";
 
   const calendarUrl = buildGoogleCalendarUrl({
@@ -86,8 +110,6 @@ export function bookingConfirmationEmail(params: {
     location,
     details: `Your Perfecto cleaning appointment.\nAddress: ${location}\nArrival: ${displayArrivalTime(params.arrivalWindow)}`,
   });
-
-  const bookingUrl = `${params.appUrl.replace(/\/$/, "")}/dashboard/bookings/${params.bookingId}`;
 
   return {
     subject: `Booking confirmed — ${params.serviceName}`,
@@ -104,7 +126,8 @@ export function bookingConfirmationEmail(params: {
         <tr><td style="padding: 6px 0; color: #64748b;">Paid</td><td style="padding: 6px 0; font-weight: 600; color: ${BRAND.green};">${amountPaid}</td></tr>
         ${invoiceLine}
       </table>
-      <p>Add this appointment to your calendar:</p>
+      ${invoiceNote}
+      <p style="margin-top: 20px;">Add this appointment to your calendar:</p>
       ${primaryButton(calendarUrl, "Add to Google Calendar")}
       ${outlineButton(bookingUrl, "View in dashboard")}
       <p style="margin-top: 24px;">We look forward to serving you.<br/>— The Perfecto Team</p>

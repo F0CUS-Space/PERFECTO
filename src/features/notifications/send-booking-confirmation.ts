@@ -1,10 +1,6 @@
 import "server-only";
 
 import { env } from "@/env";
-import {
-  buildInvoiceData,
-  renderInvoicePdf,
-} from "@/features/dashboard/services/invoice-download";
 import { sendEmail } from "@/lib/email";
 import { buildBookingIcs } from "@/lib/calendar-event";
 import { prisma } from "@/lib/prisma";
@@ -77,34 +73,18 @@ export async function maybeSendBookingConfirmationEmail(
     description: `Perfecto cleaning appointment at ${location}`,
   });
 
-  const attachments: { filename: string; content: Buffer; contentType?: string }[] = [
-    {
-      filename: "perfecto-booking.ics",
-      content: Buffer.from(ics, "utf-8"),
-      contentType: "text/calendar",
-    },
-  ];
-
-  const invoiceData = buildInvoiceData(booking);
-  if (invoiceData) {
-    try {
-      const pdf = await renderInvoicePdf(invoiceData);
-      attachments.push({
-        filename: `${invoiceData.number}.pdf`,
-        content: pdf,
-        contentType: "application/pdf",
-      });
-    } catch (error) {
-      console.error("[maybeSendBookingConfirmationEmail] invoice PDF failed", bookingId, error);
-    }
-  }
-
   try {
     const result = await sendEmail({
       to: email,
       subject: template.subject,
       html: template.html,
-      attachments,
+      attachments: [
+        {
+          filename: "perfecto-booking.ics",
+          content: Buffer.from(ics, "utf-8"),
+          contentType: "text/calendar",
+        },
+      ],
     });
 
     if (result.skipped) return { sent: false, reason: "email_not_configured" };
