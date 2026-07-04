@@ -86,10 +86,14 @@ export async function maybeSendBookingConfirmationEmail(
 
   const invoiceData = buildInvoiceData(booking);
   if (invoiceData) {
-    attachments.push({
-      filename: `${invoiceData.number}.pdf`,
-      content: await renderInvoicePdf(invoiceData),
-    });
+    try {
+      attachments.push({
+        filename: `${invoiceData.number}.pdf`,
+        content: await renderInvoicePdf(invoiceData),
+      });
+    } catch (error) {
+      console.error("[maybeSendBookingConfirmationEmail] invoice PDF failed", bookingId, error);
+    }
   }
 
   try {

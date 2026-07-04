@@ -60,9 +60,17 @@ COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma/client ./node_modules/@prisma/client
 
+# pdfkit loads .afm font files from disk — keep it external to the webpack bundle.
+COPY docker/copy-node-module-tree.cjs ./copy-node-module-tree.cjs
+RUN --mount=from=builder,source=/app/node_modules,target=/builder_node_modules \
+    node copy-node-module-tree.cjs /builder_node_modules /app/node_modules pdfkit \
+    && rm copy-node-module-tree.cjs
+
 COPY docker-entrypoint.sh ./docker-entrypoint.sh
 # Strip Windows CRLF so Linux can exec the script (common on Windows dev machines).
-RUN sed -i 's/\r$//' ./docker-entrypoint.sh && chmod +x ./docker-entrypoint.sh
+RUN sed -i 's/\r$//' ./docker-entrypoint.sh && chmod +x ./docker-entrypoint.sh \
+  && mkdir -p .next/cache \
+  && chown -R nextjs:nodejs /app
 
 USER nextjs
 EXPOSE 3000
