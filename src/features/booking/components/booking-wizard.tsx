@@ -4,7 +4,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { LogIn, UserPlus } from "lucide-react";
 
-import { BOOKING_WIZARD_STEPS, DEFAULT_ARRIVAL_TIME, minScheduleDateString } from "@/config/booking";
+import { BOOKING_WIZARD_STEPS, DEFAULT_ARRIVAL_TIME } from "@/config/booking";
 import { displayArrivalTime } from "@/lib/format-arrival-time";
 import { createDepositCheckout } from "@/features/payments/actions";
 import { Button } from "@/components/ui/button";
@@ -33,12 +33,8 @@ import { useBookingWizardStore } from "../store";
 import { BookingProgress } from "./booking-progress";
 import { BookingSummary } from "./booking-summary";
 import { PhotoUploader } from "./photo-uploader";
-import { ScheduleAvailabilityNotice } from "./schedule-availability-notice";
+import { SchedulePicker } from "./schedule-picker";
 import { useScheduleBlocks } from "../hooks/use-schedule-blocks";
-import {
-  blocksForDate,
-  getScheduleBlockMessage,
-} from "../schedule-block-utils";
 
 export function BookingWizard() {
   const authUser = useAuthUser();
@@ -93,14 +89,6 @@ export function BookingWizard() {
       const parsed = scheduleStepSchema.safeParse(schedule);
       if (!parsed.success) {
         setStepError(parsed.error.errors[0]?.message ?? "Check schedule details");
-        return;
-      }
-      const blockMessage = getScheduleBlockMessage(
-        parsed.data.arrivalWindow,
-        blocksForDate(scheduleBlocks, parsed.data.scheduledDate),
-      );
-      if (blockMessage) {
-        setStepError(blockMessage);
         return;
       }
       setStepIndex(2);
@@ -267,39 +255,13 @@ export function BookingWizard() {
             )}
 
             {stepIndex === 1 && (
-              <>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="scheduledDate">Preferred date</Label>
-                    <Input
-                      id="scheduledDate"
-                      type="date"
-                      min={minScheduleDateString()}
-                      value={schedule.scheduledDate ?? ""}
-                      onChange={(e) => setSchedule({ scheduledDate: e.target.value })}
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="arrivalTime">Preferred arrival time</Label>
-                  <Input
-                    id="arrivalTime"
-                    type="time"
-                    value={schedule.arrivalWindow ?? DEFAULT_ARRIVAL_TIME}
-                    onChange={(e) => setSchedule({ arrivalWindow: e.target.value })}
-                    className="max-w-[200px]"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Choose when you&apos;d like our team to arrive.
-                  </p>
-                </div>
-                <ScheduleAvailabilityNotice
-                  blocks={scheduleBlocks}
-                  scheduledDate={schedule.scheduledDate ?? ""}
-                  arrivalWindow={schedule.arrivalWindow ?? DEFAULT_ARRIVAL_TIME}
-                />
-              </>
+              <SchedulePicker
+                scheduledDate={schedule.scheduledDate ?? ""}
+                arrivalWindow={schedule.arrivalWindow ?? DEFAULT_ARRIVAL_TIME}
+                blocks={scheduleBlocks}
+                onDateChange={(scheduledDate) => setSchedule({ scheduledDate })}
+                onTimeChange={(arrivalWindow) => setSchedule({ arrivalWindow })}
+              />
             )}
 
             {stepIndex === 2 && (

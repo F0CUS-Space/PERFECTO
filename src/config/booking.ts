@@ -25,3 +25,11 @@ export function parseScheduleDate(dateStr: string): Date {
 
 /** Default arrival time for the schedule step (24h HH:MM). */
 export const DEFAULT_ARRIVAL_TIME = "09:00";
+
+/** Bookable arrival window for the schedule picker (24h HH:MM). */
+export const BOOKING_ARRIVAL_START = "07:00";
+export const BOOKING_ARRIVAL_END = "18:00";
+export const BOOKING_ARRIVAL_INTERVAL_MINUTES = 30;
+
+/** How far ahead customers can book. */
+export const BOOKING_SCHEDULE_HORIZON_DAYS = 90;

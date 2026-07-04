@@ -14,9 +14,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { minScheduleDateString } from "@/config/booking";
 import {
   BOOKING_POLICY_LINKS,
   getBookingPolicyHighlights,
@@ -25,10 +22,9 @@ import {
   cancelCustomerBooking,
   rescheduleCustomerBooking,
 } from "@/features/dashboard/actions";
-import { ScheduleAvailabilityNotice } from "@/features/booking/components/schedule-availability-notice";
+import { SchedulePicker } from "@/features/booking/components/schedule-picker";
 import { useScheduleBlocks } from "@/features/booking/hooks/use-schedule-blocks";
 import { isWithinLateChangeWindow } from "@/features/dashboard/booking-rules";
-import { displayArrivalTime } from "@/lib/format-arrival-time";
 import { cn } from "@/lib/utils";
 
 type DialogMode = "cancel" | "reschedule" | null;
@@ -161,41 +157,13 @@ export function BookingManagePanel({
             </div>
 
             {mode === "reschedule" && (
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="reschedule-date">New date</Label>
-                  <Input
-                    id="reschedule-date"
-                    type="date"
-                    min={minScheduleDateString()}
-                    value={newDate}
-                    onChange={(e) => setNewDate(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="reschedule-time">Arrival time</Label>
-                  <Input
-                    id="reschedule-time"
-                    type="time"
-                    value={newTime}
-                    onChange={(e) => setNewTime(e.target.value)}
-                    required
-                  />
-                  {newTime && (
-                    <p className="text-xs text-muted-foreground">
-                      {displayArrivalTime(newTime)}
-                    </p>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {mode === "reschedule" && (
-              <ScheduleAvailabilityNotice
-                blocks={scheduleBlocks}
+              <SchedulePicker
+                idPrefix="reschedule"
                 scheduledDate={newDate}
                 arrivalWindow={newTime}
+                blocks={scheduleBlocks}
+                onDateChange={setNewDate}
+                onTimeChange={setNewTime}
               />
             )}
 
