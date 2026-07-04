@@ -1,7 +1,7 @@
 import "server-only";
 
 import type { Role } from "@prisma/client";
-import PDFDocument from "pdfkit";
+import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 
 import { prisma } from "@/lib/prisma";
 import { formatCurrency } from "@/lib/utils";
@@ -40,6 +40,10 @@ type BookingWithInvoice = {
   city: string;
   postalCode: string;
 };
+
+const navy = rgb(0.043, 0.165, 0.29);
+const muted = rgb(0.392, 0.455, 0.545);
+const line = rgb(0.886, 0.91, 0.941);
 
 export function buildInvoiceData(booking: BookingWithInvoice): InvoiceData | null {
   if (!booking.invoice) return null;
@@ -94,93 +98,108 @@ function formatScheduledDate(date: Date): string {
 }
 
 export async function renderInvoicePdf(invoice: InvoiceData): Promise<Buffer> {
-  return new Promise((resolve, reject) => {
-    const doc = new PDFDocument({ margin: 50, size: "A4" });
-    const chunks: Buffer[] = [];
+  const pdf = await PDFDocument.create();
+  const page = pdf.addPage([595.28, 841.89]);
+  const { width, height } = page.getSize();
+  const margin = 50;
+  const regular = await pdf.embedFont(StandardFonts.Helvetica);
+  const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
 
-    doc.on("data", (chunk: Buffer) => chunks.push(chunk));
-    doc.on("end", () => resolve(Buffer.concat(chunks)));
-    doc.on("error", reject);
+  const drawText = (
+    text: string,
+    x: number,
+    y: number,
+    options?: { font?: typeof regular; size?: number; color?: ReturnType<typeof rgb> },
+  ) => {
+    page.drawText(text, {
+      x,
+      y,
+      size: options?.size ?? 10,
+      font: options?.font ?? regular,
+      color: options?.color ?? navy,
+    });
+  };
 
-    const balanceDue = Math.max(invoice.amountDue - invoice.amountPaid, 0);
-    const pageWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right;
-    const rightX = doc.page.margins.left + pageWidth;
-    const navy = "#0B2A4A";
-    const muted = "#64748b";
+  const drawRight = (
+    text: string,
+    y: number,
+    options?: { font?: typeof regular; size?: number; color?: ReturnType<typeof rgb> },
+  ) => {
+    const font = options?.font ?? regular;
+    const size = options?.size ?? 10;
+    const textWidth = font.widthOfTextAtSize(text, size);
+    drawText(text, width - margin - textWidth, y, { ...options, font, size });
+  };
 
-    doc.font("Helvetica-Bold").fontSize(20).fillColor(navy).text("Perfecto Cleaning Services");
-    doc.font("Helvetica").fontSize(11).fillColor(muted).text(`Invoice ${invoice.number}`);
+  let y = height - margin;
 
-    const issuedY = doc.y - doc.currentLineHeight() * 2;
-    doc
-      .font("Helvetica")
-      .fontSize(10)
-      .fillColor(navy)
-      .text(`Issued ${formatInvoiceDate(invoice.issuedAt)}`, doc.page.margins.left, issuedY, {
-        width: pageWidth,
-        align: "right",
-      });
+  drawText("Perfecto Cleaning Services", margin, y, { font: bold, size: 20 });
+  drawRight(`Issued ${formatInvoiceDate(invoice.issuedAt)}`, y, { size: 10 });
+  y -= 26;
+  drawText(`Invoice ${invoice.number}`, margin, y, { size: 11, color: muted });
 
-    doc.moveDown(2);
-    doc.font("Helvetica-Bold").fontSize(10).fillColor(navy).text("Bill to");
-    doc.font("Helvetica").text(invoice.customerName);
-    doc.text(invoice.customerPhone);
-    if (invoice.customerEmail) doc.text(invoice.customerEmail);
+  y -= 40;
+  drawText("Bill to", margin, y, { font: bold });
+  y -= 16;
+  drawText(invoice.customerName, margin, y);
+  y -= 14;
+  drawText(invoice.customerPhone, margin, y);
+  if (invoice.customerEmail) {
+    y -= 14;
+    drawText(invoice.customerEmail, margin, y);
+  }
 
-    doc.moveDown(1.5);
-    doc.font("Helvetica-Bold").text("Service address");
-    doc.font("Helvetica").text(invoice.addressLine);
-    doc.text(`${invoice.city}, ${invoice.postalCode}`);
+  y -= 28;
+  drawText("Service address", margin, y, { font: bold });
+  y -= 16;
+  drawText(invoice.addressLine, margin, y);
+  y -= 14;
+  drawText(`${invoice.city}, ${invoice.postalCode}`, margin, y);
 
-    doc.moveDown(2);
-    const tableTop = doc.y;
-    const colDesc = doc.page.margins.left;
-    const colDate = colDesc + pageWidth * 0.55;
-    const colAmount = rightX - 80;
+  y -= 36;
+  const colDate = margin + (width - margin * 2) * 0.55;
+  const colAmount = width - margin - 80;
+  drawText("Description", margin, y, { font: bold });
+  drawText("Scheduled", colDate, y, { font: bold });
+  drawText("Amount", colAmount, y, { font: bold });
 
-    doc.font("Helvetica-Bold").fontSize(10).fillColor(navy);
-    doc.text("Description", colDesc, tableTop);
-    doc.text("Scheduled", colDate, tableTop);
-    doc.text("Amount", colAmount, tableTop, { width: 80, align: "right" });
+  y -= 18;
+  drawText(invoice.serviceName, margin, y);
+  drawText(formatScheduledDate(invoice.scheduledDate), colDate, y);
+  drawRight(formatCurrency(invoice.amountDue), y);
 
-    const rowY = tableTop + 18;
-    doc.font("Helvetica").fillColor(navy);
-    doc.text(invoice.serviceName, colDesc, rowY, { width: pageWidth * 0.5 });
-    doc.text(formatScheduledDate(invoice.scheduledDate), colDate, rowY);
-    doc.text(formatCurrency(invoice.amountDue), colAmount, rowY, { width: 80, align: "right" });
-
-    doc
-      .strokeColor("#e2e8f0")
-      .moveTo(colDesc, rowY + 28)
-      .lineTo(rightX, rowY + 28)
-      .stroke();
-
-    doc.y = rowY + 44;
-    const totalsX = rightX - 220;
-    const totalsValX = rightX - 80;
-
-    function totalRow(label: string, value: string, bold = false) {
-      doc.font(bold ? "Helvetica-Bold" : "Helvetica").fontSize(bold ? 12 : 10).fillColor(navy);
-      const y = doc.y;
-      doc.text(label, totalsX, y);
-      doc.text(value, totalsValX, y, { width: 80, align: "right" });
-      doc.moveDown(0.6);
-    }
-
-    totalRow("Total due", formatCurrency(invoice.amountDue));
-    totalRow("Paid to date", formatCurrency(invoice.amountPaid));
-    totalRow("Balance remaining", formatCurrency(balanceDue), true);
-
-    doc.moveDown(2);
-    doc
-      .font("Helvetica")
-      .fontSize(9)
-      .fillColor(muted)
-      .text(
-        "Thank you for choosing Perfecto. Balance is due after your service unless already paid in full.",
-        { width: pageWidth },
-      );
-
-    doc.end();
+  y -= 10;
+  page.drawLine({
+    start: { x: margin, y },
+    end: { x: width - margin, y },
+    thickness: 1,
+    color: line,
   });
+
+  const balanceDue = Math.max(invoice.amountDue - invoice.amountPaid, 0);
+  const totalsX = width - margin - 220;
+  const totalsValue = (label: string, value: string, yPos: number, isBold = false) => {
+    const font = isBold ? bold : regular;
+    const size = isBold ? 12 : 10;
+    drawText(label, totalsX, yPos, { font, size });
+    drawRight(value, yPos, { font, size });
+  };
+
+  y -= 24;
+  totalsValue("Total due", formatCurrency(invoice.amountDue), y);
+  y -= 18;
+  totalsValue("Paid to date", formatCurrency(invoice.amountPaid), y);
+  y -= 20;
+  totalsValue("Balance remaining", formatCurrency(balanceDue), y, true);
+
+  y -= 36;
+  drawText(
+    "Thank you for choosing Perfecto. Balance is due after your service unless already paid in full.",
+    margin,
+    y,
+    { size: 9, color: muted },
+  );
+
+  const bytes = await pdf.save();
+  return Buffer.from(bytes);
 }

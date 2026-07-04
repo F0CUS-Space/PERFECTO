@@ -168,6 +168,7 @@ export default async function BookingConfirmationPage({ params, searchParams }: 
                     {" · "}
                     <a
                       href={`/api/invoices/${booking.id}/download`}
+                      download={`${booking.invoice.number}.pdf`}
                       className="text-primary underline-offset-4 hover:underline"
                     >
                       Download PDF

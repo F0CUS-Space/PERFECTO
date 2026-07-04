@@ -77,19 +77,22 @@ export async function maybeSendBookingConfirmationEmail(
     description: `Perfecto cleaning appointment at ${location}`,
   });
 
-  const attachments: { filename: string; content: Buffer }[] = [
+  const attachments: { filename: string; content: Buffer; contentType?: string }[] = [
     {
       filename: "perfecto-booking.ics",
       content: Buffer.from(ics, "utf-8"),
+      contentType: "text/calendar",
     },
   ];
 
   const invoiceData = buildInvoiceData(booking);
   if (invoiceData) {
     try {
+      const pdf = await renderInvoicePdf(invoiceData);
       attachments.push({
         filename: `${invoiceData.number}.pdf`,
-        content: await renderInvoicePdf(invoiceData),
+        content: pdf,
+        contentType: "application/pdf",
       });
     } catch (error) {
       console.error("[maybeSendBookingConfirmationEmail] invoice PDF failed", bookingId, error);

@@ -13,6 +13,7 @@ import {
 import { BookingStatusBadge } from "@/features/dashboard/components/booking-status-badge";
 import { BookingManagePanel } from "@/features/dashboard/components/booking-manage-panel";
 import { BookingReviewForm } from "@/features/dashboard/components/booking-review-form";
+import { EmailInvoiceButton } from "@/features/dashboard/components/email-invoice-button";
 import { getCustomerBookingById } from "@/features/dashboard/queries";
 import { PayDepositButton } from "@/features/payments/components/pay-deposit-button";
 import { displayArrivalTime } from "@/lib/format-arrival-time";
@@ -182,12 +183,18 @@ export default async function DashboardBookingDetailPage({ params, searchParams 
           )}
 
           {booking.invoiceNumber && booking.depositSatisfied && (
-            <Button asChild variant="outline">
-              <a href={`/api/invoices/${booking.id}/download`}>
-                <Download className="h-4 w-4" />
-                Download invoice {booking.invoiceNumber}
-              </a>
-            </Button>
+            <div className="flex flex-wrap gap-3">
+              <Button asChild variant="outline">
+                <a
+                  href={`/api/invoices/${booking.id}/download`}
+                  download={`${booking.invoiceNumber}.pdf`}
+                >
+                  <Download className="h-4 w-4" />
+                  Download PDF invoice
+                </a>
+              </Button>
+              <EmailInvoiceButton bookingId={booking.id} invoiceNumber={booking.invoiceNumber} />
+            </div>
           )}
         </CardContent>
       </Card>

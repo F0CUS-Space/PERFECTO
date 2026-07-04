@@ -24,13 +24,21 @@ export async function GET(_request: Request, { params }: RouteParams) {
     return NextResponse.json({ error: "Invoice not found." }, { status: 404 });
   }
 
-  const pdf = await renderInvoicePdf(invoice);
+  let pdf: Buffer;
+  try {
+    pdf = await renderInvoicePdf(invoice);
+  } catch (error) {
+    console.error("[invoice download] PDF generation failed", bookingId, error);
+    return NextResponse.json({ error: "Could not generate invoice PDF." }, { status: 500 });
+  }
+
   const filename = `${invoice.number}.pdf`;
 
   return new NextResponse(new Uint8Array(pdf), {
     headers: {
       "Content-Type": "application/pdf",
       "Content-Disposition": `attachment; filename="${filename}"`,
+      "Cache-Control": "private, no-cache",
     },
   });
 }

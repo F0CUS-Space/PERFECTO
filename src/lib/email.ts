@@ -13,11 +13,24 @@ function getResend(): Resend {
   return resendClient;
 }
 
+export interface EmailAttachment {
+  filename: string;
+  content: Buffer | string;
+  contentType?: string;
+}
+
 export interface SendEmailParams {
   to: string | string[];
   subject: string;
   html: string;
-  attachments?: { filename: string; content: Buffer | string }[];
+  attachments?: EmailAttachment[];
+}
+
+function encodeAttachmentContent(content: Buffer | string): string {
+  if (typeof content === "string") {
+    return content;
+  }
+  return content.toString("base64");
 }
 
 /**
@@ -37,7 +50,8 @@ export async function sendEmail({ to, subject, html, attachments }: SendEmailPar
     html,
     attachments: attachments?.map((file) => ({
       filename: file.filename,
-      content: file.content,
+      content: encodeAttachmentContent(file.content),
+      content_type: file.contentType,
     })),
   });
 

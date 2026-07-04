@@ -93,10 +93,11 @@ export function PaymentsTableClient() {
                 {payment.invoiceNumber && payment.status === "SUCCEEDED" ? (
                   <a
                     href={`/api/invoices/${payment.bookingId}/download`}
+                    download={`${payment.invoiceNumber}.pdf`}
                     className="inline-flex items-center gap-1 text-brand-blue hover:underline"
                   >
                     <Download className="h-3.5 w-3.5" />
-                    {payment.invoiceNumber}
+                    PDF {payment.invoiceNumber}
                   </a>
                 ) : (
                   <span className="text-muted-foreground">—</span>

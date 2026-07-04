@@ -214,9 +214,12 @@ export default async function AdminBookingDetailPage({ params }: PageProps) {
               </p>
               {booking.invoiceNumber && (
                 <Button asChild variant="outline" size="sm" className="w-full">
-                  <a href={`/api/invoices/${booking.id}/download`}>
+                  <a
+                    href={`/api/invoices/${booking.id}/download`}
+                    download={`${booking.invoiceNumber}.pdf`}
+                  >
                     <Download className="h-4 w-4" />
-                    Invoice {booking.invoiceNumber}
+                    Download PDF invoice
                   </a>
                 </Button>
               )}
