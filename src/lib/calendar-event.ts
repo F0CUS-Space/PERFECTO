@@ -32,6 +32,100 @@ function eventStartEnd(scheduledDate: Date, arrivalWindow: string, durationHours
   return { start, end };
 }
 
+/** Local ISO-8601 datetime for Schema.org markup in emails. */
+export function toLocalIsoDateTime(date: Date): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const offsetMinutes = -date.getTimezoneOffset();
+  const sign = offsetMinutes >= 0 ? "+" : "-";
+  const abs = Math.abs(offsetMinutes);
+  const tz = `${sign}${pad(Math.floor(abs / 60))}:${pad(abs % 60)}`;
+  return (
+    `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}` +
+    `T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}${tz}`
+  );
+}
+
+export function getBookingEventWindow(
+  scheduledDate: Date,
+  arrivalWindow: string,
+  durationHours = 3,
+) {
+  return eventStartEnd(scheduledDate, arrivalWindow, durationHours);
+}
+
+export function formatEmailEventDateTimeRange(
+  scheduledDate: Date,
+  arrivalWindow: string,
+  durationHours = 3,
+): string {
+  const { start, end } = eventStartEnd(scheduledDate, arrivalWindow, durationHours);
+  const day = start.toLocaleDateString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  });
+  const startTime = start.toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+  });
+  const endTime = end.toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+  });
+  return `${day} · ${startTime} – ${endTime}`;
+}
+
+export function buildGoogleMapsDirectionsUrl(location: string): string {
+  return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(location)}`;
+}
+
+export function buildEventReservationJsonLd(params: {
+  reservationNumber: string;
+  customerName: string;
+  customerEmail?: string | null;
+  eventName: string;
+  scheduledDate: Date;
+  arrivalWindow: string;
+  addressLine: string;
+  city: string;
+  postalCode: string;
+  bookingUrl: string;
+  description?: string;
+}) {
+  const { start, end } = eventStartEnd(params.scheduledDate, params.arrivalWindow);
+
+  return {
+    "@context": "http://schema.org",
+    "@type": "EventReservation",
+    reservationNumber: params.reservationNumber,
+    reservationStatus: "http://schema.org/Confirmed",
+    url: params.bookingUrl,
+    underName: {
+      "@type": "Person",
+      name: params.customerName,
+      ...(params.customerEmail ? { email: params.customerEmail } : {}),
+    },
+    reservationFor: {
+      "@type": "Event",
+      name: params.eventName,
+      startDate: toLocalIsoDateTime(start),
+      endDate: toLocalIsoDateTime(end),
+      ...(params.description ? { description: params.description } : {}),
+      location: {
+        "@type": "Place",
+        name: params.addressLine,
+        address: {
+          "@type": "PostalAddress",
+          streetAddress: params.addressLine,
+          addressLocality: params.city,
+          postalCode: params.postalCode,
+          addressCountry: "US",
+        },
+      },
+    },
+  };
+}
+
 export function buildGoogleCalendarUrl(params: {
   title: string;
   scheduledDate: Date;

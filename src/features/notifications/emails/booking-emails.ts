@@ -1,7 +1,9 @@
 import { siteConfig } from "@/config/site";
 import { escapeHtml } from "@/lib/escape-html";
 import { displayArrivalTime } from "@/lib/format-arrival-time";
-import { buildGoogleCalendarUrl } from "@/lib/calendar-event";
+import { buildEventReservationJsonLd } from "@/lib/calendar-event";
+
+import { buildEmailEventCard } from "./email-event-card";
 
 const BRAND = {
   navy: "#0f2744",
@@ -14,9 +16,17 @@ function brandAssetUrl(appUrl: string, file: string): string {
   return `${appUrl.replace(/\/$/, "")}/brand/${file}`;
 }
 
-export function emailLayout(body: string, appUrl: string): string {
+export function emailLayout(
+  body: string,
+  appUrl: string,
+  jsonLd?: Record<string, unknown>,
+): string {
   const iconUrl = brandAssetUrl(appUrl, "perfecto-icon.png");
   const wordmarkUrl = brandAssetUrl(appUrl, "perfecto-wordmark.png");
+  const structuredData =
+    jsonLd !== undefined
+      ? `<script type="application/ld+json">${JSON.stringify(jsonLd)}</script>`
+      : "";
 
   return `
     <div style="font-family: system-ui, -apple-system, sans-serif; max-width: 560px; margin: 0 auto; background: ${BRAND.light}; padding: 24px;">
@@ -34,6 +44,7 @@ export function emailLayout(body: string, appUrl: string): string {
           </table>
         </div>
         <div style="padding: 28px 24px; color: #334155; line-height: 1.6;">
+          ${structuredData}
           ${body}
         </div>
         <div style="background: #f1f5f9; padding: 16px 24px; text-align: center; font-size: 12px; color: #64748b;">
@@ -62,6 +73,7 @@ export function outlineButton(href: string, label: string): string {
 
 export function bookingConfirmationEmail(params: {
   customerName: string;
+  customerEmail?: string | null;
   serviceName: string;
   scheduledDate: Date;
   arrivalWindow: string;
@@ -90,6 +102,8 @@ export function bookingConfirmationEmail(params: {
   const amountPaid = escapeHtml(formatMoney(params.amountPaid));
   const total = escapeHtml(formatMoney(params.totalAmount));
   const bookingUrl = `${params.appUrl.replace(/\/$/, "")}/dashboard/bookings/${params.bookingId}`;
+  const eventTitle = `${params.serviceName} — Perfecto`;
+  const calendarDetails = `Your Perfecto cleaning appointment.\nAddress: ${location}\nArrival: ${displayArrivalTime(params.arrivalWindow)}`;
 
   const invoiceLine = params.invoiceNumber
     ? `<tr><td style="padding: 6px 0; color: #64748b;">Invoice</td><td style="padding: 6px 0; font-weight: 600;">${escapeHtml(params.invoiceNumber)}</td></tr>`
@@ -103,12 +117,26 @@ export function bookingConfirmationEmail(params: {
       </p>`
     : "";
 
-  const calendarUrl = buildGoogleCalendarUrl({
-    title: `${params.serviceName} — Perfecto`,
+  const eventCard = buildEmailEventCard({
+    title: eventTitle,
     scheduledDate: params.scheduledDate,
     arrivalWindow: params.arrivalWindow,
     location,
-    details: `Your Perfecto cleaning appointment.\nAddress: ${location}\nArrival: ${displayArrivalTime(params.arrivalWindow)}`,
+    calendarDetails,
+  });
+
+  const jsonLd = buildEventReservationJsonLd({
+    reservationNumber: params.invoiceNumber ?? params.bookingId.slice(0, 8).toUpperCase(),
+    customerName: params.customerName,
+    customerEmail: params.customerEmail,
+    eventName: eventTitle,
+    scheduledDate: params.scheduledDate,
+    arrivalWindow: params.arrivalWindow,
+    addressLine: params.addressLine,
+    city: params.city,
+    postalCode: params.postalCode,
+    bookingUrl,
+    description: calendarDetails,
   });
 
   return {
@@ -117,6 +145,7 @@ export function bookingConfirmationEmail(params: {
       `
       <p style="font-size: 16px; color: ${BRAND.navy}; font-weight: 600;">Hi ${name}, your booking is confirmed!</p>
       <p>Thank you for choosing Perfecto. Here are your appointment details:</p>
+      ${eventCard}
       <table style="width: 100%; margin: 16px 0; border-collapse: collapse;">
         <tr><td style="padding: 6px 0; color: #64748b;">Service</td><td style="padding: 6px 0; font-weight: 600;">${service}</td></tr>
         <tr><td style="padding: 6px 0; color: #64748b;">Date</td><td style="padding: 6px 0; font-weight: 600;">${date}</td></tr>
@@ -127,12 +156,11 @@ export function bookingConfirmationEmail(params: {
         ${invoiceLine}
       </table>
       ${invoiceNote}
-      <p style="margin-top: 20px;">Add this appointment to your calendar:</p>
-      ${primaryButton(calendarUrl, "Add to Google Calendar")}
       ${outlineButton(bookingUrl, "View in dashboard")}
       <p style="margin-top: 24px;">We look forward to serving you.<br/>— The Perfecto Team</p>
     `,
       params.appUrl,
+      jsonLd,
     ),
   };
 }

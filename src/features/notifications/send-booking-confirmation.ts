@@ -51,6 +51,7 @@ export async function maybeSendBookingConfirmationEmail(
 
   const template = bookingConfirmationEmail({
     customerName: customerDisplayName(booking.user),
+    customerEmail: booking.user.email,
     serviceName: booking.service.name,
     scheduledDate: booking.scheduledDate,
     arrivalWindow: booking.arrivalWindow,
