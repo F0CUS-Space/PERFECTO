@@ -429,6 +429,16 @@ export async function getAdminServices(): Promise<AdminServiceRow[]> {
   return Promise.all(services.map(mapServiceRow));
 }
 
+/** Lightweight id/name list for pickers (promotions, etc.) — no S3 presigns. */
+export async function getAdminServicePickerOptions(): Promise<{ id: string; name: string }[]> {
+  if (!isDatabaseConfigured()) return [];
+
+  return prisma.service.findMany({
+    select: { id: true, name: true },
+    orderBy: { sortOrder: "asc" },
+  });
+}
+
 export async function getAdminServiceById(id: string): Promise<AdminServiceDetail | null> {
   if (!isDatabaseConfigured()) return null;
 
