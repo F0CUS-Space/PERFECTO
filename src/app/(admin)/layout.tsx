@@ -29,7 +29,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             >
               Website
             </Link>
-            <NotificationBell userId={admin.id} />
+            <NotificationBell firebaseUid={admin.firebaseUid} />
             <LogoutButton variant="ghost" />
           </div>
         </div>

@@ -9,7 +9,7 @@ import { sendEmail } from "@/lib/email";
 import { prisma } from "@/lib/prisma";
 
 import {
-  bumpNotificationSignals,
+  bumpNotificationSignalsForDbUsers,
 } from "./firestore-signal";
 
 import {
@@ -52,7 +52,7 @@ async function createNotificationsForUsers(
           href: data.href ?? null,
         })),
       });
-      await bumpNotificationSignals(batch);
+      await bumpNotificationSignalsForDbUsers(batch);
     }
   } catch (error) {
     console.error("[notifications] createMany failed", data.type, error);

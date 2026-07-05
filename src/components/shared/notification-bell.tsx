@@ -10,7 +10,6 @@ import {
   markNotificationsAsRead,
 } from "@/features/notifications/actions";
 import { useNotificationSignal } from "@/features/notifications/use-notification-signal";
-import { isFirebaseConfigured } from "@/lib/firebase/client";
 import { cn } from "@/lib/utils";
 
 interface NotificationItem {
@@ -22,15 +21,16 @@ interface NotificationItem {
   createdAt: string;
 }
 
-/** Safety poll when Firestore realtime is unavailable. */
+/** Safety poll when Firestore realtime is unavailable (no UID, auth mismatch, or rules error). */
 const FALLBACK_POLL_MS = 120_000;
 
 export function NotificationBell({
   className,
-  userId,
+  firebaseUid,
 }: {
   className?: string;
-  userId?: string;
+  /** Firebase Auth UID — must match signed-in client for Firestore rules. */
+  firebaseUid?: string | null;
 }) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -67,14 +67,15 @@ export function NotificationBell({
     void loadRef.current({ silent: true });
   }, []);
 
-  useNotificationSignal(userId, onSignal);
+  const realtimeActive = useNotificationSignal(firebaseUid, onSignal);
+  const useFallbackPoll = !realtimeActive;
 
   useEffect(() => {
     void load();
+  }, [load]);
 
-    if (userId && isFirebaseConfigured()) {
-      return;
-    }
+  useEffect(() => {
+    if (!useFallbackPoll) return;
 
     const poll = () => {
       if (document.visibilityState !== "visible") return;
@@ -97,7 +98,7 @@ export function NotificationBell({
       window.removeEventListener("focus", onVisible);
       document.removeEventListener("visibilitychange", onVisible);
     };
-  }, [load, userId]);
+  }, [useFallbackPoll]);
 
   useEffect(() => {
     if (!open) return;

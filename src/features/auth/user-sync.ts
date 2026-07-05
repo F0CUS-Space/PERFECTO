@@ -58,6 +58,7 @@ export async function upsertUserFromFirebaseClaims(
 export function toPublicUser(user: User): PublicUser {
   return {
     id: user.id,
+    firebaseUid: user.firebaseUid,
     phone: user.phone,
     email: user.email,
     firstName: user.firstName,

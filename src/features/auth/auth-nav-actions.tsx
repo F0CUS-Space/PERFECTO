@@ -34,7 +34,7 @@ export function AuthNavActions() {
 
   return (
     <div className="hidden items-center gap-3 lg:flex">
-      <NotificationBell userId={user.id} />
+      <NotificationBell firebaseUid={user.firebaseUid} />
       <Button asChild variant="ghost" size="sm">
         <Link href={dashboardHref}>{user.role === "ADMIN" ? "Admin" : "Dashboard"}</Link>
       </Button>

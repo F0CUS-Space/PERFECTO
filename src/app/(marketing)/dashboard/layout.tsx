@@ -23,7 +23,7 @@ export default async function DashboardSectionLayout({
           <div className="min-w-0 flex-1">
             <DashboardMobileNav />
           </div>
-          <NotificationBell userId={user.id} />
+          <NotificationBell firebaseUid={user.firebaseUid} />
         </div>
       </div>
       <div className="flex">
