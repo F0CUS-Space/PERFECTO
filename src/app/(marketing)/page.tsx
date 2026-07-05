@@ -25,7 +25,7 @@ import { getFeaturedTestimonials } from "@/features/reviews/queries";
 import { testimonials as fallbackTestimonials } from "@/content/testimonials";
 
 // Home service cards are loaded from the database at runtime.
-export const dynamic = "force-dynamic";
+export const revalidate = 60;
 
 const steps = [
   { icon: ClipboardList, title: "Choose your service", body: "Tell us about your space for an instant, transparent price." },

@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Bell, Check, Loader2 } from "lucide-react";
 
@@ -10,6 +9,8 @@ import {
   markAllNotificationsAsRead,
   markNotificationsAsRead,
 } from "@/features/notifications/actions";
+import { useNotificationSignal } from "@/features/notifications/use-notification-signal";
+import { isFirebaseConfigured } from "@/lib/firebase/client";
 import { cn } from "@/lib/utils";
 
 interface NotificationItem {
@@ -21,11 +22,16 @@ interface NotificationItem {
   createdAt: string;
 }
 
-const POLL_VISIBLE_MS = 8_000;
-const POLL_OPEN_MS = 4_000;
+/** Safety poll when Firestore realtime is unavailable. */
+const FALLBACK_POLL_MS = 120_000;
 
-export function NotificationBell({ className }: { className?: string }) {
-  const pathname = usePathname();
+export function NotificationBell({
+  className,
+  userId,
+}: {
+  className?: string;
+  userId?: string;
+}) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
@@ -57,15 +63,25 @@ export function NotificationBell({ className }: { className?: string }) {
 
   loadRef.current = load;
 
+  const onSignal = useCallback(() => {
+    void loadRef.current({ silent: true });
+  }, []);
+
+  useNotificationSignal(userId, onSignal);
+
   useEffect(() => {
     void load();
+
+    if (userId && isFirebaseConfigured()) {
+      return;
+    }
 
     const poll = () => {
       if (document.visibilityState !== "visible") return;
       void loadRef.current({ silent: true });
     };
 
-    const interval = window.setInterval(poll, POLL_VISIBLE_MS);
+    const interval = window.setInterval(poll, FALLBACK_POLL_MS);
 
     const onVisible = () => {
       if (document.visibilityState === "visible") {
@@ -81,19 +97,11 @@ export function NotificationBell({ className }: { className?: string }) {
       window.removeEventListener("focus", onVisible);
       document.removeEventListener("visibilitychange", onVisible);
     };
-  }, [load]);
+  }, [load, userId]);
 
-  // Refresh after in-app navigation without a full page reload.
-  useEffect(() => {
-    void loadRef.current({ silent: true });
-  }, [pathname]);
-
-  // Poll faster while the panel is open.
   useEffect(() => {
     if (!open) return;
     void load({ silent: true });
-    const interval = window.setInterval(() => void loadRef.current({ silent: true }), POLL_OPEN_MS);
-    return () => window.clearInterval(interval);
   }, [open, load]);
 
   useEffect(() => {
@@ -114,7 +122,9 @@ export function NotificationBell({ className }: { className?: string }) {
 
   const onMarkAllRead = async () => {
     await markAllNotificationsAsRead();
-    setNotifications((items) => items.map((item) => ({ ...item, readAt: item.readAt ?? new Date().toISOString() })));
+    setNotifications((items) =>
+      items.map((item) => ({ ...item, readAt: item.readAt ?? new Date().toISOString() })),
+    );
     setUnreadCount(0);
   };
 

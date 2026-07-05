@@ -2,6 +2,7 @@
 
 import { getApp, getApps, initializeApp, type FirebaseApp } from "firebase/app";
 import { getAuth, type Auth } from "firebase/auth";
+import { getFirestore, type Firestore } from "firebase/firestore";
 
 import { isAuthDevMode } from "@/features/auth/firebase-test-phones";
 
@@ -15,6 +16,7 @@ const firebaseConfig = {
 };
 
 let app: FirebaseApp | undefined;
+let firestore: Firestore | undefined;
 let authConfigured = false;
 
 export function getFirebaseApp(): FirebaseApp {
@@ -33,4 +35,19 @@ export function getFirebaseAuth(): Auth {
     authConfigured = true;
   }
   return auth;
+}
+
+/** Firestore client — used for realtime notification signals. */
+export function getFirebaseFirestore(): Firestore {
+  if (!firebaseConfig.projectId) {
+    throw new Error("Firebase project ID is missing.");
+  }
+  if (!firestore) {
+    firestore = getFirestore(getFirebaseApp());
+  }
+  return firestore;
+}
+
+export function isFirebaseConfigured(): boolean {
+  return Boolean(firebaseConfig.apiKey && firebaseConfig.projectId);
 }

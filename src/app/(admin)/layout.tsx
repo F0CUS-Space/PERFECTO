@@ -9,8 +9,9 @@ import { AdminMobileNav, AdminSidebar } from "@/features/admin/components/admin-
 import { ForbiddenError, requireAdmin } from "@/server/rbac";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
+  let admin;
   try {
-    await requireAdmin();
+    admin = await requireAdmin();
   } catch (error) {
     if (error instanceof ForbiddenError) redirect("/dashboard");
     redirect("/login?next=/admin");
@@ -28,7 +29,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             >
               Website
             </Link>
-            <NotificationBell />
+            <NotificationBell userId={admin.id} />
             <LogoutButton variant="ghost" />
           </div>
         </div>

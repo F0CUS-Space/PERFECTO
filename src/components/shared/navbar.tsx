@@ -10,8 +10,7 @@ import { Button } from "@/components/ui/button";
 import { BrandLogo } from "@/components/shared/brand-logo";
 import { AuthNavActions } from "@/features/auth/auth-nav-actions";
 import { LogoutButton } from "@/features/auth/logout-button";
-import { useAuthUser } from "@/features/auth/use-auth-user";
-import type { PublicUser } from "@/features/auth/types";
+import { useAuthUser } from "@/features/auth/auth-provider";
 
 const MAIN_LINKS = [
   { label: "Home", href: "/" },
@@ -27,9 +26,9 @@ const MORE_LINKS = [
   { label: "Careers", href: "/careers" },
 ];
 
-export function Navbar({ initialUser }: { initialUser?: PublicUser | null }) {
+export function Navbar() {
   const pathname = usePathname();
-  const authUser = useAuthUser(initialUser);
+  const authUser = useAuthUser();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const moreRef = useRef<HTMLDivElement>(null);
@@ -133,7 +132,7 @@ export function Navbar({ initialUser }: { initialUser?: PublicUser | null }) {
         </nav>
 
         {/* Desktop CTAs */}
-        <AuthNavActions initialUser={initialUser} />
+        <AuthNavActions />
 
         {/* Mobile toggle */}
         <button

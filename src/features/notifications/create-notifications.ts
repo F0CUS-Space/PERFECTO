@@ -9,6 +9,10 @@ import { sendEmail } from "@/lib/email";
 import { prisma } from "@/lib/prisma";
 
 import {
+  bumpNotificationSignals,
+} from "./firestore-signal";
+
+import {
   adminBookingCancelledEmail,
   adminBookingRescheduledEmail,
   adminNewBookingEmail,
@@ -38,8 +42,9 @@ async function createNotificationsForUsers(
 
   try {
     for (let i = 0; i < userIds.length; i += BATCH_SIZE) {
+      const batch = userIds.slice(i, i + BATCH_SIZE);
       await prisma.notification.createMany({
-        data: userIds.slice(i, i + BATCH_SIZE).map((userId) => ({
+        data: batch.map((userId) => ({
           userId,
           type: data.type,
           title: data.title,
@@ -47,6 +52,7 @@ async function createNotificationsForUsers(
           href: data.href ?? null,
         })),
       });
+      await bumpNotificationSignals(batch);
     }
   } catch (error) {
     console.error("[notifications] createMany failed", data.type, error);

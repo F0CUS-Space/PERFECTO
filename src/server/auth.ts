@@ -1,5 +1,6 @@
 import "server-only";
 
+import { cache } from "react";
 import { cookies } from "next/headers";
 
 import { SESSION_COOKIE_NAME } from "@/lib/auth/constants";
@@ -16,9 +17,9 @@ const SESSION_COOKIE = SESSION_COOKIE_NAME;
 
 /**
  * Resolves the currently authenticated user from the Firebase session cookie.
- * Returns null when unauthenticated or the session is invalid/expired.
+ * Cached per request so layouts and pages share one verify + DB lookup.
  */
-export async function getCurrentUser(): Promise<User | null> {
+export const getCurrentUser = cache(async (): Promise<User | null> => {
   const cookieStore = await cookies();
   const token = cookieStore.get(SESSION_COOKIE)?.value;
   if (!token) return null;
@@ -47,7 +48,7 @@ export async function getCurrentUser(): Promise<User | null> {
     console.error("[getCurrentUser]", error);
     return null;
   }
-}
+});
 
 /** Store a Firebase session cookie after the client completes phone OTP. */
 export async function setSessionFromIdToken(idToken: string) {

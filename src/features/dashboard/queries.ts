@@ -3,6 +3,10 @@ import "server-only";
 import type { BookingStatus } from "@prisma/client";
 
 import { reconcileBookingPayments } from "@/features/payments/services/reconcile-payments";
+import {
+  amountPaidByBookingIds,
+  cappedAmountPaid,
+} from "@/features/payments/booking-amount-paid";
 import { prisma } from "@/lib/prisma";
 import { isDatabaseConfigured } from "@/lib/db-ready";
 
@@ -28,17 +32,6 @@ function isUpcoming(scheduledDate: Date, status: BookingStatus): boolean {
   return scheduled >= today;
 }
 
-async function amountPaidFromDb(bookingId: string, totalAmount: number): Promise<number> {
-  const payments = await prisma.payment.findMany({
-    where: { bookingId, status: "SUCCEEDED" },
-    select: { amount: true },
-  });
-  return Math.min(
-    payments.reduce((sum, payment) => sum + payment.amount, 0),
-    totalAmount,
-  );
-}
-
 export async function getCustomerBookings(userId: string): Promise<CustomerBookingSummary[]> {
   if (!isDatabaseConfigured()) return [];
 
@@ -51,11 +44,12 @@ export async function getCustomerBookings(userId: string): Promise<CustomerBooki
     orderBy: { scheduledDate: "desc" },
   });
 
-  const summaries = await Promise.all(
-    bookings.map(async (booking) => {
-      const amountPaid = await amountPaidFromDb(booking.id, booking.totalAmount);
+  const paidMap = await amountPaidByBookingIds(bookings.map((booking) => booking.id));
 
-      return {
+  const summaries = bookings.map((booking) => {
+    const amountPaid = cappedAmountPaid(paidMap, booking.id, booking.totalAmount);
+
+    return {
         id: booking.id,
         serviceName: booking.service.name,
         scheduledDate: booking.scheduledDate.toISOString(),
@@ -71,8 +65,7 @@ export async function getCustomerBookings(userId: string): Promise<CustomerBooki
         invoiceNumber: booking.invoice?.number ?? null,
         isUpcoming: isUpcoming(booking.scheduledDate, booking.status),
       } satisfies CustomerBookingSummary;
-    }),
-  );
+    });
 
   return summaries.sort((a, b) => {
     if (a.isUpcoming !== b.isUpcoming) return a.isUpcoming ? -1 : 1;
@@ -108,7 +101,9 @@ export async function getCustomerBookingById(
     depositSatisfied = reconcile.depositSatisfied;
     fullyPaid = reconcile.fullyPaid;
   } catch {
-    amountPaid = await amountPaidFromDb(booking.id, booking.totalAmount);
+    amountPaid = await amountPaidByBookingIds([booking.id]).then((map) =>
+      cappedAmountPaid(map, booking.id, booking.totalAmount),
+    );
     depositSatisfied = amountPaid >= booking.depositAmount;
     fullyPaid = amountPaid >= booking.totalAmount;
   }

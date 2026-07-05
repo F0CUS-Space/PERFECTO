@@ -3,6 +3,10 @@ import "server-only";
 import type { ApplicationStatus, BookingStatus, AdminAuditAction } from "@prisma/client";
 
 import { reconcileBookingPayments } from "@/features/payments/services/reconcile-payments";
+import {
+  amountPaidByBookingIds,
+  cappedAmountPaid,
+} from "@/features/payments/booking-amount-paid";
 import { prisma } from "@/lib/prisma";
 import { isDatabaseConfigured } from "@/lib/db-ready";
 import { getViewUrl } from "@/lib/s3";
@@ -45,17 +49,6 @@ function customerDisplayName(user: {
 }): string {
   const name = [user.firstName, user.lastName].filter(Boolean).join(" ").trim();
   return name || user.phone;
-}
-
-async function amountPaidFromDb(bookingId: string, totalAmount: number): Promise<number> {
-  const payments = await prisma.payment.findMany({
-    where: { bookingId, status: "SUCCEEDED" },
-    select: { amount: true },
-  });
-  return Math.min(
-    payments.reduce((sum, payment) => sum + payment.amount, 0),
-    totalAmount,
-  );
 }
 
 async function countStatsInRange(start: Date, end: Date) {
@@ -177,21 +170,21 @@ export async function getAdminBookings(filters?: {
     take: 100,
   });
 
-  return Promise.all(
-    bookings.map(async (booking) => ({
-      id: booking.id,
-      serviceName: booking.service.name,
-      customerName: customerDisplayName(booking.user),
-      customerPhone: booking.user.phone,
-      scheduledDate: booking.scheduledDate.toISOString(),
-      arrivalWindow: booking.arrivalWindow,
-      status: booking.status,
-      totalAmount: booking.totalAmount,
-      amountPaid: await amountPaidFromDb(booking.id, booking.totalAmount),
-      city: booking.city,
-      createdAt: booking.createdAt.toISOString(),
-    })),
-  );
+  const paidMap = await amountPaidByBookingIds(bookings.map((booking) => booking.id));
+
+  return bookings.map((booking) => ({
+    id: booking.id,
+    serviceName: booking.service.name,
+    customerName: customerDisplayName(booking.user),
+    customerPhone: booking.user.phone,
+    scheduledDate: booking.scheduledDate.toISOString(),
+    arrivalWindow: booking.arrivalWindow,
+    status: booking.status,
+    totalAmount: booking.totalAmount,
+    amountPaid: cappedAmountPaid(paidMap, booking.id, booking.totalAmount),
+    city: booking.city,
+    createdAt: booking.createdAt.toISOString(),
+  }));
 }
 
 export async function getAdminBookingById(id: string): Promise<AdminBookingDetail | null> {
@@ -220,7 +213,8 @@ export async function getAdminBookingById(id: string): Promise<AdminBookingDetai
     amountPaid = reconcile.amountPaid;
     fullyPaid = reconcile.fullyPaid;
   } catch {
-    amountPaid = await amountPaidFromDb(booking.id, booking.totalAmount);
+    const paidMap = await amountPaidByBookingIds([booking.id]);
+    amountPaid = cappedAmountPaid(paidMap, booking.id, booking.totalAmount);
     fullyPaid = amountPaid >= booking.totalAmount;
   }
 
@@ -341,21 +335,21 @@ export async function getAdminCustomerById(id: string): Promise<AdminCustomerDet
     orderBy: { scheduledDate: "desc" },
   });
 
-  const bookingRows = await Promise.all(
-    userBookings.map(async (booking) => ({
-      id: booking.id,
-      serviceName: booking.service.name,
-      customerName: customerDisplayName(booking.user),
-      customerPhone: booking.user.phone,
-      scheduledDate: booking.scheduledDate.toISOString(),
-      arrivalWindow: booking.arrivalWindow,
-      status: booking.status,
-      totalAmount: booking.totalAmount,
-      amountPaid: await amountPaidFromDb(booking.id, booking.totalAmount),
-      city: booking.city,
-      createdAt: booking.createdAt.toISOString(),
-    })),
-  );
+  const paidMap = await amountPaidByBookingIds(userBookings.map((booking) => booking.id));
+
+  const bookingRows = userBookings.map((booking) => ({
+    id: booking.id,
+    serviceName: booking.service.name,
+    customerName: customerDisplayName(booking.user),
+    customerPhone: booking.user.phone,
+    scheduledDate: booking.scheduledDate.toISOString(),
+    arrivalWindow: booking.arrivalWindow,
+    status: booking.status,
+    totalAmount: booking.totalAmount,
+    amountPaid: cappedAmountPaid(paidMap, booking.id, booking.totalAmount),
+    city: booking.city,
+    createdAt: booking.createdAt.toISOString(),
+  }));
 
   return {
     id: user.id,

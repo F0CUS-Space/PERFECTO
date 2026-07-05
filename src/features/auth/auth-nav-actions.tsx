@@ -3,13 +3,12 @@
 import Link from "next/link";
 
 import { LogoutButton } from "@/features/auth/logout-button";
-import { useAuthUser } from "@/features/auth/use-auth-user";
-import type { PublicUser } from "@/features/auth/types";
+import { useAuthUser } from "@/features/auth/auth-provider";
 import { Button } from "@/components/ui/button";
 import { NotificationBell } from "@/components/shared/notification-bell";
 
-export function AuthNavActions({ initialUser }: { initialUser?: PublicUser | null }) {
-  const user = useAuthUser(initialUser);
+export function AuthNavActions() {
+  const user = useAuthUser();
 
   if (user === undefined) {
     return <div className="hidden h-9 w-24 animate-pulse rounded-lg bg-secondary lg:block" />;
@@ -35,7 +34,7 @@ export function AuthNavActions({ initialUser }: { initialUser?: PublicUser | nul
 
   return (
     <div className="hidden items-center gap-3 lg:flex">
-      <NotificationBell />
+      <NotificationBell userId={user.id} />
       <Button asChild variant="ghost" size="sm">
         <Link href={dashboardHref}>{user.role === "ADMIN" ? "Admin" : "Dashboard"}</Link>
       </Button>

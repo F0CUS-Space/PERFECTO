@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { markNotificationsRead } from "@/features/notifications/queries";
+import { bumpNotificationSignal } from "@/features/notifications/firestore-signal";
 import { requireUser } from "@/server/rbac";
 
 export async function markNotificationsAsRead(notificationIds?: string[]) {
@@ -14,6 +15,7 @@ export async function markNotificationsAsRead(notificationIds?: string[]) {
   }
 
   await markNotificationsRead(user.id, parsed.data);
+  await bumpNotificationSignal(user.id);
   revalidatePath("/api/notifications");
   return { ok: true as const };
 }
@@ -21,6 +23,7 @@ export async function markNotificationsAsRead(notificationIds?: string[]) {
 export async function markAllNotificationsAsRead() {
   const user = await requireUser();
   await markNotificationsRead(user.id);
+  await bumpNotificationSignal(user.id);
   revalidatePath("/api/notifications");
   return { ok: true as const };
 }

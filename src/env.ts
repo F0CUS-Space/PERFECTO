@@ -32,7 +32,7 @@ const envSchema = z.object({
   // When "true", shows test-phone helpers and relaxes Firebase app verification for local dev.
   NEXT_PUBLIC_AUTH_DEV_MODE: z.string().optional(),
   AUTH_DEV_MODE: z.string().optional(),
-// k
+
   // Stripe
   STRIPE_SECRET_KEY: z.string().optional(),
   STRIPE_WEBHOOK_SECRET: z.string().optional(),

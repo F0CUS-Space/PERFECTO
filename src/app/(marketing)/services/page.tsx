@@ -18,7 +18,7 @@ export const metadata: Metadata = {
 
 // Render at request time so Docker builds succeed without a database and
 // admin-managed catalog changes appear immediately.
-export const dynamic = "force-dynamic";
+export const revalidate = 60;
 
 export default async function ServicesPage() {
   const services = await getActiveServices();
