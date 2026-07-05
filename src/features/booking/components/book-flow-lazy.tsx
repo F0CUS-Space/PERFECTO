@@ -1,3 +1,5 @@
+"use client";
+
 import dynamic from "next/dynamic";
 
 import { BookFlowSkeleton } from "./book-flow-skeleton";
