@@ -2,11 +2,11 @@ import "server-only";
 
 import type { BookingStatus } from "@prisma/client";
 
-import { reconcileBookingPayments } from "@/features/payments/services/reconcile-payments";
 import {
   amountPaidByBookingIds,
   cappedAmountPaid,
 } from "@/features/payments/booking-amount-paid";
+import { getBookingPaymentStateFromDb } from "@/features/payments/booking-payment-state";
 import { prisma } from "@/lib/prisma";
 import { isDatabaseConfigured } from "@/lib/db-ready";
 
@@ -32,17 +32,28 @@ function isUpcoming(scheduledDate: Date, status: BookingStatus): boolean {
   return scheduled >= today;
 }
 
-export async function getCustomerBookings(userId: string): Promise<CustomerBookingSummary[]> {
-  if (!isDatabaseConfigured()) return [];
+export async function getCustomerBookings(
+  userId: string,
+  options?: { limit?: number; offset?: number },
+): Promise<{ bookings: CustomerBookingSummary[]; total: number }> {
+  if (!isDatabaseConfigured()) return { bookings: [], total: 0 };
 
-  const bookings = await prisma.booking.findMany({
-    where: { userId },
-    include: {
-      service: { select: { name: true } },
-      invoice: { select: { number: true } },
-    },
-    orderBy: { scheduledDate: "desc" },
-  });
+  const limit = Math.min(Math.max(options?.limit ?? 50, 1), 100);
+  const offset = Math.max(options?.offset ?? 0, 0);
+
+  const [total, bookings] = await Promise.all([
+    prisma.booking.count({ where: { userId } }),
+    prisma.booking.findMany({
+      where: { userId },
+      include: {
+        service: { select: { name: true } },
+        invoice: { select: { number: true } },
+      },
+      orderBy: { scheduledDate: "desc" },
+      take: limit,
+      skip: offset,
+    }),
+  ]);
 
   const paidMap = await amountPaidByBookingIds(bookings.map((booking) => booking.id));
 
@@ -67,10 +78,13 @@ export async function getCustomerBookings(userId: string): Promise<CustomerBooki
       } satisfies CustomerBookingSummary;
     });
 
-  return summaries.sort((a, b) => {
-    if (a.isUpcoming !== b.isUpcoming) return a.isUpcoming ? -1 : 1;
-    return new Date(b.scheduledDate).getTime() - new Date(a.scheduledDate).getTime();
-  });
+  return {
+    bookings: summaries.sort((a, b) => {
+      if (a.isUpcoming !== b.isUpcoming) return a.isUpcoming ? -1 : 1;
+      return new Date(b.scheduledDate).getTime() - new Date(a.scheduledDate).getTime();
+    }),
+    total,
+  };
 }
 
 export async function getCustomerBookingById(
@@ -91,22 +105,11 @@ export async function getCustomerBookingById(
 
   if (!booking) return null;
 
-  let amountPaid = 0;
-  let depositSatisfied = false;
-  let fullyPaid = false;
-
-  try {
-    const reconcile = await reconcileBookingPayments(booking.id);
-    amountPaid = reconcile.amountPaid;
-    depositSatisfied = reconcile.depositSatisfied;
-    fullyPaid = reconcile.fullyPaid;
-  } catch {
-    amountPaid = await amountPaidByBookingIds([booking.id]).then((map) =>
-      cappedAmountPaid(map, booking.id, booking.totalAmount),
-    );
-    depositSatisfied = amountPaid >= booking.depositAmount;
-    fullyPaid = amountPaid >= booking.totalAmount;
-  }
+  const paymentState = await getBookingPaymentStateFromDb(booking.id, {
+    totalAmount: booking.totalAmount,
+    depositAmount: booking.depositAmount,
+    status: booking.status,
+  });
 
   return {
     id: booking.id,
@@ -117,7 +120,7 @@ export async function getCustomerBookingById(
     totalAmount: booking.totalAmount,
     depositAmount: booking.depositAmount,
     balanceAmount: booking.balanceAmount,
-    amountPaid,
+    amountPaid: paymentState.amountPaid,
     addressLine: booking.addressLine,
     city: booking.city,
     postalCode: booking.postalCode,
@@ -130,15 +133,15 @@ export async function getCustomerBookingById(
     specialInstructions: booking.specialInstructions,
     signatureName: booking.agreement?.signatureName ?? null,
     signedAt: booking.agreement?.signedAt?.toISOString() ?? null,
-    fullyPaid,
-    depositSatisfied,
+    fullyPaid: paymentState.fullyPaid,
+    depositSatisfied: paymentState.depositSatisfied,
     hasReview: Boolean(booking.review),
     canCancel: canCustomerCancelBooking(booking),
     canReschedule: canCustomerRescheduleBooking(booking),
     canReview: canCustomerReviewBooking({
       status: booking.status,
       scheduledDate: booking.scheduledDate,
-      depositSatisfied,
+      depositSatisfied: paymentState.depositSatisfied,
       hasReview: Boolean(booking.review),
     }),
     rescheduleCount: booking.rescheduleCount,
@@ -147,23 +150,37 @@ export async function getCustomerBookingById(
   };
 }
 
-export async function getCustomerPayments(userId: string): Promise<CustomerPaymentRow[]> {
-  if (!isDatabaseConfigured()) return [];
+export async function getCustomerPayments(
+  userId: string,
+  options?: { limit?: number; offset?: number },
+): Promise<{ payments: CustomerPaymentRow[]; total: number }> {
+  if (!isDatabaseConfigured()) return { payments: [], total: 0 };
 
-  const payments = await prisma.payment.findMany({
-    where: { booking: { userId } },
-    include: {
-      booking: {
-        select: {
-          service: { select: { name: true } },
-          invoice: { select: { number: true } },
+  const limit = Math.min(Math.max(options?.limit ?? 50, 1), 100);
+  const offset = Math.max(options?.offset ?? 0, 0);
+
+  const where = { booking: { userId } };
+
+  const [total, payments] = await Promise.all([
+    prisma.payment.count({ where }),
+    prisma.payment.findMany({
+      where,
+      include: {
+        booking: {
+          select: {
+            service: { select: { name: true } },
+            invoice: { select: { number: true } },
+          },
         },
       },
-    },
-    orderBy: { createdAt: "desc" },
-  });
+      orderBy: { createdAt: "desc" },
+      take: limit,
+      skip: offset,
+    }),
+  ]);
 
-  return payments.map((payment) => ({
+  return {
+    payments: payments.map((payment) => ({
     id: payment.id,
     bookingId: payment.bookingId,
     serviceName: payment.booking.service.name,
@@ -172,11 +189,13 @@ export async function getCustomerPayments(userId: string): Promise<CustomerPayme
     amount: payment.amount,
     createdAt: payment.createdAt.toISOString(),
     invoiceNumber: payment.booking.invoice?.number ?? null,
-  }));
+  })),
+    total,
+  };
 }
 
 export async function getCustomerDashboardStats(userId: string) {
-  const bookings = await getCustomerBookings(userId);
+  const { bookings } = await getCustomerBookings(userId, { limit: 100, offset: 0 });
   const upcoming = bookings.filter((b) => b.isUpcoming);
   const pendingDeposit = bookings.filter(
     (b) => b.status === "PENDING_PAYMENT" && b.amountPaid < b.depositAmount,

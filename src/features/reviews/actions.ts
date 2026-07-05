@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { canCustomerReviewBooking } from "@/features/dashboard/booking-rules";
-import { reconcileBookingPayments } from "@/features/payments/services/reconcile-payments";
+import { getBookingPaymentStateFromDb } from "@/features/payments/booking-payment-state";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/server/rbac";
 
@@ -33,11 +33,13 @@ export async function submitBookingReview(input: z.infer<typeof reviewSchema>): 
   }
 
   let depositSatisfied = booking.status !== "PENDING_PAYMENT";
-  try {
-    const reconcile = await reconcileBookingPayments(booking.id);
-    depositSatisfied = reconcile.depositSatisfied;
-  } catch {
-    depositSatisfied = booking.status !== "PENDING_PAYMENT";
+  if (!depositSatisfied) {
+    const paymentState = await getBookingPaymentStateFromDb(booking.id, {
+      totalAmount: booking.totalAmount,
+      depositAmount: booking.depositAmount,
+      status: booking.status,
+    });
+    depositSatisfied = paymentState.depositSatisfied;
   }
 
   if (

@@ -15,6 +15,7 @@ import { Section } from "@/components/shared/section";
 import { PayDepositButton } from "@/features/payments/components/pay-deposit-button";
 import { DepositConfirmationSync } from "@/features/payments/components/deposit-confirmation-sync";
 import { AppliedPromotionSummary } from "@/features/promotions/components/applied-promotion-summary";
+import { getBookingPaymentStateFromDb } from "@/features/payments/booking-payment-state";
 import { reconcileBookingPayments } from "@/features/payments/services/reconcile-payments";
 import { isStripeConfigured } from "@/lib/stripe-ready";
 import { displayArrivalTime } from "@/lib/format-arrival-time";
@@ -65,19 +66,35 @@ export default async function BookingConfirmationPage({ params, searchParams }: 
     notFound();
   }
 
-  const reconcile = await reconcileBookingPayments(booking.id);
-  booking = await loadBooking(id, user.id);
+  // Stripe reconcile only when returning from checkout — webhooks handle the normal path.
+  const paymentState =
+    checkout === "success" && booking.status === "PENDING_PAYMENT"
+      ? await reconcileBookingPayments(booking.id).catch(() =>
+          getBookingPaymentStateFromDb(booking!.id, {
+            totalAmount: booking!.totalAmount,
+            depositAmount: booking!.depositAmount,
+            status: booking!.status,
+          }),
+        )
+      : await getBookingPaymentStateFromDb(booking.id, {
+          totalAmount: booking.totalAmount,
+          depositAmount: booking.depositAmount,
+          status: booking.status,
+        });
 
-  if (!booking) {
-    notFound();
+  if (checkout === "success") {
+    booking = await loadBooking(id, user.id);
+    if (!booking) {
+      notFound();
+    }
   }
 
   const isConfirmed = booking.status === "CONFIRMED";
-  const fullyPaid = reconcile.fullyPaid;
-  const amountDue = Math.max(booking.totalAmount - reconcile.amountPaid, 0);
-  const showPayNow = !fullyPaid && !reconcile.depositSatisfied && booking.status === "PENDING_PAYMENT";
+  const fullyPaid = paymentState.fullyPaid;
+  const amountDue = Math.max(booking.totalAmount - paymentState.amountPaid, 0);
+  const showPayNow = !fullyPaid && !paymentState.depositSatisfied && booking.status === "PENDING_PAYMENT";
   const paymentsEnabled = isStripeConfigured();
-  const awaitingConfirmation = checkout === "success" && !reconcile.depositSatisfied;
+  const awaitingConfirmation = checkout === "success" && !paymentState.depositSatisfied;
 
   return (
     <>
@@ -161,7 +178,7 @@ export default async function BookingConfirmationPage({ params, searchParams }: 
               <div>
                 <dt className="text-muted-foreground">Paid so far</dt>
                 <dd className="text-lg font-bold tabular-nums text-primary">
-                  {formatCurrency(reconcile.amountPaid)}
+                  {formatCurrency(paymentState.amountPaid)}
                 </dd>
               </div>
               {!fullyPaid && (

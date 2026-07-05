@@ -13,13 +13,12 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { HeroBrand } from "@/components/shared/hero-brand";
+import { RevealLazy as Reveal, TiltLazy as Tilt } from "@/components/shared/lazy-motion";
 import { Section, SectionHeading } from "@/components/shared/section";
 import { ServiceCard } from "@/components/shared/service-card";
 import { TestimonialCard } from "@/components/shared/testimonial-card";
 import { PageHero } from "@/components/shared/page-hero";
 import { HomeAboutSection } from "@/components/marketing/home-about-section";
-import { Tilt } from "@/components/shared/tilt";
-import { Reveal } from "@/components/shared/reveal";
 import { getHomeFeaturedServices } from "@/features/services-catalog/queries";
 import { getFeaturedTestimonials } from "@/features/reviews/queries";
 import { testimonials as fallbackTestimonials } from "@/content/testimonials";

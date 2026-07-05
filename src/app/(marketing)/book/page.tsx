@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 
 import { PageHero } from "@/components/shared/page-hero";
 import { Section } from "@/components/shared/section";
-import { BookFlow } from "@/features/booking/components/book-flow";
+import { BookFlowLazy } from "@/features/booking/components/book-flow-lazy";
 import { getClaimablePromotionById } from "@/features/promotions/queries";
 import { getQuoteCatalog } from "@/features/quote/queries";
 
@@ -32,7 +32,7 @@ export default async function BookPage({ searchParams }: BookPageProps) {
         containerClassName="py-12 md:py-20"
       />
       <Section className="[&>div]:py-10 md:[&>div]:py-16">
-        <BookFlow catalog={catalog} claimPromotion={claimPromotion} />
+        <BookFlowLazy catalog={catalog} claimPromotion={claimPromotion} />
       </Section>
     </>
   );

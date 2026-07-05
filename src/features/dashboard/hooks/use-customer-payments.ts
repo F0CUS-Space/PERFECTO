@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import type { CustomerPaymentRow } from "@/features/dashboard/types";
 
 async function fetchPayments(): Promise<CustomerPaymentRow[]> {
-  const res = await fetch("/api/dashboard/payments");
+  const res = await fetch("/api/dashboard/payments?limit=100");
   if (!res.ok) throw new Error("Failed to load payments");
   const data = await res.json();
   return data.payments;

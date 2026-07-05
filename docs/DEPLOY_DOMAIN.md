@@ -39,6 +39,9 @@ Use this IP everywhere below.
 
 In **GoDaddy → My Products → DNS** for your domain:
 
+**Important:** Turn off **Domain Forwarding** and **GoDaddy Website Builder / parking** if enabled.
+Those use GoDaddy IPs (e.g. `76.223.x.x`) and break Let's Encrypt with HTTP 403.
+
 | Type | Name | Value | TTL |
 |------|------|-------|-----|
 | **A** | `@` | `YOUR_EC2_PUBLIC_IP` | 600 (or default) |
@@ -46,11 +49,16 @@ In **GoDaddy → My Products → DNS** for your domain:
 
 Remove conflicting records (old parking page, conflicting CNAME on `@`).
 
-Wait 5–30 minutes, then verify:
+On EC2, get your public IP:
+
+```bash
+curl -s https://checkip.amazonaws.com
+```
+
+Wait 5–30 minutes, then verify (must match EC2 IP, **not** `76.223.x.x`):
 
 ```bash
 dig +short yourdomain.com
-# should print YOUR_EC2_PUBLIC_IP
 ```
 
 ---
@@ -154,6 +162,7 @@ https://yourdomain.com/api/webhooks/stripe
 
 | Problem | Fix |
 |---------|-----|
+| certbot fails with `403` on `76.223.x.x` | GoDaddy forwarding/parking — disable it; A record must point to EC2 |
 | certbot fails | DNS not propagated yet — wait and retry |
 | Site loads but OTP fails | Domain missing from Firebase Authorized domains |
 | Login works on IP but not domain | Rebuild after changing `NEXT_PUBLIC_APP_URL` |

@@ -2,11 +2,11 @@ import "server-only";
 
 import type { ApplicationStatus, BookingStatus, AdminAuditAction } from "@prisma/client";
 
-import { reconcileBookingPayments } from "@/features/payments/services/reconcile-payments";
 import {
   amountPaidByBookingIds,
   cappedAmountPaid,
 } from "@/features/payments/booking-amount-paid";
+import { getBookingPaymentStateFromDb } from "@/features/payments/booking-payment-state";
 import { prisma } from "@/lib/prisma";
 import { isDatabaseConfigured } from "@/lib/db-ready";
 import { getViewUrl } from "@/lib/s3";
@@ -206,17 +206,11 @@ export async function getAdminBookingById(id: string): Promise<AdminBookingDetai
 
   if (!booking) return null;
 
-  let amountPaid = 0;
-  let fullyPaid = false;
-  try {
-    const reconcile = await reconcileBookingPayments(booking.id);
-    amountPaid = reconcile.amountPaid;
-    fullyPaid = reconcile.fullyPaid;
-  } catch {
-    const paidMap = await amountPaidByBookingIds([booking.id]);
-    amountPaid = cappedAmountPaid(paidMap, booking.id, booking.totalAmount);
-    fullyPaid = amountPaid >= booking.totalAmount;
-  }
+  const paymentState = await getBookingPaymentStateFromDb(booking.id, {
+    totalAmount: booking.totalAmount,
+    depositAmount: booking.depositAmount,
+    status: booking.status,
+  });
 
   const photos = await Promise.all(
     booking.photos.map(async (photo) => {
@@ -245,8 +239,8 @@ export async function getAdminBookingById(id: string): Promise<AdminBookingDetai
     totalAmount: booking.totalAmount,
     depositAmount: booking.depositAmount,
     balanceAmount: booking.balanceAmount,
-    amountPaid,
-    fullyPaid,
+    amountPaid: paymentState.amountPaid,
+    fullyPaid: paymentState.fullyPaid,
     addressLine: booking.addressLine,
     city: booking.city,
     postalCode: booking.postalCode,

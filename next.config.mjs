@@ -5,6 +5,9 @@ const nextConfig = {
   reactStrictMode: true,
   // Keep Node-only server SDKs out of the webpack bundle (they use `node:` built-ins).
   serverExternalPackages: ["firebase-admin", "stripe"],
+  experimental: {
+    optimizePackageImports: ["lucide-react", "@tanstack/react-query"],
+  },
   images: {
     remotePatterns: [
       // S3 bucket (property photos, resumes-derived public assets, etc.)
