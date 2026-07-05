@@ -95,8 +95,16 @@ export function PhoneAuthForm({ mode = "login" }: { mode?: AuthMode }) {
     recaptchaRef.current = new RecaptchaVerifier(auth, recaptchaContainerRef.current, {
       size: "invisible",
     });
+    await recaptchaRef.current.render();
     return recaptchaRef.current;
   }, []);
+
+  const sendPhoneOtp = useCallback(async (normalized: string) => {
+    const auth = getFirebaseAuth();
+    const verifier = await ensureRecaptcha();
+    const result = await signInWithPhoneNumber(auth, normalized, verifier);
+    setConfirmation(result);
+  }, [ensureRecaptcha]);
 
   const finishAndRedirect = (user: PublicUser) => {
     notifyAuthChanged();
@@ -186,10 +194,7 @@ export function PhoneAuthForm({ mode = "login" }: { mode?: AuthMode }) {
         return;
       }
 
-      const auth = getFirebaseAuth();
-      const verifier = await ensureRecaptcha();
-      const result = await signInWithPhoneNumber(auth, normalized, verifier);
-      setConfirmation(result);
+      await sendPhoneOtp(normalized);
       setLoginStep("otp");
     } catch (err) {
       cleanupRecaptcha();
@@ -212,6 +217,13 @@ export function PhoneAuthForm({ mode = "login" }: { mode?: AuthMode }) {
       const normalized = normalizePhone(phone);
       validatePhoneForMode(normalized);
       setPhone(normalized);
+
+      if (devMode) {
+        setRegisterStep("otp");
+        return;
+      }
+
+      await sendPhoneOtp(normalized);
       setRegisterStep("otp");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Please check your details.");
@@ -446,7 +458,8 @@ export function PhoneAuthForm({ mode = "login" }: { mode?: AuthMode }) {
               <Button type="submit" className="w-full" size="lg" disabled={loading}>
                 {loading ? (
                   <>
-                    <Loader2 className="h-4 w-4 animate-spin" /> Continuing…
+                    <Loader2 className="h-4 w-4 animate-spin" />{" "}
+                    {devMode ? "Continuing…" : "Sending code…"}
                   </>
                 ) : (
                   "Continue to verification"

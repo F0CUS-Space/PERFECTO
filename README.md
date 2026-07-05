@@ -45,7 +45,8 @@ via GitHub Actions on every push to `main`.
 
 1. **Security group** — allow inbound:
    - `22` (SSH, for GitHub Actions deploy)
-   - `3000` (app — or `80`/`443` if you add a reverse proxy)
+   - `80` and `443` (nginx + HTTPS — recommended for production)
+   - `3000` (direct app access — optional after nginx is configured)
 
 2. **Attach IAM role** to the EC2 instance with S3 access (`s3:PutObject`, `s3:GetObject`
    on `arn:aws:s3:::your-bucket/*`). Remove `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY`
@@ -102,6 +103,8 @@ docker compose up -d --build
 ```
 
 App: `http://<EC2_HOST>:3000` (or your `APP_HOST_PORT`).
+
+**Custom domain (GoDaddy + nginx + HTTPS + Firebase):** see [`docs/DEPLOY_DOMAIN.md`](./docs/DEPLOY_DOMAIN.md).
 
 ### Stripe (M5 — deposit payments)
 

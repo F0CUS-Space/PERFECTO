@@ -55,6 +55,7 @@ export function ChangePhoneForm({ currentPhone }: ChangePhoneFormProps) {
     recaptchaRef.current = new RecaptchaVerifier(auth, recaptchaContainerRef.current, {
       size: "invisible",
     });
+    await recaptchaRef.current.render();
     return recaptchaRef.current;
   }, []);
 
