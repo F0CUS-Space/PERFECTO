@@ -20,8 +20,6 @@ export async function GET() {
     });
   }
 
-  return NextResponse.json({
-    enabled: true,
-    credentialSource: check.credentialSource,
-  });
+  // Only expose whether uploads work — not how credentials are sourced.
+  return NextResponse.json({ enabled: true });
 }

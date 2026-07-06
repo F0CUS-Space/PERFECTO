@@ -4,6 +4,7 @@ import { contactSchema, type ContactInput } from "@/features/contact/schema";
 import { sendEmail } from "@/lib/email";
 import { siteConfig } from "@/config/site";
 import { escapeHtml } from "@/lib/escape-html";
+import { getClientIp, rateLimit } from "@/lib/rate-limit";
 
 export interface ActionResult {
   success: boolean;
@@ -11,6 +12,14 @@ export interface ActionResult {
 }
 
 export async function submitContactForm(input: ContactInput): Promise<ActionResult> {
+  const limit = rateLimit(`contact:${await getClientIp()}`, 5, 10 * 60 * 1000);
+  if (!limit.ok) {
+    return {
+      success: false,
+      message: "You've sent several messages already. Please wait a few minutes and try again.",
+    };
+  }
+
   const parsed = contactSchema.safeParse(input);
   if (!parsed.success) {
     return { success: false, message: "Please check the form and try again." };

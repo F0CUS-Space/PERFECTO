@@ -6,6 +6,7 @@ import {
   renderInvoicePdf,
 } from "@/features/dashboard/services/invoice-download";
 import { sendEmail } from "@/lib/email";
+import { escapeHtml } from "@/lib/escape-html";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/server/auth";
 
@@ -52,14 +53,17 @@ export async function sendBookingInvoiceEmail(
   const customerName =
     [booking.user.firstName, booking.user.lastName].filter(Boolean).join(" ").trim() ||
     booking.user.phone;
+  const safeName = escapeHtml(customerName);
+  const safeNumber = escapeHtml(invoiceData.number);
+  const safeService = escapeHtml(booking.service.name);
 
   try {
     const result = await sendEmail({
       to: email,
       subject: `Your invoice ${invoiceData.number} — Perfecto`,
       html: `
-        <p>Hi ${customerName},</p>
-        <p>Please find your invoice <strong>${invoiceData.number}</strong> for ${booking.service.name} attached as a PDF.</p>
+        <p>Hi ${safeName},</p>
+        <p>Please find your invoice <strong>${safeNumber}</strong> for ${safeService} attached as a PDF.</p>
         <p><a href="${appUrl}/dashboard/bookings/${booking.id}">View booking details</a></p>
         <p>— The Perfecto Team</p>
       `,

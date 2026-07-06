@@ -3,6 +3,7 @@
 import { siteConfig } from "@/config/site";
 import { sendEmail } from "@/lib/email";
 import { prisma } from "@/lib/prisma";
+import { getClientIp, rateLimit } from "@/lib/rate-limit";
 
 import {
   applicationReceivedAdminEmail,
@@ -69,6 +70,14 @@ export async function submitJobApplication(
 ): Promise<SubmitApplicationResult> {
   if (input.companyWebsite) {
     return { ok: true, applicationId: "", confirmationEmailSent: false };
+  }
+
+  const limit = rateLimit(`job-application:${await getClientIp()}`, 5, 10 * 60 * 1000);
+  if (!limit.ok) {
+    return {
+      ok: false,
+      error: "Too many applications submitted. Please wait a few minutes and try again.",
+    };
   }
 
   const activePositions = await getActiveJobPostingTitles();

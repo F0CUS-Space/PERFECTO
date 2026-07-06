@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { formatS3Error, getViewUrl, putObject } from "@/lib/s3";
 import { isS3Configured } from "@/lib/s3-ready";
+import { getRequestIp, rateLimit } from "@/lib/rate-limit";
 
 const MAX_RESUME_BYTES = 5 * 1024 * 1024;
 
@@ -11,6 +12,15 @@ function sanitizeFilename(name: string) {
 
 /** Public resume upload for job applications (PDF only). */
 export async function POST(request: Request) {
+  // Public, unauthenticated S3 write — throttle per IP to limit abuse/cost.
+  const limit = rateLimit(`resume-upload:${getRequestIp(request)}`, 5, 10 * 60 * 1000);
+  if (!limit.ok) {
+    return NextResponse.json(
+      { error: "Too many uploads. Please wait a few minutes and try again." },
+      { status: 429, headers: { "Retry-After": String(limit.retryAfterSeconds) } },
+    );
+  }
+
   if (!isS3Configured()) {
     return NextResponse.json(
       { error: "Resume uploads are not configured." },

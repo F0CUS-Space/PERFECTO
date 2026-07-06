@@ -14,6 +14,7 @@ import {
   createCustomTokenForUid,
   getOrCreateFirebaseUserByPhone,
 } from "@/lib/firebase/admin";
+import { getRequestIp, rateLimit } from "@/lib/rate-limit";
 import { prisma } from "@/lib/prisma";
 
 const bodySchema = z.object({
@@ -31,6 +32,14 @@ const bodySchema = z.object({
 export async function POST(request: Request) {
   if (!isServerAuthDevMode()) {
     return NextResponse.json({ error: "Not available." }, { status: 404 });
+  }
+
+  const limit = rateLimit(`auth-dev-phone:${getRequestIp(request)}`, 30, 5 * 60 * 1000);
+  if (!limit.ok) {
+    return NextResponse.json(
+      { error: "Too many attempts. Please wait a moment and try again." },
+      { status: 429, headers: { "Retry-After": String(limit.retryAfterSeconds) } },
+    );
   }
 
   try {

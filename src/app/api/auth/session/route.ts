@@ -4,12 +4,21 @@ import { z } from "zod";
 import { attachSessionCookie } from "@/lib/auth/session-cookie";
 import { verifyIdToken, createSessionCookie } from "@/lib/firebase/admin";
 import { toPublicUser, upsertUserFromFirebaseClaims } from "@/features/auth/user-sync";
+import { getRequestIp, rateLimit } from "@/lib/rate-limit";
 
 const bodySchema = z.object({
   idToken: z.string().min(1),
 });
 
 export async function POST(request: Request) {
+  const limit = rateLimit(`auth-session:${getRequestIp(request)}`, 30, 5 * 60 * 1000);
+  if (!limit.ok) {
+    return NextResponse.json(
+      { error: "Too many sign-in attempts. Please wait a moment and try again." },
+      { status: 429, headers: { "Retry-After": String(limit.retryAfterSeconds) } },
+    );
+  }
+
   try {
     const json = await request.json();
     const { idToken } = bodySchema.parse(json);
