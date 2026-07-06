@@ -153,7 +153,8 @@ export function Navbar() {
             className="absolute inset-0 bg-brand-navy/20 backdrop-blur-sm"
             onClick={() => setMobileOpen(false)}
           />
-          <nav className="absolute inset-x-0 top-0 max-h-[calc(100vh-4rem)] overflow-y-auto border-b border-border bg-background p-5 shadow-soft">
+          {/* dvh (not vh) so the last CTA isn't hidden behind the mobile browser chrome */}
+          <nav className="absolute inset-x-0 top-0 max-h-[calc(100dvh-4rem)] overflow-y-auto overscroll-contain border-b border-border bg-background p-5 pb-8 shadow-soft">
             <div className="flex flex-col gap-1">
               {[...MAIN_LINKS, ...MORE_LINKS].map((link) => (
                 <Link

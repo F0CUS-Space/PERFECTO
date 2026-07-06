@@ -33,14 +33,14 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             <LogoutButton variant="ghost" />
           </div>
         </div>
-        <div className="border-t border-border/60 px-4 pb-3 pt-2 lg:hidden">
+        <div className="border-t border-border/60 px-4 pb-3 pt-2 md:hidden">
           <AdminMobileNav />
         </div>
       </header>
 
       <div className="flex">
-        <aside className="hidden w-64 shrink-0 border-r border-border/60 bg-secondary/20 lg:block">
-          <div className="sticky top-16 max-h-[calc(100vh-4rem)] overflow-y-auto p-4">
+        <aside className="hidden w-64 shrink-0 border-r border-border/60 bg-secondary/20 md:block">
+          <div className="sticky top-16 max-h-[calc(100dvh-4rem)] overflow-y-auto p-4">
             <p className="mb-4 px-3 text-sm font-semibold text-brand-navy">Admin portal</p>
             <AdminSidebar />
           </div>

@@ -18,7 +18,7 @@ export default async function DashboardSectionLayout({
 
   return (
     <div className="border-t border-border bg-background">
-      <div className="border-b border-border bg-secondary/30 px-4 py-3 lg:hidden">
+      <div className="border-b border-border bg-secondary/30 px-4 py-3 md:hidden">
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0 flex-1">
             <DashboardMobileNav />
@@ -27,8 +27,8 @@ export default async function DashboardSectionLayout({
         </div>
       </div>
       <div className="flex">
-        <aside className="hidden w-60 shrink-0 border-r border-border/60 bg-secondary/20 lg:block">
-          <div className="sticky top-[var(--navbar-height,4rem)] max-h-[calc(100vh-var(--navbar-height,4rem))] overflow-y-auto p-4">
+        <aside className="hidden w-60 shrink-0 border-r border-border/60 bg-secondary/20 md:block">
+          <div className="sticky top-[var(--navbar-height,4rem)] max-h-[calc(100dvh-var(--navbar-height,4rem))] overflow-y-auto p-4">
             <p className="mb-4 px-3 text-sm font-semibold text-brand-navy">My account</p>
             <DashboardSidebar />
           </div>

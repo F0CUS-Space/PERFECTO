@@ -1,6 +1,31 @@
+// Content-Security-Policy tuned for this app's third parties:
+// - Firebase Auth (phone/reCAPTCHA) + Firestore realtime (HTTPS + WebSocket)
+// - Stripe.js + Checkout
+// - S3 images
+// Scripts allow 'unsafe-inline'/'unsafe-eval' because Next.js hydration and the
+// Firebase/Stripe/reCAPTCHA SDKs require it without a nonce pipeline. The remaining
+// directives (frame-ancestors, object-src, base-uri, form-action, restricted
+// connect/frame hosts) still provide meaningful protection.
+const contentSecurityPolicy = [
+  "default-src 'self'",
+  "base-uri 'self'",
+  "object-src 'none'",
+  "form-action 'self'",
+  "frame-ancestors 'self'",
+  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://apis.google.com https://www.google.com https://www.gstatic.com https://js.stripe.com https://*.firebaseapp.com",
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+  "font-src 'self' data: https://fonts.gstatic.com",
+  "img-src 'self' data: blob: https:",
+  "connect-src 'self' https://*.googleapis.com https://*.google.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firestore.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://*.firebaseapp.com https://api.stripe.com",
+  "frame-src 'self' https://*.firebaseapp.com https://www.google.com https://recaptcha.google.com https://js.stripe.com https://hooks.stripe.com",
+  "worker-src 'self' blob:",
+  "upgrade-insecure-requests",
+].join("; ");
+
 // Security headers applied to every response. These are provider-agnostic and safe
 // for the Firebase Auth / Stripe / reCAPTCHA integrations (they frame us, not vice versa).
 const securityHeaders = [
+  { key: "Content-Security-Policy", value: contentSecurityPolicy },
   // Prevent MIME-type sniffing.
   { key: "X-Content-Type-Options", value: "nosniff" },
   // Disallow the site being framed by other origins (clickjacking protection).

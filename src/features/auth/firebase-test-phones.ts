@@ -38,6 +38,16 @@ export function formatFirebaseAuthError(err: unknown): string {
   const code = (err as { code?: string })?.code;
   const message = err instanceof Error ? err.message : "Something went wrong.";
 
+  // Backend error 39 = QuotaExceeded: Firebase's SMS abuse protection temporarily
+  // blocks the request (per-IP/project rate limit, or a throttled carrier/region).
+  // Surfaces as HTTP 503 with "Error code: 39" or auth/error-code:-39.
+  if (code === "auth/error-code:-39" || /error[ -]?code:?\s*-?39\b/i.test(message)) {
+    return (
+      "We couldn't send a code right now — SMS verification is temporarily rate-limited. " +
+      "Please wait a few minutes and try again."
+    );
+  }
+
   switch (code) {
     case "auth/operation-not-allowed":
       return (
