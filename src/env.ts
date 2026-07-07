@@ -47,6 +47,8 @@ const envSchema = z.object({
   // Email (Resend)
   RESEND_API_KEY: z.string().optional(),
   EMAIL_FROM: z.string().default("Perfecto <noreply@perfecto.local>"),
+  /** Inbox for contact-form submissions. Defaults to pre-launch tester inbox when unset. */
+  CONTACT_INBOX: z.string().email().optional(),
 
   // Seed (optional)
   SEED_ADMIN_PHONE: z.string().optional(),

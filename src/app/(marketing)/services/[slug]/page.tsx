@@ -16,7 +16,7 @@ import {
 } from "@/features/services-catalog/display";
 import { getServiceBySlug, getServiceSlugs } from "@/features/services-catalog/queries";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 60;
 
 export async function generateStaticParams() {
   const slugs = await getServiceSlugs();

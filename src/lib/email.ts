@@ -23,6 +23,7 @@ export interface SendEmailParams {
   to: string | string[];
   subject: string;
   html: string;
+  replyTo?: string | string[];
   attachments?: EmailAttachment[];
 }
 
@@ -37,7 +38,7 @@ function encodeAttachmentContent(content: Buffer | string): string {
  * Transactional email sender. Centralized so templates and provider can evolve
  * (V3.0 may add additional channels) behind a stable interface.
  */
-export async function sendEmail({ to, subject, html, attachments }: SendEmailParams) {
+export async function sendEmail({ to, subject, html, replyTo, attachments }: SendEmailParams) {
   if (!env.RESEND_API_KEY) {
     console.warn(`[email] RESEND_API_KEY not set — skipping email "${subject}" to ${to}`);
     return { skipped: true as const };
@@ -48,6 +49,7 @@ export async function sendEmail({ to, subject, html, attachments }: SendEmailPar
     to,
     subject,
     html,
+    ...(replyTo ? { replyTo } : {}),
     attachments: attachments?.map((file) => ({
       filename: file.filename,
       content: encodeAttachmentContent(file.content),

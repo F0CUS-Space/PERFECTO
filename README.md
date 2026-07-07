@@ -106,6 +106,21 @@ App: `http://<EC2_HOST>:3000` (or your `APP_HOST_PORT`).
 
 **Custom domain (GoDaddy + nginx + HTTPS + Firebase):** see [`docs/DEPLOY_DOMAIN.md`](./docs/DEPLOY_DOMAIN.md).
 
+### Contact form (Resend)
+
+Add to server `.env`:
+
+```env
+RESEND_API_KEY=re_...
+EMAIL_FROM="Perfecto <onboarding@resend.dev>"
+CONTACT_INBOX=liyategared85@gmail.com
+```
+
+- Get an API key at [resend.com](https://resend.com).
+- Until your domain is verified, use `onboarding@resend.dev` as the sender.
+- Submissions go to `CONTACT_INBOX` (pre-launch: `liyategared85@gmail.com`).
+- At go-live, set `CONTACT_INBOX` to your real business inbox and verify your domain in Resend.
+
 ### Stripe (M5 — deposit payments)
 
 Add to server `.env`:

@@ -1255,10 +1255,12 @@ export async function createPromotion(
   revalidateAuditLogPath();
 
   if (promotion.isActive) {
-    await notifyCustomersPromotion({
+    void notifyCustomersPromotion({
       title: promotion.title,
       description: promotion.description,
       created: true,
+    }).catch((error) => {
+      console.error("[promotions] customer notify failed", error);
     });
   }
 
@@ -1306,10 +1308,12 @@ export async function updatePromotion(
 
   const wasActivated = !existing.isActive && promotion.isActive;
   if (wasActivated) {
-    await notifyCustomersPromotion({
+    void notifyCustomersPromotion({
       title: promotion.title,
       description: promotion.description,
       created: true,
+    }).catch((error) => {
+      console.error("[promotions] customer notify failed", error);
     });
   }
 
