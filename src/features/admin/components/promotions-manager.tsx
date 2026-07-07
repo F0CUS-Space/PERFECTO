@@ -296,8 +296,13 @@ export function PromotionsManager({
         </p>
         <PromotionFormFields values={formValues} onChange={setFormValues} services={services} />
         {error && !editingId && <p className="text-sm text-destructive">{error}</p>}
-        <div className="flex flex-wrap gap-2">
-          <Button type="button" disabled={pending || !canCreate} onClick={() => onCreate(true)}>
+        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+          <Button
+            type="button"
+            className="w-full sm:w-auto"
+            disabled={pending || !canCreate}
+            onClick={() => onCreate(true)}
+          >
             {pending ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin" /> Saving…
@@ -309,6 +314,7 @@ export function PromotionsManager({
           <Button
             type="button"
             variant="outline"
+            className="w-full sm:w-auto"
             disabled={pending || !canCreate}
             onClick={() => onCreate(false)}
           >
@@ -330,23 +336,30 @@ export function PromotionsManager({
           </p>
         ) : (
           promotions.map((promotion) => (
-            <article key={promotion.id} className="rounded-2xl border border-border bg-card p-4">
-              <div className="flex flex-wrap items-start justify-between gap-3">
+            <article
+              key={promotion.id}
+              className="overflow-hidden rounded-2xl border border-border bg-card p-4"
+            >
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                 <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <p className="font-medium text-brand-navy">{promotion.title}</p>
-                    <StatusBadge isActive={promotion.isActive} />
-                    <span className="rounded-full bg-brand-blue/10 px-2.5 py-0.5 text-xs font-medium text-brand-blue">
-                      {formatPromotionDiscountLabel(
-                        promotion.discountType,
-                        promotion.discountValue,
-                      )}
-                    </span>
+                  <div className="space-y-2">
+                    <p className="break-words font-medium text-brand-navy">{promotion.title}</p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <StatusBadge isActive={promotion.isActive} />
+                      <span className="rounded-full bg-brand-blue/10 px-2.5 py-0.5 text-xs font-medium text-brand-blue">
+                        {formatPromotionDiscountLabel(
+                          promotion.discountType,
+                          promotion.discountValue,
+                        )}
+                      </span>
+                    </div>
                   </div>
                   {editingId !== promotion.id && (
                     <>
-                      <p className="mt-1 text-sm text-muted-foreground">{promotion.description}</p>
-                      <p className="mt-2 text-xs text-muted-foreground">
+                      <p className="mt-2 break-words text-sm text-muted-foreground [overflow-wrap:anywhere]">
+                        {promotion.description}
+                      </p>
+                      <p className="mt-2 break-words text-xs text-muted-foreground">
                         {promotion.serviceNames.length > 0
                           ? `Services: ${promotion.serviceNames.join(", ")}`
                           : "Applies to all services"}
@@ -356,12 +369,13 @@ export function PromotionsManager({
                     </>
                   )}
                 </div>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap">
                   {editingId !== promotion.id && (
                     <Button
                       type="button"
                       variant="outline"
                       size="sm"
+                      className="w-full sm:w-auto"
                       disabled={pending}
                       onClick={() => {
                         setError(null);
@@ -377,6 +391,7 @@ export function PromotionsManager({
                     type="button"
                     variant={promotion.isActive ? "outline" : "default"}
                     size="sm"
+                    className="w-full sm:w-auto"
                     disabled={pending}
                     onClick={() => onToggle(promotion)}
                   >
@@ -387,7 +402,7 @@ export function PromotionsManager({
                     variant="outline"
                     size="sm"
                     disabled={pending}
-                    className="text-destructive hover:text-destructive"
+                    className="w-full text-destructive hover:text-destructive sm:w-auto"
                     onClick={() => onDelete(promotion)}
                   >
                     <Trash2 className="h-4 w-4" />

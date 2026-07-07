@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Bell, Check, Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -37,7 +37,28 @@ export function NotificationBell({
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const panelRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const [panelStyle, setPanelStyle] = useState<React.CSSProperties>({});
   const loadRef = useRef<(options?: { silent?: boolean }) => Promise<void>>(async () => {});
+
+  const updatePanelPosition = useCallback(() => {
+    const button = buttonRef.current;
+    if (!button) return;
+
+    const margin = 16;
+    const width = Math.min(352, window.innerWidth - margin * 2);
+    const rect = button.getBoundingClientRect();
+    let left = rect.right - width;
+    left = Math.max(margin, Math.min(left, window.innerWidth - width - margin));
+
+    setPanelStyle({
+      position: "fixed",
+      top: rect.bottom + 8,
+      left,
+      width,
+      zIndex: 50,
+    });
+  }, []);
 
   const load = useCallback(async (options?: { silent?: boolean }) => {
     try {
@@ -116,6 +137,19 @@ export function NotificationBell({
     return () => document.removeEventListener("mousedown", onClick);
   }, [open]);
 
+  useLayoutEffect(() => {
+    if (!open) return;
+
+    updatePanelPosition();
+    window.addEventListener("resize", updatePanelPosition);
+    window.addEventListener("scroll", updatePanelPosition, true);
+
+    return () => {
+      window.removeEventListener("resize", updatePanelPosition);
+      window.removeEventListener("scroll", updatePanelPosition, true);
+    };
+  }, [open, updatePanelPosition]);
+
   const onOpen = () => {
     setOpen((value) => !value);
     if (!open) void load();
@@ -145,6 +179,7 @@ export function NotificationBell({
   return (
     <div ref={panelRef} className={cn("relative", className)}>
       <Button
+        ref={buttonRef}
         type="button"
         variant="ghost"
         size="icon"
@@ -161,7 +196,10 @@ export function NotificationBell({
       </Button>
 
       {open && (
-        <div className="absolute right-0 z-50 mt-2 w-[min(22rem,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-border bg-card shadow-soft">
+        <div
+          style={panelStyle}
+          className="max-h-[min(20rem,calc(100dvh-6rem))] overflow-hidden rounded-2xl border border-border bg-card shadow-soft"
+        >
           <div className="flex items-center justify-between border-b border-border px-4 py-3">
             <p className="font-semibold text-brand-navy">Notifications</p>
             {unreadCount > 0 && (
@@ -191,7 +229,9 @@ export function NotificationBell({
                   const content = (
                     <>
                       <p className="font-medium text-brand-navy">{item.title}</p>
-                      <p className="mt-1 text-sm text-muted-foreground line-clamp-2">{item.body}</p>
+                      <p className="mt-1 break-words text-sm text-muted-foreground line-clamp-2 [overflow-wrap:anywhere]">
+                        {item.body}
+                      </p>
                       <p className="mt-2 text-xs text-muted-foreground">
                         {new Date(item.createdAt).toLocaleString("en-US", {
                           month: "short",
