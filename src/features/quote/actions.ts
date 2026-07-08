@@ -4,7 +4,7 @@ import { z } from "zod";
 
 import { getServiceQuoteProfile } from "@/config/service-quote-profiles";
 import { prisma } from "@/lib/prisma";
-import { getCurrentUser } from "@/server/auth";
+import { requireUser, UnauthorizedError } from "@/server/rbac";
 
 import { parseQuoteInput } from "./schema";
 import { calculateQuote, type QuoteCalculation } from "./services/pricing";
@@ -123,11 +123,11 @@ export async function saveQuote(raw: unknown): Promise<SaveQuoteResult> {
       };
     }
 
-    const user = await getCurrentUser();
+    const user = await requireUser();
 
     const quote = await prisma.quote.create({
       data: {
-        userId: user?.id ?? null,
+        userId: user.id,
         serviceId: service.id,
         bedrooms: input.bedrooms ?? 0,
         bathrooms: input.bathrooms ?? 0,
@@ -152,6 +152,12 @@ export async function saveQuote(raw: unknown): Promise<SaveQuoteResult> {
       serviceSlug: service.slug,
     };
   } catch (error) {
+    if (error instanceof UnauthorizedError) {
+      return {
+        ok: false,
+        error: "Please sign in or create an account before getting a price estimate.",
+      };
+    }
     if (error instanceof z.ZodError) {
       return { ok: false, error: error.errors[0]?.message ?? "Invalid quote details." };
     }

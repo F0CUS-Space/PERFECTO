@@ -43,7 +43,7 @@ export function formatFirebaseAuthError(err: unknown): string {
   // Surfaces as HTTP 503 with "Error code: 39" or auth/error-code:-39.
   if (code === "auth/error-code:-39" || /error[ -]?code:?\s*-?39\b/i.test(message)) {
     return (
-      "We couldn't send a code right now — SMS verification is temporarily rate-limited. " +
+      "We couldn't send a verification code right now because SMS is temporarily rate-limited. " +
       "Please wait a few minutes and try again."
     );
   }
@@ -51,20 +51,30 @@ export function formatFirebaseAuthError(err: unknown): string {
   switch (code) {
     case "auth/operation-not-allowed":
       return (
-        "Phone SMS sign-in failed. With NEXT_PUBLIC_AUTH_DEV_MODE=true, use test numbers " +
-        "(+10000000000 admin login, +10000000001/+10000000002 customer signup) and OTP 123123."
+        "Phone sign-in is not enabled for this app. Contact support if this keeps happening."
       );
     case "auth/invalid-phone-number":
-      return "That phone number format is not valid. Use E.164 format, e.g. +10000000000.";
+      return "That phone number isn't valid. Include your country code, e.g. +12025551234.";
     case "auth/too-many-requests":
-      return "Too many attempts. Please wait a few minutes and try again.";
+      return "Too many attempts from this device. Please wait a few minutes and try again.";
     case "auth/invalid-verification-code":
-      return "Invalid verification code. For test numbers use OTP 123123.";
+      return "That code doesn't match. Check the 6 digits in your text message and try again.";
     case "auth/code-expired":
-      return "That code has expired. Request a new one.";
+      return "This code has expired. Go back, request a new code, and enter it right away.";
     case "auth/captcha-check-failed":
-      return "Security check failed. Refresh the page and try again.";
+      return "The security check failed. Refresh the page and try sending the code again.";
+    case "auth/missing-verification-code":
+      return "Enter the 6-digit code from your text message.";
+    case "auth/invalid-verification-id":
+      return "Your verification session expired. Go back and request a new code.";
+    case "auth/user-disabled":
+      return "This account has been disabled. Contact support for help.";
+    case "auth/network-request-failed":
+      return "Network error. Check your connection and try again.";
     default:
+      if (message.includes("Verification session expired")) {
+        return message;
+      }
       return message.replace(/^Firebase:\s*/i, "").replace(/\s*\(auth\/[^)]+\)\.?\s*$/, ".");
   }
 }

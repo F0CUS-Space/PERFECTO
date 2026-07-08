@@ -85,8 +85,11 @@ export function ChangePhoneForm({ currentPhone }: ChangePhoneFormProps) {
     }
   };
 
+  const verifyInFlightRef = useRef(false);
+
   const verifyAndUpdate = async () => {
-    if (!confirmation) return;
+    if (!confirmation || verifyInFlightRef.current) return;
+    verifyInFlightRef.current = true;
     setError(null);
     setLoading(true);
 
@@ -109,8 +112,29 @@ export function ChangePhoneForm({ currentPhone }: ChangePhoneFormProps) {
       setExpanded(false);
       window.location.reload();
     } catch (err) {
+      const auth = getFirebaseAuth();
+      if (auth.currentUser) {
+        try {
+          const idToken = await auth.currentUser.getIdToken(true);
+          const res = await fetch("/api/auth/change-phone", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ idToken }),
+          });
+          const data = await res.json();
+          if (res.ok) {
+            setSuccess(true);
+            setExpanded(false);
+            window.location.reload();
+            return;
+          }
+        } catch {
+          // fall through to show error
+        }
+      }
       setError(formatFirebaseAuthError(err));
     } finally {
+      verifyInFlightRef.current = false;
       setLoading(false);
     }
   };

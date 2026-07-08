@@ -78,6 +78,10 @@ export function PhoneAuthForm({ mode = "login" }: { mode?: AuthMode }) {
 
   const recaptchaRef = useRef<RecaptchaVerifier | null>(null);
   const recaptchaContainerRef = useRef<HTMLDivElement>(null);
+  const verifyInFlightRef = useRef(false);
+  const verifyCompletedRef = useRef(false);
+
+  const alternateHref = `${copy.alternate.href}?next=${encodeURIComponent(nextPath)}`;
 
   const cleanupRecaptcha = useCallback(() => {
     recaptchaRef.current?.clear();
@@ -107,6 +111,8 @@ export function PhoneAuthForm({ mode = "login" }: { mode?: AuthMode }) {
   }, [ensureRecaptcha]);
 
   const finishAndRedirect = (user: PublicUser) => {
+    verifyCompletedRef.current = true;
+    setError(null);
     notifyAuthChanged();
     if (user.role === "ADMIN") {
       router.replace(nextPath.startsWith("/admin") ? nextPath : "/admin");
@@ -115,6 +121,42 @@ export function PhoneAuthForm({ mode = "login" }: { mode?: AuthMode }) {
     }
     router.replace(nextPath.startsWith("/admin") ? "/dashboard" : nextPath);
     router.refresh();
+  };
+
+  const completeSignIn = async (idToken: string) => {
+    const { user, needsProfile } = await establishSession(idToken);
+
+    if (mode === "register") {
+      const result = await updateProfile({
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        email: email.trim() || "",
+      });
+      if (!result.ok) {
+        throw new Error(result.error);
+      }
+    }
+
+    if (needsProfile && mode === "login") {
+      throw new Error(
+        "No account found for this phone number. Please create an account first.",
+      );
+    }
+
+    finishAndRedirect(user);
+  };
+
+  const tryRecoverSignedInUser = async (): Promise<boolean> => {
+    const auth = getFirebaseAuth();
+    if (!auth.currentUser) return false;
+
+    try {
+      const idToken = await auth.currentUser.getIdToken(true);
+      await completeSignIn(idToken);
+      return true;
+    } catch {
+      return false;
+    }
   };
 
   const establishSession = async (idToken: string) => {
@@ -152,8 +194,7 @@ export function PhoneAuthForm({ mode = "login" }: { mode?: AuthMode }) {
     const auth = getFirebaseAuth();
     await signInWithCustomToken(auth, data.customToken as string);
     const idToken = await auth.currentUser!.getIdToken(true);
-    const session = await establishSession(idToken);
-    finishAndRedirect(session.user);
+    await completeSignIn(idToken);
   };
 
   const validatePhoneForMode = (normalized: string) => {
@@ -226,7 +267,7 @@ export function PhoneAuthForm({ mode = "login" }: { mode?: AuthMode }) {
       await sendPhoneOtp(normalized);
       setRegisterStep("otp");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Please check your details.");
+      setError(formatFirebaseAuthError(err));
     } finally {
       setLoading(false);
     }
@@ -234,6 +275,9 @@ export function PhoneAuthForm({ mode = "login" }: { mode?: AuthMode }) {
 
   const handleVerifyOtp = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (verifyInFlightRef.current || verifyCompletedRef.current) return;
+
+    verifyInFlightRef.current = true;
     setError(null);
     setLoading(true);
 
@@ -254,33 +298,23 @@ export function PhoneAuthForm({ mode = "login" }: { mode?: AuthMode }) {
       }
 
       if (!confirmation) {
-        throw new Error("Verification session expired. Go back and request a new code.");
+        if (await tryRecoverSignedInUser()) return;
+        throw new Error("Your verification session timed out. Go back and request a new code.");
       }
+
       await confirmation.confirm(otp);
       const auth = getFirebaseAuth();
       const idToken = await auth.currentUser!.getIdToken(true);
-      const { user, needsProfile } = await establishSession(idToken);
-
-      if (mode === "register") {
-        const result = await updateProfile({
-          firstName: firstName.trim(),
-          lastName: lastName.trim(),
-          email: email.trim() || "",
-        });
-        if (!result.ok) {
-          throw new Error(result.error);
-        }
-      }
-
-      if (needsProfile && mode === "login") {
-        throw new Error("Please complete sign up first.");
-      }
-
-      finishAndRedirect(user);
+      await completeSignIn(idToken);
     } catch (err) {
+      if (verifyCompletedRef.current) return;
+      if (await tryRecoverSignedInUser()) return;
       setError(formatFirebaseAuthError(err));
     } finally {
-      setLoading(false);
+      verifyInFlightRef.current = false;
+      if (!verifyCompletedRef.current) {
+        setLoading(false);
+      }
     }
   };
 
@@ -353,7 +387,7 @@ export function PhoneAuthForm({ mode = "login" }: { mode?: AuthMode }) {
                 )}
               </Button>
               <p className="text-center text-sm">
-                <Link href={copy.alternate.href} className="font-medium text-brand-blue hover:underline">
+                <Link href={alternateHref} className="font-medium text-brand-blue hover:underline">
                   {copy.alternate.label}
                 </Link>
               </p>
@@ -466,7 +500,7 @@ export function PhoneAuthForm({ mode = "login" }: { mode?: AuthMode }) {
                 )}
               </Button>
               <p className="text-center text-sm">
-                <Link href={copy.alternate.href} className="font-medium text-brand-blue hover:underline">
+                <Link href={alternateHref} className="font-medium text-brand-blue hover:underline">
                   {copy.alternate.label}
                 </Link>
               </p>

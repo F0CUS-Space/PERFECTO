@@ -4,7 +4,7 @@ import { headers } from "next/headers";
 import { z } from "zod";
 
 import { prisma } from "@/lib/prisma";
-import { requireUser } from "@/server/rbac";
+import { requireUser, UnauthorizedError } from "@/server/rbac";
 
 import { getScheduleAvailabilityError, toScheduleDateString } from "@/features/booking/services/schedule-availability";
 import { createBookingSchema } from "./schema";
@@ -151,6 +151,12 @@ export async function createBooking(raw: unknown): Promise<CreateBookingResult> 
 
     return { ok: true, bookingId: booking.id };
   } catch (error) {
+    if (error instanceof UnauthorizedError) {
+      return {
+        ok: false,
+        error: "Your session expired. Please sign in again to complete your booking.",
+      };
+    }
     if (error instanceof z.ZodError) {
       return { ok: false, error: error.errors[0]?.message ?? "Invalid booking details." };
     }

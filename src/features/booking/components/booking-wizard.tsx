@@ -2,7 +2,6 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
-import { LogIn, UserPlus } from "lucide-react";
 
 import { BOOKING_WIZARD_STEPS, DEFAULT_ARRIVAL_TIME } from "@/config/booking";
 import { displayArrivalTime } from "@/lib/format-arrival-time";
@@ -75,15 +74,21 @@ export function BookingWizard() {
     return null;
   }
 
+  const requireAuthForStep = (): boolean => {
+    if (authUser === undefined) return false;
+    if (authUser === null) {
+      setStepError("Please sign in again to continue your booking.");
+      return false;
+    }
+    return true;
+  };
+
   const goNext = () => {
     setStepError(null);
 
+    if (!requireAuthForStep()) return;
+
     if (stepIndex === 0) {
-      if (authUser === undefined) return;
-      if (authUser === null) {
-        setStepError("Sign in or create an account below to continue with your booking.");
-        return;
-      }
       const parsed = propertyStepSchema.safeParse(property);
       if (!parsed.success) {
         setStepError(parsed.error.errors[0]?.message ?? "Check property details");
@@ -138,6 +143,8 @@ export function BookingWizard() {
 
   const onSubmitBooking = async () => {
     setStepError(null);
+
+    if (!requireAuthForStep()) return;
 
     if (scheduleBlocked) {
       const blockMessage = getScheduleBlockMessage(
@@ -211,25 +218,13 @@ export function BookingWizard() {
                   </p>
                 ) : (
                   <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 space-y-3">
-                    <p className="font-medium text-brand-navy">Account required to book</p>
+                    <p className="font-medium text-brand-navy">Session expired</p>
                     <p className="text-sm text-muted-foreground">
-                      Sign in or create an account to continue — it only takes a minute with your
-                      phone number.
+                      Sign in again to continue with your booking.
                     </p>
-                    <div className="flex flex-wrap gap-3">
-                      <Button asChild>
-                        <Link href="/login?next=/book">
-                          <LogIn className="h-4 w-4" />
-                          Sign in
-                        </Link>
-                      </Button>
-                      <Button asChild variant="outline">
-                        <Link href="/register?next=/book">
-                          <UserPlus className="h-4 w-4" />
-                          Create account
-                        </Link>
-                      </Button>
-                    </div>
+                    <Button asChild size="sm">
+                      <Link href="/login?next=/book">Sign in</Link>
+                    </Button>
                   </div>
                 )}
 
@@ -420,7 +415,7 @@ export function BookingWizard() {
                   onClick={goNext}
                   disabled={
                     authUser === undefined ||
-                    (stepIndex === 0 && authUser === null) ||
+                    authUser === null ||
                     (stepIndex === 1 && scheduleBlocked)
                   }
                   className="w-full sm:w-auto"
@@ -431,7 +426,7 @@ export function BookingWizard() {
                 <Button
                   type="button"
                   onClick={onSubmitBooking}
-                  disabled={submitting || scheduleBlocked}
+                  disabled={submitting || scheduleBlocked || authUser === undefined || authUser === null}
                   className="w-full sm:w-auto"
                 >
                   {submitting ? "Processing…" : "Confirm & pay"}
