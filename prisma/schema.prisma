@@ -92,6 +92,7 @@ enum AdminAuditAction {
   PROMOTION_UPDATE
   PROMOTION_DELETE
   PAYMENT_REFUND
+  CHECKOUT_ATTEMPT_VOID
 }
 
 enum PromotionDiscountType {
