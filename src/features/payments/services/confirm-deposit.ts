@@ -27,11 +27,22 @@ export async function confirmDepositFromCheckoutSession(session: Stripe.Checkout
 
   const before = await prisma.booking.findUnique({
     where: { id: bookingId },
-    select: { status: true },
+    select: { status: true, userId: true },
   });
 
   if (!before) {
     throw new Error(`Booking ${bookingId} not found.`);
+  }
+
+  // Defense-in-depth: the session's userId metadata must match the booking owner.
+  // Prevents a session minted for one account from confirming another's booking.
+  const sessionUserId = session.metadata?.userId;
+  if (sessionUserId && sessionUserId !== before.userId) {
+    console.error(
+      "[confirm-deposit] session/booking owner mismatch — refusing to confirm",
+      JSON.stringify({ bookingId, sessionId: session.id }),
+    );
+    return { skipped: true as const, reason: "owner_mismatch" };
   }
 
   const result = await reconcileBookingPayments(bookingId);

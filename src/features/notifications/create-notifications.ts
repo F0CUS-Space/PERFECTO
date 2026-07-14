@@ -7,6 +7,11 @@ import { env } from "@/env";
 import { displayArrivalTime } from "@/lib/format-arrival-time";
 import { sendEmail } from "@/lib/email";
 import { prisma } from "@/lib/prisma";
+import { amountPaidByBookingIds } from "@/features/payments/booking-amount-paid";
+
+function formatMoney(cents: number): string {
+  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(cents / 100);
+}
 
 import {
   bumpNotificationSignalsForDbUsers,
@@ -160,8 +165,17 @@ export async function notifyAdminsBookingCancelled(bookingId: string): Promise<v
     year: "numeric",
   });
   const href = `/admin/bookings/${booking.id}`;
-  const title = "Booking cancelled";
-  const body = `${customerName} cancelled ${booking.service.name} scheduled for ${dateLabel}.`;
+
+  // Refunds are admin-initiated only — flag for review when money was captured.
+  const paidMap = await amountPaidByBookingIds([booking.id]);
+  const capturedCents = paidMap.get(booking.id) ?? 0;
+  const refundNote =
+    capturedCents > 0
+      ? ` A payment of ${formatMoney(capturedCents)} was captured — review whether a refund is owed.`
+      : "";
+
+  const title = capturedCents > 0 ? "Booking cancelled — refund review" : "Booking cancelled";
+  const body = `${customerName} cancelled ${booking.service.name} scheduled for ${dateLabel}.${refundNote}`;
 
   const { ids } = await getAdminRecipients();
   await createNotificationsForUsers(ids, {
