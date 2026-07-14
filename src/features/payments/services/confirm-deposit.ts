@@ -36,6 +36,10 @@ export async function confirmDepositFromCheckoutSession(session: Stripe.Checkout
 
   const result = await reconcileBookingPayments(bookingId);
 
+  // Persist the PaymentIntent id so later payment_intent/charge webhooks (which do
+  // NOT carry the Checkout Session id) can be matched back to this payment row.
+  await persistPaymentIntentId(session);
+
   if (before.status === "CONFIRMED" && !result.newlyConfirmed) {
     return { skipped: true as const, reason: "already_confirmed", result };
   }
@@ -53,15 +57,70 @@ export async function syncBookingDepositIfPaid(bookingId: string): Promise<boole
   return result.depositSatisfied;
 }
 
-/** Marks deposit failed when Stripe reports a failed payment intent. */
+function paymentIntentIdFromSession(session: Stripe.Checkout.Session): string | null {
+  const intent = session.payment_intent;
+  if (!intent) return null;
+  return typeof intent === "string" ? intent : intent.id;
+}
+
+/** Stores the Stripe PaymentIntent id on the payment row linked to this session. */
+async function persistPaymentIntentId(session: Stripe.Checkout.Session): Promise<void> {
+  const paymentIntentId = paymentIntentIdFromSession(session);
+  if (!paymentIntentId) return;
+
+  await prisma.payment.updateMany({
+    where: { provider: "stripe", providerPaymentId: session.id, providerPaymentIntentId: null },
+    data: { providerPaymentIntentId: paymentIntentId },
+  });
+}
+
+/**
+ * Marks a payment failed when Stripe reports a failed PaymentIntent.
+ * Matches on the PaymentIntent id (pi_...), which is what the webhook carries —
+ * falls back to the session id for safety.
+ */
 export async function markDepositFailed(paymentIntentId: string) {
   const payment = await prisma.payment.findFirst({
-    where: { providerPaymentId: paymentIntentId },
+    where: {
+      OR: [
+        { providerPaymentIntentId: paymentIntentId },
+        { providerPaymentId: paymentIntentId },
+      ],
+    },
   });
   if (!payment || payment.status === "SUCCEEDED") return;
 
   await prisma.payment.update({
     where: { id: payment.id },
     data: { status: "FAILED" },
+  });
+}
+
+/** Marks the attempt failed when a Checkout Session's async payment fails. */
+export async function markCheckoutSessionFailed(sessionId: string) {
+  const payment = await prisma.payment.findFirst({
+    where: { provider: "stripe", providerPaymentId: sessionId },
+  });
+  if (!payment || payment.status === "SUCCEEDED") return;
+
+  await prisma.payment.update({
+    where: { id: payment.id },
+    data: { status: "FAILED" },
+  });
+}
+
+/**
+ * Releases an expired Checkout Session's attempt row so the customer can retry.
+ * Clears the session link (leaves it PENDING) so a fresh checkout can reuse the row.
+ */
+export async function releaseExpiredCheckoutSession(sessionId: string) {
+  const payment = await prisma.payment.findFirst({
+    where: { provider: "stripe", providerPaymentId: sessionId },
+  });
+  if (!payment || payment.status === "SUCCEEDED") return;
+
+  await prisma.payment.update({
+    where: { id: payment.id },
+    data: { providerPaymentId: null, status: "PENDING" },
   });
 }
