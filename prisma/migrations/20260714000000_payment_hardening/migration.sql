@@ -1,6 +1,9 @@
 -- Phase 5: refund audit action
 ALTER TYPE "AdminAuditAction" ADD VALUE 'PAYMENT_REFUND';
 
+-- Phase 6: void-checkout-attempt audit action
+ALTER TYPE "AdminAuditAction" ADD VALUE 'CHECKOUT_ATTEMPT_VOID';
+
 -- Phase 4: PaymentIntent id so failed/refund webhooks (which reference the
 -- PaymentIntent, not the Checkout Session) can be matched to a payment row.
 ALTER TABLE "Payment" ADD COLUMN "providerPaymentIntentId" TEXT;
