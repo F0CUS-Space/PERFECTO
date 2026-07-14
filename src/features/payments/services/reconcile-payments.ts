@@ -1,7 +1,5 @@
 import "server-only";
 
-import type Stripe from "stripe";
-
 import { env } from "@/env";
 import { getStripe } from "@/lib/stripe";
 import { prisma } from "@/lib/prisma";
@@ -10,6 +8,9 @@ import type { Booking, Invoice, Payment, Prisma } from "@prisma/client";
 import { netCapturedFromPayments } from "@/features/payments/booking-amount-paid";
 import { generateInvoiceNumber } from "./invoice";
 import { OUTBOX_EVENT, drainOutbox, enqueueOutboxEvent } from "./outbox";
+import type { SettledCapture } from "./payment-reconciler";
+import { getPaymentReconciler } from "./stripe-reconciler";
+import { getPaymentService } from "./stripe-payment-service";
 
 export type PaymentReconcileResult = {
   amountPaid: number;
@@ -27,52 +28,20 @@ type BookingWithRelations = Booking & {
   invoice: Invoice | null;
 };
 
-function sessionAmountCents(session: Stripe.Checkout.Session): number {
-  return session.amount_total ?? 0;
-}
-
-/** Loads every Stripe Checkout session ID we have on file for a booking. */
-async function findPaidCheckoutSessions(bookingId: string): Promise<Stripe.Checkout.Session[]> {
-  const stripe = getStripe();
-  const byId = new Map<string, Stripe.Checkout.Session>();
-
-  const payments = await prisma.payment.findMany({
-    where: { bookingId, providerPaymentId: { not: null } },
-    select: { providerPaymentId: true },
-  });
-
-  for (const payment of payments) {
-    if (!payment.providerPaymentId?.startsWith("cs_")) continue;
-
-    try {
-      const session = await stripe.checkout.sessions.retrieve(payment.providerPaymentId);
-      if (session.metadata?.bookingId === bookingId && session.payment_status === "paid") {
-        byId.set(session.id, session);
-      }
-    } catch {
-      // Session may have been deleted or is invalid — ignore.
-    }
-  }
-
-  return [...byId.values()];
-}
-
-async function recordPaidSession(
+async function recordSettledCapture(
   tx: Prisma.TransactionClient,
   booking: BookingWithRelations,
-  session: Stripe.Checkout.Session,
+  capture: SettledCapture,
 ): Promise<number> {
-  const amount = sessionAmountCents(session);
+  const amount = capture.amountCents;
   if (amount <= 0) return 0;
 
-  // Capture the PaymentIntent id here too (not just in the webhook) so refunds work
-  // even when confirmation happened via the redirect-path reconcile.
-  const paymentIntent = session.payment_intent;
-  const paymentIntentId =
-    typeof paymentIntent === "string" ? paymentIntent : (paymentIntent?.id ?? null);
+  // Capture the provider refund id (Stripe PaymentIntent) here too (not just in the
+  // webhook) so refunds work even when confirmation happened via the redirect reconcile.
+  const paymentIntentId = capture.providerPaymentIntentId;
 
   const existing = await tx.payment.findFirst({
-    where: { provider: "stripe", providerPaymentId: session.id },
+    where: { provider: "stripe", providerPaymentId: capture.providerPaymentId },
   });
 
   if (existing?.status === "SUCCEEDED") {
@@ -91,8 +60,8 @@ async function recordPaidSession(
     return amount;
   }
 
-  // Link this session to the pending attempt row that started it (still unlinked).
-  const metadataPaymentId = session.metadata?.paymentId;
+  // Link this capture to the pending attempt row that started it (still unlinked).
+  const metadataPaymentId = capture.metadataPaymentId;
   if (metadataPaymentId) {
     const linked = await tx.payment.findUnique({ where: { id: metadataPaymentId } });
     if (linked && linked.status !== "SUCCEEDED" && !linked.providerPaymentId) {
@@ -100,7 +69,7 @@ async function recordPaidSession(
         where: { id: metadataPaymentId },
         data: {
           status: "SUCCEEDED",
-          providerPaymentId: session.id,
+          providerPaymentId: capture.providerPaymentId,
           providerPaymentIntentId: linked.providerPaymentIntentId ?? paymentIntentId,
           amount,
         },
@@ -109,19 +78,22 @@ async function recordPaidSession(
     }
   }
 
-  // Backstop for missed webhooks / duplicate sessions. The @@unique([provider, providerPaymentId])
+  // Backstop for missed webhooks / duplicate captures. The @@unique([provider, providerPaymentId])
   // makes this idempotent even under concurrent reconciles (upsert instead of create).
   // V1.0 collects the full amount at booking, so every captured session is a DEPOSIT-type payment.
   await tx.payment.upsert({
     where: {
-      provider_providerPaymentId: { provider: "stripe", providerPaymentId: session.id },
+      provider_providerPaymentId: {
+        provider: "stripe",
+        providerPaymentId: capture.providerPaymentId,
+      },
     },
     create: {
       bookingId: booking.id,
       type: "DEPOSIT",
       amount,
       status: "SUCCEEDED",
-      providerPaymentId: session.id,
+      providerPaymentId: capture.providerPaymentId,
       providerPaymentIntentId: paymentIntentId,
     },
     update: { status: "SUCCEEDED", amount },
@@ -146,16 +118,15 @@ export async function reconcileBookingPayments(
     throw new Error(`Booking ${bookingId} not found.`);
   }
 
-  let paidSessions: Stripe.Checkout.Session[] = [];
-  if (env.STRIPE_SECRET_KEY?.trim()) {
-    paidSessions = await findPaidCheckoutSessions(bookingId);
-  }
+  // Provider-agnostic: the reconciler returns settled captures (empty when the
+  // provider isn't configured), keeping the DB/transaction logic below neutral.
+  const captures = await getPaymentReconciler().findSettledCaptures(bookingId);
 
   let didConfirm = false;
 
   await prisma.$transaction(async (tx) => {
-    for (const session of paidSessions) {
-      await recordPaidSession(tx, booking, session);
+    for (const capture of captures) {
+      await recordSettledCapture(tx, booking, capture);
     }
 
     const payments = await tx.payment.findMany({ where: { bookingId } });
@@ -319,4 +290,37 @@ export async function createDepositCheckoutAttempt(bookingId: string, amount: nu
       status: "PENDING",
     },
   });
+}
+
+/**
+ * Voids every open/pending checkout attempt for a booking: expires the provider
+ * session and marks the local attempt FAILED. Unsticks bookings whose checkout is
+ * stuck. Returns the number of attempts voided.
+ */
+export async function voidPendingCheckoutAttempts(bookingId: string): Promise<number> {
+  const pending = await prisma.payment.findMany({
+    where: { bookingId, status: "PENDING", providerPaymentId: { not: null } },
+  });
+
+  const service = getPaymentService();
+  let voided = 0;
+
+  for (const payment of pending) {
+    if (payment.providerPaymentId?.startsWith("cs_")) {
+      await service.voidCheckoutSession(payment.providerPaymentId).catch((error) => {
+        console.error(
+          "[voidPendingCheckoutAttempts] void failed",
+          payment.providerPaymentId,
+          error,
+        );
+      });
+    }
+    await prisma.payment.update({
+      where: { id: payment.id },
+      data: { status: "FAILED", providerPaymentId: null },
+    });
+    voided += 1;
+  }
+
+  return voided;
 }

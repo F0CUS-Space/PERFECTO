@@ -1,3 +1,6 @@
+/** Supported payment providers. Extend this union to add a new provider. */
+export type PaymentProvider = "stripe";
+
 export interface CreateDepositCheckoutInput {
   bookingId: string;
   paymentId: string;
@@ -41,4 +44,11 @@ export interface PaymentService {
   ): Promise<DepositCheckoutSession>;
 
   refundPayment(input: RefundPaymentInput): Promise<RefundResult>;
+
+  /**
+   * Voids/expires an open checkout session so it can no longer be paid.
+   * Used to compensate a failed local link-write and to let admins clear stuck attempts.
+   * Safe to call on already-expired sessions.
+   */
+  voidCheckoutSession(sessionId: string): Promise<void>;
 }

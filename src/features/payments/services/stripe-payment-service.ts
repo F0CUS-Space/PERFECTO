@@ -1,10 +1,13 @@
 import "server-only";
 
+import Stripe from "stripe";
+
 import { getStripe } from "@/lib/stripe";
 
 import type {
   CreateDepositCheckoutInput,
   DepositCheckoutSession,
+  PaymentProvider,
   PaymentService,
   RefundPaymentInput,
   RefundResult,
@@ -73,13 +76,37 @@ export class StripePaymentService implements PaymentService {
       amountCents: refund.amount,
     };
   }
+
+  async voidCheckoutSession(sessionId: string): Promise<void> {
+    const stripe = getStripe();
+    try {
+      await stripe.checkout.sessions.expire(sessionId);
+    } catch (error) {
+      // A session that is already completed/expired cannot be expired again — that's fine.
+      if (error instanceof Stripe.errors.StripeInvalidRequestError) return;
+      throw error;
+    }
+  }
 }
 
-let stripePaymentService: StripePaymentService | undefined;
+// Provider registry — add new providers here without touching call sites.
+const services: Partial<Record<PaymentProvider, PaymentService>> = {};
 
-export function getPaymentService(): PaymentService {
-  if (!stripePaymentService) {
-    stripePaymentService = new StripePaymentService();
+function createService(provider: PaymentProvider): PaymentService {
+  switch (provider) {
+    case "stripe":
+      return new StripePaymentService();
+    default:
+      throw new Error(`Unsupported payment provider: ${provider}`);
   }
-  return stripePaymentService;
+}
+
+/** Returns the payment provider implementation (defaults to Stripe in V1.0). */
+export function getPaymentService(provider: PaymentProvider = "stripe"): PaymentService {
+  const existing = services[provider];
+  if (existing) return existing;
+
+  const service = createService(provider);
+  services[provider] = service;
+  return service;
 }
