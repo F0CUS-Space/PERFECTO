@@ -453,7 +453,7 @@ Quote (optional) ──► Booking wizard
    Step 3: Schedule (date + arrival window)
    Step 4: Access info & special notes
    Step 5: Agreements (T&C / cancellation / liability) + e-signature
-   Step 6: Deposit payment (Stripe, 50%)
+   Step 6: Payment (Stripe, full amount)
         │
         ▼
    Stripe PaymentIntent ──► success ──► webhook (api/webhooks/stripe)
@@ -464,7 +464,7 @@ Quote (optional) ──► Booking wizard
 ```
 
 - **Source of truth for confirmation** is the Stripe **webhook**, not the client redirect.
-- Deposit = 50% of `estimatedTotal`; `balanceAmount` tracked for later collection.
+- V1.0 collects the full amount at booking: `depositAmount = estimatedTotal` and `balanceAmount = 0`. The `depositAmount` field name is retained for schema stability; the UI still labels this the "deposit".
 - Agreement must be accepted + signed **before** payment step is reachable.
 
 ---

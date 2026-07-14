@@ -2,8 +2,8 @@
 
 Premium cleaning services platform — **Version 1.0 (Business Launch Platform)**.
 
-Marketing website + phone-first auth + instant quote + online booking + 50% deposit
-payments + customer & admin dashboards + recruitment. Built to scale toward V1.5–V3.0.
+Marketing website + phone-first auth + instant quote + online booking + full payment
+at booking + customer & admin dashboards + recruitment. Built to scale toward V1.5–V3.0.
 
 See [`PROJECT_CONTEXT.md`](./PROJECT_CONTEXT.md), [`SYSTEM_ARCHITECTURE.md`](./SYSTEM_ARCHITECTURE.md),
 and [`IMPLEMENTATION_PLAN.md`](./IMPLEMENTATION_PLAN.md) for full context.
@@ -13,7 +13,7 @@ and [`IMPLEMENTATION_PLAN.md`](./IMPLEMENTATION_PLAN.md) for full context.
 - **Next.js 15** (App Router, RSC) · **TypeScript** · **TailwindCSS** + **shadcn/ui**
 - **Prisma** + **PostgreSQL** (self-hosted via Docker)
 - **Firebase Auth** (phone OTP; email verification optional)
-- **Stripe** (deposit payments) · **AWS S3** (uploads) · **Resend** (email)
+- **Stripe** (booking payments) · **AWS S3** (uploads) · **Resend** (email)
 - **TanStack Query** + **Zustand** · **React Hook Form** + **Zod**
 
 ## Local Development
@@ -121,7 +121,7 @@ CONTACT_INBOX=perfectocleanings@gmail.com
 - Submissions go to `CONTACT_INBOX` (default: `perfectocleanings@gmail.com`).
 - At go-live, verify your domain in Resend and set `EMAIL_FROM` to your business address.
 
-### Stripe (M5 — deposit payments)
+### Stripe (M5 — booking payments)
 
 Add to server `.env`:
 ```env
