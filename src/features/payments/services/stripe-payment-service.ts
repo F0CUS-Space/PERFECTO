@@ -6,6 +6,8 @@ import type {
   CreateDepositCheckoutInput,
   DepositCheckoutSession,
   PaymentService,
+  RefundPaymentInput,
+  RefundResult,
 } from "./payment-service";
 
 export class StripePaymentService implements PaymentService {
@@ -51,6 +53,25 @@ export class StripePaymentService implements PaymentService {
     }
 
     return { url: session.url, sessionId: session.id };
+  }
+
+  async refundPayment(input: RefundPaymentInput): Promise<RefundResult> {
+    const stripe = getStripe();
+
+    const refund = await stripe.refunds.create(
+      {
+        payment_intent: input.paymentIntentId,
+        ...(input.amountCents !== undefined ? { amount: input.amountCents } : {}),
+        ...(input.reason ? { metadata: { reason: input.reason } } : {}),
+      },
+      { idempotencyKey: input.idempotencyKey },
+    );
+
+    return {
+      refundId: refund.id,
+      status: refund.status ?? "pending",
+      amountCents: refund.amount,
+    };
   }
 }
 
