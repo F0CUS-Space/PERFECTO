@@ -38,6 +38,9 @@ const envSchema = z.object({
   STRIPE_WEBHOOK_SECRET: z.string().optional(),
   NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: z.string().optional(),
 
+  // Shared secret for the scheduled payments-maintenance endpoint (cron).
+  CRON_SECRET: z.string().optional(),
+
   // AWS S3
   AWS_REGION: z.string().default("us-east-1"),
   AWS_ACCESS_KEY_ID: z.string().optional(),
