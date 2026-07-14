@@ -26,6 +26,7 @@ export const AUDIT_ACTION_LABELS: Record<AdminAuditAction, string> = {
   PROMOTION_UPDATE: "Promotion updated",
   PROMOTION_DELETE: "Promotion deleted",
   PAYMENT_REFUND: "Payment refunded",
+  CHECKOUT_ATTEMPT_VOID: "Checkout attempts voided",
 };
 
 export const AUDIT_ACTIONS = Object.keys(AUDIT_ACTION_LABELS) as AdminAuditAction[];

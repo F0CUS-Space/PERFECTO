@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/card";
 import { BookingStatusForm } from "@/features/admin/components/booking-status-form";
 import { RefundPanel } from "@/features/admin/components/refund-panel";
+import { VoidAttemptsButton } from "@/features/admin/components/void-attempts-button";
 import { getAdminBookingById } from "@/features/admin/queries";
 import { BookingStatusBadge } from "@/features/dashboard/components/booking-status-badge";
 import { AppliedPromotionSummary } from "@/features/promotions/components/applied-promotion-summary";
@@ -274,6 +275,11 @@ export default async function AdminBookingDetailPage({ params }: PageProps) {
                     </span>
                   </div>
                 ))}
+                {booking.payments.some((payment) => payment.status === "PENDING") && (
+                  <div className="pt-2">
+                    <VoidAttemptsButton bookingId={booking.id} />
+                  </div>
+                )}
               </CardContent>
             </Card>
           )}

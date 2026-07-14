@@ -20,6 +20,7 @@ import {
 import { requireAdmin } from "@/server/rbac";
 import { logAdminAction } from "@/features/admin/audit-log";
 import { refundBookingPayment } from "@/features/payments/services/refunds";
+import { voidPendingCheckoutAttempts } from "@/features/payments/services/reconcile-payments";
 import {
   notifyCustomersPromotion,
   notifyCustomersServiceUpdate,
@@ -359,6 +360,46 @@ export async function refundPayment(
 
 function formatRefundAmount(cents: number): string {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(cents / 100);
+}
+
+export async function voidCheckoutAttempts(bookingId: string): Promise<AdminActionResult> {
+  const admin = await requireAdmin();
+
+  if (!bookingId) {
+    return { ok: false, error: "Missing booking id." };
+  }
+
+  const booking = await prisma.booking.findUnique({ where: { id: bookingId } });
+  if (!booking) {
+    return { ok: false, error: "Booking not found." };
+  }
+
+  let voided: number;
+  try {
+    voided = await voidPendingCheckoutAttempts(bookingId);
+  } catch (error) {
+    console.error("[voidCheckoutAttempts]", bookingId, error);
+    return { ok: false, error: "Could not void the checkout attempts. Please try again." };
+  }
+
+  if (voided === 0) {
+    return { ok: false, error: "No open checkout attempts to void." };
+  }
+
+  revalidatePath("/admin/bookings");
+  revalidatePath(`/admin/bookings/${bookingId}`);
+
+  await logAdminAction({
+    actorId: admin.id,
+    action: "CHECKOUT_ATTEMPT_VOID",
+    entityType: "booking",
+    entityId: bookingId,
+    summary: `Voided ${voided} pending checkout ${voided === 1 ? "attempt" : "attempts"}`,
+    metadata: { voided },
+  });
+  revalidateAuditLogPath();
+
+  return { ok: true };
 }
 
 export async function updateService(
