@@ -12,6 +12,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { BookingStatusForm } from "@/features/admin/components/booking-status-form";
+import { RefundPanel } from "@/features/admin/components/refund-panel";
 import { getAdminBookingById } from "@/features/admin/queries";
 import { BookingStatusBadge } from "@/features/dashboard/components/booking-status-badge";
 import { AppliedPromotionSummary } from "@/features/promotions/components/applied-promotion-summary";
@@ -242,6 +243,17 @@ export default async function AdminBookingDetailPage({ params }: PageProps) {
               <BookingStatusForm bookingId={booking.id} currentStatus={booking.status} />
             </CardContent>
           </Card>
+
+          {booking.amountPaid > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Refund</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <RefundPanel bookingId={booking.id} refundableCents={booking.amountPaid} />
+              </CardContent>
+            </Card>
+          )}
 
           {booking.payments.length > 0 && (
             <Card>
