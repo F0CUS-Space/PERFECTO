@@ -91,6 +91,7 @@ enum AdminAuditAction {
   PROMOTION_CREATE
   PROMOTION_UPDATE
   PROMOTION_DELETE
+  PAYMENT_REFUND
 }
 
 enum PromotionDiscountType {
@@ -281,8 +282,8 @@ model Booking {
 
   // Money in cents
   totalAmount   Int
-  depositAmount Int // 50% of total
-  balanceAmount Int
+  depositAmount Int // V1.0: full amount charged at booking (== totalAmount). Field name kept for schema stability; UI still labels this the "deposit".
+  balanceAmount Int // V1.0: always 0 (no later balance collection)
 
   promotionId            String?
   promotion              Promotion? @relation(fields: [promotionId], references: [id], onDelete: SetNull)
@@ -328,7 +329,10 @@ model Payment {
   bookingId         String
   booking           Booking       @relation(fields: [bookingId], references: [id], onDelete: Cascade)
   provider          String        @default("stripe")
-  providerPaymentId String? // Stripe PaymentIntent / Checkout Session id
+  providerPaymentId String? // Stripe Checkout Session id (cs_...)
+  // Stripe PaymentIntent id (pi_...) — captured on session completion so failed/refund
+  // webhooks (which reference the PaymentIntent, not the session) can be matched.
+  providerPaymentIntentId String?
   type              PaymentType   @default(DEPOSIT)
   amount            Int // cents
   status            PaymentStatus @default(PENDING)
@@ -336,8 +340,10 @@ model Payment {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@unique([provider, providerPaymentId])
   @@index([bookingId])
   @@index([providerPaymentId])
+  @@index([providerPaymentIntentId])
 }
 
 model Invoice {
@@ -349,6 +355,46 @@ model Invoice {
   amountDue  Int
   amountPaid Int      @default(0)
   issuedAt   DateTime @default(now())
+}
+
+// Monotonic per-year invoice sequence. Incremented atomically inside a transaction
+// (row lock) so concurrent confirmations never collide on invoice numbers.
+model InvoiceCounter {
+  year Int @id
+  seq  Int @default(0)
+}
+
+// Webhook idempotency + audit. Keyed by the provider event id so a redelivered
+// event is processed at most once, and failures are observable for ops.
+model ProcessedWebhookEvent {
+  id        String   @id // provider event id (Stripe evt_...)
+  provider  String   @default("stripe")
+  type      String
+  status    String   @default("PROCESSED") // PROCESSED | FAILED
+  error     String?
+  attempts  Int      @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([type])
+  @@index([status])
+}
+
+// Transactional outbox: durable side-effect intents written in the SAME transaction
+// as the state change that triggers them. Drained by a worker (best-effort inline +
+// a scheduled sweep), so post-commit side effects survive process crashes.
+model OutboxEvent {
+  id          String    @id @default(cuid())
+  type        String // e.g. "BOOKING_CONFIRMED"
+  payload     Json
+  status      String    @default("PENDING") // PENDING | PROCESSING | PROCESSED | FAILED
+  attempts    Int       @default(0)
+  lastError   String?
+  createdAt   DateTime  @default(now())
+  processedAt DateTime?
+
+  @@index([status])
+  @@index([createdAt])
 }
 
 // ---------------------------------------------------------------------------
