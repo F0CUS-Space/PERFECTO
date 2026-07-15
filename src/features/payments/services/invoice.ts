@@ -1,20 +1,20 @@
 import "server-only";
 
-import { prisma } from "@/lib/prisma";
+import type { Prisma } from "@prisma/client";
 
-/** Generates a unique invoice number like INV-2026-000042. */
-export async function generateInvoiceNumber(): Promise<string> {
+/**
+ * Generates a unique invoice number like INV-2026-000042 using an atomic per-year
+ * counter. MUST run inside a transaction so the counter row lock serializes
+ * concurrent confirmations and numbers never collide.
+ */
+export async function generateInvoiceNumber(tx: Prisma.TransactionClient): Promise<string> {
   const year = new Date().getFullYear();
-  const prefix = `INV-${year}-`;
 
-  for (let attempt = 0; attempt < 5; attempt++) {
-    const count = await prisma.invoice.count({
-      where: { number: { startsWith: prefix } },
-    });
-    const candidate = `${prefix}${String(count + 1 + attempt).padStart(6, "0")}`;
-    const exists = await prisma.invoice.findUnique({ where: { number: candidate } });
-    if (!exists) return candidate;
-  }
+  const counter = await tx.invoiceCounter.upsert({
+    where: { year },
+    create: { year, seq: 1 },
+    update: { seq: { increment: 1 } },
+  });
 
-  return `${prefix}${Date.now()}`;
+  return `INV-${year}-${String(counter.seq).padStart(6, "0")}`;
 }

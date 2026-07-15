@@ -130,14 +130,8 @@ export async function createBooking(raw: unknown): Promise<CreateBookingResult> 
         },
       });
 
-      await tx.payment.create({
-        data: {
-          bookingId: created.id,
-          type: "DEPOSIT",
-          amount: depositAmount,
-          status: "PENDING",
-        },
-      });
+      // Payment rows are created per checkout attempt in createDepositCheckout,
+      // so we intentionally do NOT create a pending payment here (avoids an orphan row).
 
       if (!quote.userId) {
         await tx.quote.update({

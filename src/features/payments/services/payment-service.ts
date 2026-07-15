@@ -1,3 +1,6 @@
+/** Supported payment providers. Extend this union to add a new provider. */
+export type PaymentProvider = "stripe";
+
 export interface CreateDepositCheckoutInput {
   bookingId: string;
   paymentId: string;
@@ -16,9 +19,36 @@ export interface DepositCheckoutSession {
   sessionId: string;
 }
 
+export interface RefundPaymentInput {
+  /** Provider PaymentIntent id to refund against (Stripe pi_...). */
+  paymentIntentId: string;
+  /** Amount to refund in cents. Omit to refund the full captured amount. */
+  amountCents?: number;
+  /** Optional human-readable reason (stored on the provider refund). */
+  reason?: string;
+  /** Idempotency key — prevents duplicate refunds on retries/double-clicks. */
+  idempotencyKey: string;
+}
+
+export interface RefundResult {
+  refundId: string;
+  /** Provider refund status, e.g. "succeeded" | "pending" | "failed". */
+  status: string;
+  amountCents: number;
+}
+
 /** Swappable payment provider interface (Stripe in V1.0). */
 export interface PaymentService {
   createDepositCheckoutSession(
     input: CreateDepositCheckoutInput,
   ): Promise<DepositCheckoutSession>;
+
+  refundPayment(input: RefundPaymentInput): Promise<RefundResult>;
+
+  /**
+   * Voids/expires an open checkout session so it can no longer be paid.
+   * Used to compensate a failed local link-write and to let admins clear stuck attempts.
+   * Safe to call on already-expired sessions.
+   */
+  voidCheckoutSession(sessionId: string): Promise<void>;
 }

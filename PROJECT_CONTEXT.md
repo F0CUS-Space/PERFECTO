@@ -224,7 +224,7 @@ Users can:
 
 ## Payments
 
-Bookings require a 50% deposit.
+Bookings require payment in full at booking time.
 
 A booking is only confirmed after payment succeeds.
 
