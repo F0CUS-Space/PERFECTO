@@ -60,11 +60,17 @@ async function recordSettledCapture(
     return amount;
   }
 
-  // Link this capture to the pending attempt row that started it (still unlinked).
+  // Link this capture to the pending attempt row from metadata when the session was
+  // never written to providerPaymentId (or only partially linked).
   const metadataPaymentId = capture.metadataPaymentId;
   if (metadataPaymentId) {
     const linked = await tx.payment.findUnique({ where: { id: metadataPaymentId } });
-    if (linked && linked.status !== "SUCCEEDED" && !linked.providerPaymentId) {
+    if (
+      linked &&
+      linked.bookingId === booking.id &&
+      linked.status !== "SUCCEEDED" &&
+      (!linked.providerPaymentId || linked.providerPaymentId === capture.providerPaymentId)
+    ) {
       await tx.payment.update({
         where: { id: metadataPaymentId },
         data: {
@@ -102,12 +108,22 @@ async function recordSettledCapture(
   return amount;
 }
 
+export type ReconcileBookingPaymentsOptions = {
+  /**
+   * Captures already known (e.g. from a Stripe webhook payload or redirect
+   * `session_id`). Merged with provider lookups so confirmation still works when
+   * the local payment row was never linked to the Checkout Session id.
+   */
+  knownCaptures?: SettledCapture[];
+};
+
 /**
  * Reconciles Stripe Checkout sessions with local payment records.
  * Handles missed webhooks, double payments, and duplicate checkout sessions.
  */
 export async function reconcileBookingPayments(
   bookingId: string,
+  options: ReconcileBookingPaymentsOptions = {},
 ): Promise<PaymentReconcileResult> {
   const booking = await prisma.booking.findUnique({
     where: { id: bookingId },
@@ -120,7 +136,17 @@ export async function reconcileBookingPayments(
 
   // Provider-agnostic: the reconciler returns settled captures (empty when the
   // provider isn't configured), keeping the DB/transaction logic below neutral.
-  const captures = await getPaymentReconciler().findSettledCaptures(bookingId);
+  const found = await getPaymentReconciler().findSettledCaptures(bookingId);
+  const byId = new Map<string, SettledCapture>();
+  for (const capture of found) {
+    byId.set(capture.providerPaymentId, capture);
+  }
+  for (const capture of options.knownCaptures ?? []) {
+    if (capture.amountCents > 0) {
+      byId.set(capture.providerPaymentId, capture);
+    }
+  }
+  const captures = [...byId.values()];
 
   let didConfirm = false;
 

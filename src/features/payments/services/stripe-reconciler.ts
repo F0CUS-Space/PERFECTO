@@ -26,14 +26,20 @@ export class StripeReconciler implements PaymentReconciler {
       if (!id?.startsWith("cs_")) continue;
 
       try {
-        const session = await stripe.checkout.sessions.retrieve(id);
+        const session = await stripe.checkout.sessions.retrieve(id, {
+          expand: ["payment_intent"],
+        });
         if (session.metadata?.bookingId === bookingId && session.payment_status === "paid") {
           const paymentIntent = session.payment_intent;
+          const intentAmount =
+            typeof paymentIntent === "object" && paymentIntent && "amount" in paymentIntent
+              ? Number(paymentIntent.amount) || 0
+              : 0;
           byId.set(session.id, {
             providerPaymentId: session.id,
             providerPaymentIntentId:
               typeof paymentIntent === "string" ? paymentIntent : (paymentIntent?.id ?? null),
-            amountCents: session.amount_total ?? 0,
+            amountCents: session.amount_total ?? intentAmount,
             metadataPaymentId: session.metadata?.paymentId ?? null,
           });
         }

@@ -45,6 +45,14 @@ export class StripePaymentService implements PaymentService {
           userId: input.userId,
           type: "DEPOSIT",
         },
+        payment_intent_data: {
+          metadata: {
+            bookingId: input.bookingId,
+            paymentId: input.paymentId,
+            userId: input.userId,
+            type: "DEPOSIT",
+          },
+        },
       },
       {
         idempotencyKey: input.idempotencyKey,

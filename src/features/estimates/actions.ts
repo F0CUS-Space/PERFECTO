@@ -15,7 +15,6 @@ import {
   getScheduleAvailabilityError,
   toScheduleDateString,
 } from "@/features/booking/services/schedule-availability";
-import { createDepositCheckout } from "@/features/payments/actions";
 
 import { estimateOfferEmail } from "./emails/estimate-email";
 import { completeBookingOfferSchema, createBookingOfferSchema } from "./schema";
@@ -428,23 +427,24 @@ export async function completeBookingOffer(raw: unknown): Promise<EstimateAction
         },
       });
 
-      await tx.bookingOffer.update({
-        where: { id: offer.id },
+      const converted = await tx.bookingOffer.updateMany({
+        where: { id: offer.id, bookingId: null, status: { in: ["SENT"] } },
         data: {
           status: "CONVERTED",
           bookingId: created.id,
           userId: offer.userId ?? user.id,
         },
       });
+      if (converted.count === 0) {
+        throw new Error("ESTIMATE_ALREADY_USED");
+      }
 
       return created;
     });
 
-    const checkout = await createDepositCheckout(booking.id);
-    if (checkout.ok) {
-      return { ok: true, bookingId: booking.id, checkoutUrl: checkout.url };
-    }
-
+    // Checkout is started by the client (same as self-serve booking) so we never
+    // nest Server Actions — that path can return a Stripe URL without persisting
+    // the local payment↔session link, which blocks webhook/redirect confirmation.
     return { ok: true, bookingId: booking.id };
   } catch (error) {
     if (error instanceof UnauthorizedError) {
@@ -452,6 +452,9 @@ export async function completeBookingOffer(raw: unknown): Promise<EstimateAction
     }
     if (error instanceof ZodError) {
       return { ok: false, error: error.errors[0]?.message ?? "Check your booking details." };
+    }
+    if (error instanceof Error && error.message === "ESTIMATE_ALREADY_USED") {
+      return { ok: false, error: "This estimate has already been used." };
     }
     console.error("[completeBookingOffer]", error);
     return { ok: false, error: "Could not complete booking. Please try again." };

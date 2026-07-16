@@ -3,8 +3,45 @@ import "server-only";
 import type Stripe from "stripe";
 
 import { prisma } from "@/lib/prisma";
+import { getStripe } from "@/lib/stripe";
 
+import type { SettledCapture } from "./payment-reconciler";
 import { reconcileBookingPayments } from "./reconcile-payments";
+
+function paymentIntentIdFromSession(session: Stripe.Checkout.Session): string | null {
+  const intent = session.payment_intent;
+  if (!intent) return null;
+  return typeof intent === "string" ? intent : intent.id;
+}
+
+function amountCentsFromSession(session: Stripe.Checkout.Session): number {
+  if (typeof session.amount_total === "number" && session.amount_total > 0) {
+    return session.amount_total;
+  }
+  const intent = session.payment_intent;
+  if (typeof intent === "object" && intent && typeof intent.amount === "number") {
+    return intent.amount;
+  }
+  return 0;
+}
+
+/** Builds a settled capture from a paid Checkout Session (webhook or redirect). */
+export function settledCaptureFromCheckoutSession(
+  session: Stripe.Checkout.Session,
+): SettledCapture | null {
+  if (session.payment_status !== "paid") return null;
+  if (session.metadata?.type !== "DEPOSIT") return null;
+
+  const amountCents = amountCentsFromSession(session);
+  if (amountCents <= 0) return null;
+
+  return {
+    providerPaymentId: session.id,
+    providerPaymentIntentId: paymentIntentIdFromSession(session),
+    amountCents,
+    metadataPaymentId: session.metadata?.paymentId ?? null,
+  };
+}
 
 /**
  * Confirms a deposit after Stripe Checkout completes.
@@ -45,7 +82,10 @@ export async function confirmDepositFromCheckoutSession(session: Stripe.Checkout
     return { skipped: true as const, reason: "owner_mismatch" };
   }
 
-  const result = await reconcileBookingPayments(bookingId);
+  const knownCapture = settledCaptureFromCheckoutSession(session);
+  const result = await reconcileBookingPayments(bookingId, {
+    knownCaptures: knownCapture ? [knownCapture] : [],
+  });
 
   // Persist the PaymentIntent id so later payment_intent/charge webhooks (which do
   // NOT carry the Checkout Session id) can be matched back to this payment row.
@@ -62,16 +102,40 @@ export async function confirmDepositFromCheckoutSession(session: Stripe.Checkout
   return { skipped: true as const, reason: "deposit_not_satisfied", result };
 }
 
+/**
+ * Redirect-sync helper: load a Checkout Session by id and reconcile it onto the booking.
+ * Used when Stripe returns `session_id` on the success URL.
+ */
+export async function reconcileBookingFromCheckoutSessionId(
+  bookingId: string,
+  sessionId: string,
+): Promise<boolean> {
+  if (!sessionId.startsWith("cs_")) return false;
+
+  const session = await getStripe().checkout.sessions.retrieve(sessionId, {
+    expand: ["payment_intent"],
+  });
+
+  if (session.metadata?.bookingId && session.metadata.bookingId !== bookingId) {
+    console.error(
+      "[confirm-deposit] redirect session/booking mismatch",
+      JSON.stringify({ bookingId, sessionId }),
+    );
+    return false;
+  }
+
+  const knownCapture = settledCaptureFromCheckoutSession(session);
+  const result = await reconcileBookingPayments(bookingId, {
+    knownCaptures: knownCapture ? [knownCapture] : [],
+  });
+  await persistPaymentIntentId(session);
+  return result.depositSatisfied;
+}
+
 /** @deprecated Use reconcileBookingPayments — kept for callers during redirect sync. */
 export async function syncBookingDepositIfPaid(bookingId: string): Promise<boolean> {
   const result = await reconcileBookingPayments(bookingId);
   return result.depositSatisfied;
-}
-
-function paymentIntentIdFromSession(session: Stripe.Checkout.Session): string | null {
-  const intent = session.payment_intent;
-  if (!intent) return null;
-  return typeof intent === "string" ? intent : intent.id;
 }
 
 /** Stores the Stripe PaymentIntent id on the payment row linked to this session. */

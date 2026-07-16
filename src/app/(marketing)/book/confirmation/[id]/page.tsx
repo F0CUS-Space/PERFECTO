@@ -16,6 +16,7 @@ import { PayDepositButton } from "@/features/payments/components/pay-deposit-but
 import { DepositConfirmationSync } from "@/features/payments/components/deposit-confirmation-sync";
 import { AppliedPromotionSummary } from "@/features/promotions/components/applied-promotion-summary";
 import { getBookingPaymentStateFromDb } from "@/features/payments/booking-payment-state";
+import { reconcileBookingFromCheckoutSessionId } from "@/features/payments/services/confirm-deposit";
 import { reconcileBookingPayments } from "@/features/payments/services/reconcile-payments";
 import { isStripeConfigured } from "@/lib/stripe-ready";
 import { displayArrivalTime } from "@/lib/format-arrival-time";
@@ -33,7 +34,7 @@ export const dynamic = "force-dynamic";
 
 interface PageProps {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ checkout?: string }>;
+  searchParams: Promise<{ checkout?: string; session_id?: string }>;
 }
 
 async function loadBooking(id: string, userId: string) {
@@ -49,13 +50,17 @@ async function loadBooking(id: string, userId: string) {
 }
 
 export default async function BookingConfirmationPage({ params, searchParams }: PageProps) {
+  const { id } = await params;
+  const { checkout, session_id: sessionId } = await searchParams;
+
   const user = await getCurrentUser();
   if (!user) {
-    redirect(`/login?next=${encodeURIComponent("/book")}`);
+    const next =
+      checkout === "success"
+        ? `/book/confirmation/${id}?checkout=success${sessionId ? `&session_id=${encodeURIComponent(sessionId)}` : ""}`
+        : `/book/confirmation/${id}`;
+    redirect(`/login?next=${encodeURIComponent(next)}`);
   }
-
-  const { id } = await params;
-  const { checkout } = await searchParams;
 
   if (!isDatabaseConfigured()) {
     notFound();
@@ -66,28 +71,29 @@ export default async function BookingConfirmationPage({ params, searchParams }: 
     notFound();
   }
 
-  // Stripe reconcile only when returning from checkout — webhooks handle the normal path.
-  const paymentState =
-    checkout === "success" && booking.status === "PENDING_PAYMENT"
-      ? await reconcileBookingPayments(booking.id).catch(() =>
-          getBookingPaymentStateFromDb(booking!.id, {
-            totalAmount: booking!.totalAmount,
-            depositAmount: booking!.depositAmount,
-            status: booking!.status,
-          }),
-        )
-      : await getBookingPaymentStateFromDb(booking.id, {
-          totalAmount: booking.totalAmount,
-          depositAmount: booking.depositAmount,
-          status: booking.status,
-        });
-
-  if (checkout === "success") {
+  // Stripe reconcile on return from Checkout. Prefer session_id from the success URL so
+  // we can confirm even when the local payment row was never linked to the session.
+  if (checkout === "success" && booking.status === "PENDING_PAYMENT") {
+    try {
+      if (sessionId) {
+        await reconcileBookingFromCheckoutSessionId(booking.id, sessionId);
+      } else {
+        await reconcileBookingPayments(booking.id);
+      }
+    } catch (error) {
+      console.error("[book/confirmation] reconcile failed", booking.id, error);
+    }
     booking = await loadBooking(id, user.id);
     if (!booking) {
       notFound();
     }
   }
+
+  const paymentState = await getBookingPaymentStateFromDb(booking.id, {
+    totalAmount: booking.totalAmount,
+    depositAmount: booking.depositAmount,
+    status: booking.status,
+  });
 
   const isConfirmed = booking.status === "CONFIRMED";
   const fullyPaid = paymentState.fullyPaid;

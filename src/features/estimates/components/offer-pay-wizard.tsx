@@ -32,6 +32,7 @@ import {
   isScheduleSlotBlocked,
 } from "@/features/booking/schedule-block-utils";
 import { completeBookingOffer } from "@/features/estimates/actions";
+import { createDepositCheckout } from "@/features/payments/actions";
 import type { PublicOfferSnapshot } from "@/features/estimates/types";
 
 const STEPS = [
@@ -185,17 +186,18 @@ export function OfferPayWizard({ offer }: { offer: PublicOfferSnapshot }) {
       return;
     }
 
-    if (result.checkoutUrl) {
-      window.location.href = result.checkoutUrl;
+    if (!result.bookingId) {
+      setStepError("Booking created, but checkout could not start. Check your dashboard.");
       return;
     }
 
-    if (result.bookingId) {
-      window.location.href = `/book/confirmation/${result.bookingId}`;
+    const checkout = await createDepositCheckout(result.bookingId);
+    if (checkout.ok) {
+      window.location.href = checkout.url;
       return;
     }
 
-    setStepError("Booking created, but checkout could not start. Check your dashboard.");
+    window.location.href = `/book/confirmation/${result.bookingId}`;
   };
 
   const step = STEPS[stepIndex];
