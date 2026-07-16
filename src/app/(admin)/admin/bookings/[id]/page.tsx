@@ -12,6 +12,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { BookingStatusForm } from "@/features/admin/components/booking-status-form";
+import { RefundPanel } from "@/features/admin/components/refund-panel";
+import { VoidAttemptsButton } from "@/features/admin/components/void-attempts-button";
 import { getAdminBookingById } from "@/features/admin/queries";
 import { BookingStatusBadge } from "@/features/dashboard/components/booking-status-badge";
 import { AppliedPromotionSummary } from "@/features/promotions/components/applied-promotion-summary";
@@ -243,6 +245,17 @@ export default async function AdminBookingDetailPage({ params }: PageProps) {
             </CardContent>
           </Card>
 
+          {booking.amountPaid > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Refund</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <RefundPanel bookingId={booking.id} refundableCents={booking.amountPaid} />
+              </CardContent>
+            </Card>
+          )}
+
           {booking.payments.length > 0 && (
             <Card>
               <CardHeader>
@@ -262,6 +275,11 @@ export default async function AdminBookingDetailPage({ params }: PageProps) {
                     </span>
                   </div>
                 ))}
+                {booking.payments.some((payment) => payment.status === "PENDING") && (
+                  <div className="pt-2">
+                    <VoidAttemptsButton bookingId={booking.id} />
+                  </div>
+                )}
               </CardContent>
             </Card>
           )}

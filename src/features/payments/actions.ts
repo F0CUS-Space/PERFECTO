@@ -68,7 +68,9 @@ export async function createDepositCheckout(
     const successUrl = `${baseUrl}/book/confirmation/${booking.id}?checkout=success`;
     const cancelUrl = `${baseUrl}/book/confirmation/${booking.id}?checkout=cancelled`;
 
-    const { url, sessionId } = await getPaymentService().createDepositCheckoutSession({
+    const paymentService = getPaymentService();
+
+    const { url, sessionId } = await paymentService.createDepositCheckoutSession({
       bookingId: booking.id,
       paymentId: attempt.id,
       userId: user.id,
@@ -80,10 +82,20 @@ export async function createDepositCheckout(
       idempotencyKey: `deposit-checkout-${attempt.id}`,
     });
 
-    await prisma.payment.update({
-      where: { id: attempt.id },
-      data: { providerPaymentId: sessionId },
-    });
+    try {
+      await prisma.payment.update({
+        where: { id: attempt.id },
+        data: { providerPaymentId: sessionId },
+      });
+    } catch (linkError) {
+      // Compensating action: the session exists in Stripe but we failed to link it
+      // locally. Void it so the customer can't pay against an untracked session.
+      console.error("[createDepositCheckout] failed to link session; voiding", sessionId, linkError);
+      await paymentService.voidCheckoutSession(sessionId).catch((voidError) => {
+        console.error("[createDepositCheckout] failed to void orphaned session", sessionId, voidError);
+      });
+      return { ok: false, error: "Unable to start checkout. Please try again." };
+    }
 
     return { ok: true, url };
   } catch (error) {
