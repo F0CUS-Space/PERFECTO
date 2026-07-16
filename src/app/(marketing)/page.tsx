@@ -23,8 +23,8 @@ import { getHomeFeaturedServices } from "@/features/services-catalog/queries";
 import { getFeaturedTestimonials } from "@/features/reviews/queries";
 import { testimonials as fallbackTestimonials } from "@/content/testimonials";
 
-// Home service cards are loaded from the database at runtime.
-export const revalidate = 60;
+// Home service cards are loaded from the database at request time (layout is dynamic).
+
 
 const steps = [
   { icon: ClipboardList, title: "Choose your service", body: "Tell us about your space for an instant, transparent price." },

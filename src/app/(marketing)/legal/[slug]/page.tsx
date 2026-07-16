@@ -3,11 +3,7 @@ import { notFound } from "next/navigation";
 
 import { Section } from "@/components/shared/section";
 import { PageHero } from "@/components/shared/page-hero";
-import { legalDocuments, legalSlugs } from "@/content/legal";
-
-export function generateStaticParams() {
-  return legalSlugs.map((slug) => ({ slug }));
-}
+import { legalDocuments } from "@/content/legal";
 
 export async function generateMetadata({
   params,

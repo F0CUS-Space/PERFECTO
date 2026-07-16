@@ -12,8 +12,6 @@ export const metadata = {
   description: "Current offers and promotions from Perfecto Cleaning Services.",
 };
 
-export const revalidate = 60;
-
 export default async function PromotionsPage() {
   const promotions = await getActivePromotions();
 

@@ -17,8 +17,6 @@ export const metadata: Metadata = {
   description: "See the Perfecto difference — a showcase of spaces transformed by our cleaning professionals.",
 };
 
-export const revalidate = 60;
-
 export default async function GalleryPage() {
   const dbItems = await getActiveGalleryItems();
   const beforeAfter =

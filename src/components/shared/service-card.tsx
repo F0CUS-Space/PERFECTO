@@ -16,7 +16,8 @@ export function ServiceCard({
   imageSrc?: string;
 }) {
   const detail = serviceDetails[service.slug] ?? defaultServiceDetail;
-  const src = imageSrc ?? detail.image;
+  const raw = imageSrc ?? detail.image;
+  const src = raw.startsWith("/images/") ? "/brand/perfecto-icon.png" : raw;
 
   return (
     <Link

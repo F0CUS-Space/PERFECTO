@@ -16,9 +16,8 @@ export const metadata: Metadata = {
     "Explore Perfecto's premium residential and commercial cleaning services — residential, deep, move in/out, office, and recurring cleaning.",
 };
 
-// Render at request time so Docker builds succeed without a database and
-// admin-managed catalog changes appear immediately.
-export const revalidate = 60;
+// Catalog is loaded at request time (marketing layout uses auth cookies).
+
 
 export default async function ServicesPage() {
   const services = await getActiveServices();

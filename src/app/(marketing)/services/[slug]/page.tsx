@@ -14,14 +14,11 @@ import {
   getServicePageContent,
   resolveServiceImageUrl,
 } from "@/features/services-catalog/display";
-import { getServiceBySlug, getServiceSlugs } from "@/features/services-catalog/queries";
+import { getServiceBySlug } from "@/features/services-catalog/queries";
 
-export const revalidate = 60;
-
-export async function generateStaticParams() {
-  const slugs = await getServiceSlugs();
-  return slugs.map((slug) => ({ slug }));
-}
+// Request-time render (same as /services) so Docker builds don't need DB
+// and admin catalog changes show up without a redeploy.
+export const dynamic = "force-dynamic";
 
 export async function generateMetadata({
   params,
@@ -47,7 +44,12 @@ export default async function ServiceDetailPage({
   if (!service) notFound();
 
   const detail = getServicePageContent(service);
-  const heroImage = await resolveServiceImageUrl(service.imageUrl, service.slug);
+  let heroImage = "/brand/perfecto-icon.png";
+  try {
+    heroImage = await resolveServiceImageUrl(service.imageUrl, service.slug);
+  } catch (error) {
+    console.error("[ServiceDetailPage] image resolve failed", slug, error);
+  }
 
   return (
     <>
@@ -69,7 +71,7 @@ export default async function ServiceDetailPage({
         }
         media={
           <Tilt className="relative">
-            <div className="relative aspect-[4/3] w-full overflow-hidden rounded-3xl border border-white/60 shadow-soft">
+            <div className="relative aspect-[4/3] w-full overflow-hidden rounded-3xl border border-white/60 shadow-soft bg-secondary">
               <Image
                 src={heroImage}
                 alt={service.name}

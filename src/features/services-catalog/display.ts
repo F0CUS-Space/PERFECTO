@@ -17,10 +17,13 @@ export interface ServicePageContent {
 export function getServicePageContent(service: Service): ServicePageContent {
   const staticDetail = serviceDetails[service.slug] ?? defaultServiceDetail;
 
+  const includes = Array.isArray(service.includes) ? service.includes : [];
+  const idealFor = Array.isArray(service.idealFor) ? service.idealFor : [];
+
   return {
     longDescription: service.longDescription?.trim() || service.description,
-    includes: service.includes,
-    idealFor: service.idealFor,
+    includes: includes.length > 0 ? includes : staticDetail.includes,
+    idealFor: idealFor.length > 0 ? idealFor : staticDetail.idealFor,
     accent: staticDetail.accent,
   };
 }
@@ -30,9 +33,15 @@ export async function resolveServiceImageUrl(
   imageUrl: string | null | undefined,
   slug: string,
 ): Promise<string> {
-  const staticFallback = serviceDetails[slug]?.image ?? defaultServiceDetail.image;
+  // Prefer brand asset that ships in the Docker image; seeded /images/* paths are often missing.
+  const staticFallback =
+    serviceDetails[slug]?.image && !serviceDetails[slug]!.image.startsWith("/images/")
+      ? serviceDetails[slug]!.image
+      : "/brand/perfecto-icon.png";
   const value = imageUrl?.trim();
   if (!value) return staticFallback;
+  // Seeded marketing paths under /images/ were never added to /public — avoid broken next/image.
+  if (value.startsWith("/images/")) return staticFallback;
   if (value.startsWith("http") || value.startsWith("/")) return value;
   if (isS3Configured()) {
     try {

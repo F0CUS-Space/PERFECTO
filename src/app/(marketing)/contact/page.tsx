@@ -11,8 +11,6 @@ export const metadata: Metadata = {
   description: "Get in touch with Perfecto Cleaning Services. We're here to help with quotes, bookings, and questions.",
 };
 
-export const revalidate = 3600;
-
 export default function ContactPage() {
   const details = [
     { icon: Phone, label: "Phone", value: siteConfig.contact.phone },
