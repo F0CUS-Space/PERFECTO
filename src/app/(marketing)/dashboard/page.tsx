@@ -116,7 +116,7 @@ export default async function DashboardPage() {
           <p className="text-muted-foreground">No bookings yet.</p>
           <div className="mt-4 flex flex-wrap justify-center gap-3">
             <Button asChild>
-              <Link href="/book">Book now</Link>
+              <Link href="/contact?intent=estimate">Get estimate</Link>
             </Button>
           </div>
         </section>
@@ -125,7 +125,7 @@ export default async function DashboardPage() {
       {stats.recentBookings.length > 0 && (
         <div className="mt-10 flex flex-wrap gap-3">
           <Button asChild>
-            <Link href="/book">Book another clean</Link>
+            <Link href="/contact?intent=estimate">Get another estimate</Link>
           </Button>
         </div>
       )}

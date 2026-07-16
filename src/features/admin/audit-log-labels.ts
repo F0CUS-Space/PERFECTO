@@ -27,6 +27,9 @@ export const AUDIT_ACTION_LABELS: Record<AdminAuditAction, string> = {
   PROMOTION_DELETE: "Promotion deleted",
   PAYMENT_REFUND: "Payment refunded",
   CHECKOUT_ATTEMPT_VOID: "Checkout attempts voided",
+  ESTIMATE_CREATE: "Estimate created",
+  ESTIMATE_SEND: "Estimate sent",
+  ESTIMATE_CANCEL: "Estimate cancelled",
 };
 
 export const AUDIT_ACTIONS = Object.keys(AUDIT_ACTION_LABELS) as AdminAuditAction[];
@@ -59,6 +62,8 @@ export function auditEntityHref(entityType: string, entityId: string | null): st
       return "/admin/schedule";
     case "promotion":
       return "/admin/promotions";
+    case "booking_offer":
+      return `/admin/estimates/${entityId}`;
     default:
       return null;
   }

@@ -54,12 +54,12 @@ export default async function HomePage() {
             <Sparkles className="h-3.5 w-3.5" /> Premium Home & Office Care
           </>
         }
-        description="Premium residential and commercial cleaning for homes and offices — tailored to your lifestyle and delivered with meticulous care. See your price and book in minutes."
+        description="Premium residential and commercial cleaning for homes and offices — tailored to your lifestyle and delivered with meticulous care. Request an estimate and we'll take it from there."
         actions={
           <>
             <Button asChild size="lg">
-              <Link href="/book">
-                Book Now <ArrowRight className="h-4 w-4" />
+              <Link href="/contact?intent=estimate">
+                Get estimate <ArrowRight className="h-4 w-4" />
               </Link>
             </Button>
             <Button asChild size="lg" variant="outline">
@@ -222,8 +222,8 @@ export default async function HomePage() {
             </p>
             <div className="relative mt-8 flex flex-col justify-center gap-3 sm:flex-row">
               <Button asChild size="lg" variant="accent">
-                <Link href="/book">
-                  Book Now <ArrowRight className="h-4 w-4" />
+                <Link href="/contact?intent=estimate">
+                  Get estimate <ArrowRight className="h-4 w-4" />
                 </Link>
               </Button>
               <Button

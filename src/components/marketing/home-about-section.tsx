@@ -81,8 +81,8 @@ export function HomeAboutSection() {
               </div>
               <div className="mt-8 flex flex-wrap gap-3">
                 <Button asChild>
-                  <Link href="/book">
-                    Book Now <ArrowRight className="h-4 w-4" />
+                  <Link href="/contact?intent=estimate">
+                    Get estimate <ArrowRight className="h-4 w-4" />
                   </Link>
                 </Button>
                 <Button asChild variant="outline">
@@ -134,7 +134,7 @@ export function HomeAboutSection() {
         <Reveal delay={100}>
           <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <Button asChild size="lg">
-              <Link href="/book">
+              <Link href="/contact?intent=estimate">
                 Get started <ArrowRight className="h-4 w-4" />
               </Link>
             </Button>

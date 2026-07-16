@@ -8,10 +8,18 @@ import { siteConfig } from "@/config/site";
 
 export const metadata: Metadata = {
   title: "Contact",
-  description: "Get in touch with Perfecto Cleaning Services. We're here to help with quotes, bookings, and questions.",
+  description:
+    "Get in touch with Perfecto Cleaning Services. We're here to help with estimates, bookings, and questions.",
 };
 
-export default function ContactPage() {
+interface ContactPageProps {
+  searchParams: Promise<{ intent?: string }>;
+}
+
+export default async function ContactPage({ searchParams }: ContactPageProps) {
+  const { intent } = await searchParams;
+  const isEstimate = intent === "estimate";
+
   const details = [
     { icon: Phone, label: "Phone", value: siteConfig.contact.phone },
     { icon: Mail, label: "Email", value: siteConfig.contact.email },
@@ -22,8 +30,12 @@ export default function ContactPage() {
   return (
     <>
       <PageHero
-        title="Let's talk"
-        description="Questions about a service or booking? Send us a message and our team will respond promptly."
+        title={isEstimate ? "Request an estimate" : "Let's talk"}
+        description={
+          isEstimate
+            ? "Share a few details about your space. Our team will follow up with a personalized estimate and a secure pay link when you're ready to book."
+            : "Questions about a service or booking? Send us a message and our team will respond promptly."
+        }
       />
 
       <Section>

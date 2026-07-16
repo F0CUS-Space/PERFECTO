@@ -52,7 +52,7 @@ export function BookingsListClient({ filter }: { filter?: "upcoming" | "past" | 
           ? "No upcoming bookings yet."
           : filter === "past"
             ? "No past bookings yet."
-            : "No bookings yet. Book a clean to get started."}
+            : "No bookings yet. Request an estimate to get started."}
       </p>
     );
   }

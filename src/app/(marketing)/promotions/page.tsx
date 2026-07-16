@@ -36,7 +36,7 @@ export default async function PromotionsPage() {
               Check back soon — or get an instant quote to see today&apos;s pricing.
             </p>
             <Button asChild className="mt-5">
-              <Link href="/book">Book Now</Link>
+              <Link href="/contact?intent=estimate">Get estimate</Link>
             </Button>
           </div>
         ) : (
@@ -63,7 +63,7 @@ export default async function PromotionsPage() {
                       : `Applies to: ${promo.serviceNames.join(", ")}`}
                   </p>
                   <Button asChild className="mt-5 w-fit">
-                    <Link href={`/book?promotion=${promo.id}`}>Claim this offer</Link>
+                    <Link href="/contact?intent=estimate">Get estimate</Link>
                   </Button>
                 </div>
               </div>

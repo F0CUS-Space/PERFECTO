@@ -18,7 +18,7 @@ export default function DashboardBookingsPage() {
           <p className="mt-2 text-muted-foreground">Upcoming and past cleaning appointments.</p>
         </div>
         <Button asChild>
-          <Link href="/book">Book a clean</Link>
+          <Link href="/contact?intent=estimate">Get an estimate</Link>
         </Button>
       </div>
 

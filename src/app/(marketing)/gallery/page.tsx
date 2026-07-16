@@ -108,7 +108,7 @@ export default async function GalleryPage() {
           </div>
           <div className="mt-12 flex justify-center">
             <Button asChild size="lg">
-              <Link href="/book">Book your clean</Link>
+              <Link href="/contact?intent=estimate">Book your clean</Link>
             </Button>
           </div>
         </Section>

@@ -24,7 +24,7 @@ export function AuthNavActions() {
           <Link href="/register">Sign Up</Link>
         </Button>
         <Button asChild size="sm">
-          <Link href="/book">Book Now</Link>
+          <Link href="/contact?intent=estimate">Get estimate</Link>
         </Button>
       </div>
     );
@@ -40,7 +40,7 @@ export function AuthNavActions() {
       </Button>
       <LogoutButton />
       <Button asChild size="sm">
-        <Link href="/book">Book Now</Link>
+        <Link href="/contact?intent=estimate">Get estimate</Link>
       </Button>
     </div>
   );

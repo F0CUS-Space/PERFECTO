@@ -19,7 +19,7 @@ export default async function AdminNewServicePage() {
 
       <h1 className="text-3xl font-bold text-brand-navy">Add service</h1>
       <p className="mt-2 text-muted-foreground">
-        New services appear in Book Now once marked active.
+        New services appear in the catalog once marked active.
       </p>
 
       <div className="mt-8">

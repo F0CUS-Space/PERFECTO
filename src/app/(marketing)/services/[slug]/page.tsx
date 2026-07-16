@@ -64,8 +64,8 @@ export default async function ServiceDetailPage({
         description={detail.longDescription}
         actions={
           <Button asChild size="lg">
-            <Link href="/book">
-              Book Now <ArrowRight className="h-4 w-4" />
+            <Link href="/contact?intent=estimate">
+              Get estimate <ArrowRight className="h-4 w-4" />
             </Link>
           </Button>
         }
@@ -133,8 +133,8 @@ export default async function ServiceDetailPage({
             Starting from {formatCurrency(service.basePrice)} — get an instant quote and schedule in minutes.
           </p>
           <Button asChild size="lg">
-            <Link href="/book">
-              Book Now <ArrowRight className="h-4 w-4" />
+            <Link href="/contact?intent=estimate">
+              Get estimate <ArrowRight className="h-4 w-4" />
             </Link>
           </Button>
         </Reveal>

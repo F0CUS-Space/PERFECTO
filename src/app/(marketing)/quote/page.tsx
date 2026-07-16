@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 
-/** Quote flow is now part of Book Now. */
+/** Public quoting now goes through contact / staff estimates. */
 export default function QuotePage() {
-  redirect("/book");
+  redirect("/contact?intent=estimate");
 }

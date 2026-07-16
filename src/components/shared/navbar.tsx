@@ -193,7 +193,7 @@ export function Navbar() {
                 </>
               )}
               <Button asChild size="lg">
-                <Link href="/book">Book Now</Link>
+                <Link href="/contact?intent=estimate">Get estimate</Link>
               </Button>
             </div>
           </nav>

@@ -93,6 +93,17 @@ enum AdminAuditAction {
   PROMOTION_DELETE
   PAYMENT_REFUND
   CHECKOUT_ATTEMPT_VOID
+  ESTIMATE_CREATE
+  ESTIMATE_SEND
+  ESTIMATE_CANCEL
+}
+
+enum BookingOfferStatus {
+  DRAFT
+  SENT
+  CONVERTED
+  CANCELLED
+  EXPIRED
 }
 
 enum PromotionDiscountType {
@@ -130,6 +141,8 @@ model User {
 
   bookings     Booking[]
   quotes       Quote[]
+  bookingOffers BookingOffer[] @relation("BookingOfferCustomer")
+  createdOffers BookingOffer[] @relation("BookingOfferCreatedBy")
   agreements   Agreement[]
   addresses    Address[]
   reviews      Review[]
@@ -182,6 +195,7 @@ model Service {
 
   quotes   Quote[]
   bookings Booking[]
+  bookingOffers BookingOffer[]
   addOns   AddOnOnService[]
   promotions PromotionOnService[]
 
@@ -296,6 +310,7 @@ model Booking {
   invoice   Invoice?
   agreement Agreement?
   review    Review?
+  bookingOffer BookingOffer?
 
   confirmationEmailSentAt DateTime?
   completionEmailSentAt   DateTime?
@@ -308,6 +323,51 @@ model Booking {
   @@index([userId])
   @@index([status])
   @@index([scheduledDate])
+}
+
+// ---------------------------------------------------------------------------
+// Staff-created estimates / pay invitations
+// ---------------------------------------------------------------------------
+
+model BookingOffer {
+  id     String             @id @default(cuid())
+  token  String             @unique
+  status BookingOfferStatus @default(DRAFT)
+
+  // Optional tagged existing customer account
+  userId String?
+  user   User?   @relation("BookingOfferCustomer", fields: [userId], references: [id], onDelete: SetNull)
+
+  customerName  String
+  customerEmail String?
+  customerPhone String?
+
+  serviceId   String
+  service     Service @relation(fields: [serviceId], references: [id])
+  serviceName String
+
+  // Total in cents; breakdown JSON holds service line + add-on / custom lines
+  totalAmount Int
+  breakdown   Json
+
+  staffNotes        String? @db.Text
+  messageToCustomer String? @db.Text
+
+  createdById String
+  createdBy   User     @relation("BookingOfferCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  sentAt      DateTime?
+  expiresAt   DateTime
+
+  bookingId String?  @unique
+  booking   Booking? @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+  @@index([userId])
+  @@index([createdById])
+  @@index([expiresAt])
 }
 
 model PropertyPhoto {

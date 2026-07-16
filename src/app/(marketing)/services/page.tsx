@@ -79,7 +79,7 @@ export default async function ServicesPage() {
         </div>
         <div className="mt-10 flex justify-center">
           <Button asChild size="lg">
-            <Link href="/book">Book Now</Link>
+            <Link href="/contact?intent=estimate">Get estimate</Link>
           </Button>
         </div>
       </Section>
