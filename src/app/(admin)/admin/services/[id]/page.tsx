@@ -39,6 +39,7 @@ export default async function AdminServiceDetailPage({ params }: PageProps) {
               className="object-cover"
               sizes="360px"
               priority
+              unoptimized={service.image.startsWith("http")}
             />
           </div>
         </div>

@@ -11,6 +11,7 @@ import { defaultProvider } from "@aws-sdk/credential-provider-node";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 import { env, requireEnv } from "@/env";
+import { logOutboundS3 } from "@/lib/outbound-log";
 
 let s3Client: S3Client | undefined;
 
@@ -50,6 +51,7 @@ function bucketName() {
 export async function verifyS3Access(): Promise<
   { ok: true; credentialSource: "env" | "iam-role" | "other" } | { ok: false; message: string }
 > {
+  const started = Date.now();
   try {
     let credentialSource: "env" | "iam-role" | "other" = "other";
     if (hasExplicitAwsCredentials()) {
@@ -60,9 +62,16 @@ export async function verifyS3Access(): Promise<
     }
 
     await getClient().send(new HeadBucketCommand({ Bucket: bucketName() }));
+    logOutboundS3({ op: "head-bucket", durationMs: Date.now() - started, ok: true });
     return { ok: true, credentialSource };
   } catch (error) {
     const message = error instanceof Error ? error.message : "S3 access check failed";
+    logOutboundS3({
+      op: "head-bucket",
+      durationMs: Date.now() - started,
+      ok: false,
+      error: message,
+    });
     if (/Could not load credentials|CredentialsProviderError|EC2 Metadata/i.test(message)) {
       return {
         ok: false,
@@ -90,20 +99,54 @@ export async function putObject(
   body: Buffer,
   contentType: string,
 ): Promise<void> {
-  await getClient().send(
-    new PutObjectCommand({
-      Bucket: bucketName(),
-      Key: key,
-      Body: body,
-      ContentType: contentType,
-    }),
-  );
+  const started = Date.now();
+  try {
+    await getClient().send(
+      new PutObjectCommand({
+        Bucket: bucketName(),
+        Key: key,
+        Body: body,
+        ContentType: contentType,
+      }),
+    );
+    logOutboundS3({
+      op: "put",
+      key,
+      bytes: body.byteLength,
+      durationMs: Date.now() - started,
+      ok: true,
+    });
+  } catch (error) {
+    logOutboundS3({
+      op: "put",
+      key,
+      bytes: body.byteLength,
+      durationMs: Date.now() - started,
+      ok: false,
+      error: error instanceof Error ? error.message : "put failed",
+    });
+    throw error;
+  }
 }
 
 /** Presigned GET for private bucket thumbnails and admin reads. */
 export async function getViewUrl(key: string, expiresIn = 3600): Promise<string> {
-  const command = new GetObjectCommand({ Bucket: bucketName(), Key: key });
-  return getSignedUrl(getClient(), command, { expiresIn });
+  const started = Date.now();
+  try {
+    const command = new GetObjectCommand({ Bucket: bucketName(), Key: key });
+    const url = await getSignedUrl(getClient(), command, { expiresIn });
+    logOutboundS3({ op: "get-presign", key, durationMs: Date.now() - started, ok: true });
+    return url;
+  } catch (error) {
+    logOutboundS3({
+      op: "get-presign",
+      key,
+      durationMs: Date.now() - started,
+      ok: false,
+      error: error instanceof Error ? error.message : "presign failed",
+    });
+    throw error;
+  }
 }
 
 export async function deleteObject(key: string) {

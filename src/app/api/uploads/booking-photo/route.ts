@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { MAX_PHOTO_BYTES } from "@/config/booking";
 import { formatS3Error, getViewUrl, putObject } from "@/lib/s3";
 import { isS3Configured } from "@/lib/s3-ready";
+import { getRequestIp, rateLimit } from "@/lib/rate-limit";
 import { getCurrentUser } from "@/server/auth";
 
 function sanitizeFilename(name: string) {
@@ -14,9 +15,25 @@ function sanitizeFilename(name: string) {
  * Accepts multipart/form-data with a single "file" field.
  */
 export async function POST(request: Request) {
+  const limit = rateLimit(`upload-booking-photo:${getRequestIp(request)}`, 20, 10 * 60 * 1000);
+  if (!limit.ok) {
+    return NextResponse.json(
+      { error: "Too many uploads. Please wait a few minutes and try again." },
+      { status: 429, headers: { "Retry-After": String(limit.retryAfterSeconds) } },
+    );
+  }
+
   const user = await getCurrentUser();
   if (!user) {
     return NextResponse.json({ error: "Sign in to upload photos." }, { status: 401 });
+  }
+
+  const userLimit = rateLimit(`upload-booking-photo-user:${user.id}`, 30, 10 * 60 * 1000);
+  if (!userLimit.ok) {
+    return NextResponse.json(
+      { error: "Too many uploads for this account. Please wait and try again." },
+      { status: 429, headers: { "Retry-After": String(userLimit.retryAfterSeconds) } },
+    );
   }
 
   if (!isS3Configured()) {

@@ -27,6 +27,7 @@ import {
 } from "@/features/notifications/create-notifications";
 import { slugifyServiceName } from "@/features/admin/service-slug";
 import { EMPLOYMENT_TYPES, JOB_LOCATIONS } from "@/features/recruitment/job-options";
+import { isAllowedMediaRef } from "@/lib/media-ref";
 
 const bookingStatusSchema = z.enum([
   "PENDING_PAYMENT",
@@ -39,16 +40,9 @@ const bookingStatusSchema = z.enum([
 const serviceImageRef = z
   .string()
   .trim()
-  .refine(
-    (val) => {
-      if (!val) return true;
-      if (val.startsWith("/") || val.startsWith("services/") || val.startsWith("gallery/")) {
-        return true;
-      }
-      return z.string().url().safeParse(val).success;
-    },
-    { message: "Invalid image reference." },
-  )
+  .refine((val) => isAllowedMediaRef(val), {
+    message: "Image must be a local path, S3 key, or URL to your S3 bucket.",
+  })
   .optional()
   .or(z.literal(""));
 
@@ -109,23 +103,25 @@ function revalidateJobPaths(jobId?: string) {
 async function resolveUniqueJobSlug(preferred: string): Promise<string> {
   const slug = preferred;
   let suffix = 0;
-  while (true) {
+  while (suffix < 1000) {
     const candidate = suffix === 0 ? slug : `${slug}-${suffix}`;
     const existing = await prisma.jobPosting.findUnique({ where: { slug: candidate } });
     if (!existing) return candidate;
     suffix += 1;
   }
+  throw new Error("Unable to allocate a unique job slug.");
 }
 
 async function resolveUniqueSlug(preferred: string): Promise<string> {
   const slug = preferred;
   let suffix = 0;
-  while (true) {
+  while (suffix < 1000) {
     const candidate = suffix === 0 ? slug : `${slug}-${suffix}`;
     const existing = await prisma.service.findUnique({ where: { slug: candidate } });
     if (!existing) return candidate;
     suffix += 1;
   }
+  throw new Error("Unable to allocate a unique service slug.");
 }
 
 import { maybeSendBookingCompletionEmail } from "@/features/notifications/send-booking-completion";
@@ -1102,14 +1098,9 @@ function revalidateReviewPaths() {
 const galleryImageRef = z
   .string()
   .trim()
-  .refine(
-    (val) => {
-      if (!val) return true;
-      if (val.startsWith("/") || val.startsWith("gallery/")) return true;
-      return z.string().url().safeParse(val).success;
-    },
-    { message: "Enter a valid image path, S3 key, or URL" },
-  )
+  .refine((val) => isAllowedMediaRef(val), {
+    message: "Image must be a local path, S3 key (gallery/…), or URL to your S3 bucket.",
+  })
   .optional()
   .or(z.literal(""));
 

@@ -19,6 +19,7 @@ export function AdminServiceCard({ service }: { service: AdminServiceRow }) {
           fill
           sizes="(max-width: 640px) 100vw, 33vw"
           className="object-cover transition-transform duration-500 group-hover:scale-105"
+          unoptimized={service.image.startsWith("http")}
         />
         {!service.isActive && (
           <Badge variant="secondary" className="absolute left-3 top-3 bg-card/95">

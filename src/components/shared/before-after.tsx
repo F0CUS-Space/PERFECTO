@@ -66,6 +66,7 @@ export function BeforeAfter({
           fill
           sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
           className="object-cover"
+          unoptimized={afterSrc.startsWith("http")}
         />
         <span className="absolute right-3 top-3 z-10 rounded-full bg-brand-green px-3 py-1 text-xs font-semibold text-white shadow-sm">
           After
@@ -82,6 +83,7 @@ export function BeforeAfter({
             fill
             sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
             className="object-cover"
+            unoptimized={beforeSrc.startsWith("http")}
           />
           <span className="absolute left-3 top-3 rounded-full bg-brand-navy px-3 py-1 text-xs font-semibold text-white shadow-sm">
             Before

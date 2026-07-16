@@ -92,6 +92,7 @@ export default async function GalleryPage() {
                       fill
                       sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                       className="object-cover transition-transform duration-500 group-hover:scale-105"
+                      unoptimized={Boolean(item.imageUrl?.startsWith("http"))}
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-brand-navy/70 via-brand-navy/10 to-transparent" />
                     <div className="relative p-5">

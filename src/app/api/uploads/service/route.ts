@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { MAX_PHOTO_BYTES } from "@/config/booking";
 import { formatS3Error, getViewUrl, putObject } from "@/lib/s3";
 import { isS3Configured } from "@/lib/s3-ready";
+import { getRequestIp, rateLimit } from "@/lib/rate-limit";
 import { requireAdmin } from "@/server/rbac";
 
 function sanitizeFilename(name: string) {
@@ -11,6 +12,14 @@ function sanitizeFilename(name: string) {
 
 /** Admin service hero image upload. */
 export async function POST(request: Request) {
+  const limit = rateLimit(`upload-service:${getRequestIp(request)}`, 40, 10 * 60 * 1000);
+  if (!limit.ok) {
+    return NextResponse.json(
+      { error: "Too many uploads. Please wait and try again." },
+      { status: 429, headers: { "Retry-After": String(limit.retryAfterSeconds) } },
+    );
+  }
+
   try {
     await requireAdmin();
   } catch {

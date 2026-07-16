@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { getUploadUrl } from "@/lib/s3";
 import { isS3Configured } from "@/lib/s3-ready";
+import { getRequestIp, rateLimit } from "@/lib/rate-limit";
 import { getCurrentUser } from "@/server/auth";
 
 const presignSchema = z.object({
@@ -16,6 +17,14 @@ function sanitizeFilename(name: string) {
 
 /** Returns a presigned PUT URL for staging booking property photos. */
 export async function POST(request: Request) {
+  const limit = rateLimit(`upload-presign:${getRequestIp(request)}`, 30, 10 * 60 * 1000);
+  if (!limit.ok) {
+    return NextResponse.json(
+      { error: "Too many upload requests. Please wait and try again." },
+      { status: 429, headers: { "Retry-After": String(limit.retryAfterSeconds) } },
+    );
+  }
+
   const user = await getCurrentUser();
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

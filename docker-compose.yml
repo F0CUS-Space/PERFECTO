@@ -61,8 +61,20 @@ services:
       S3_BUCKET_NAME: ${S3_BUCKET_NAME:-}
       # Omit blank AWS keys from .env when using EC2 IAM role — empty values block the role chain.
     ports:
-      # Host port 3000 for production (EC2 security group). Use APP_HOST_PORT=3002 locally if 3000 is taken.
-      - "${APP_HOST_PORT:-3000}:3000"
+      # Prefer nginx on 443 only in production. Keep 3000 bound to localhost if possible:
+      # APP_HOST_BIND=127.0.0.1 APP_HOST_PORT=3000
+      - "${APP_HOST_BIND:-0.0.0.0}:${APP_HOST_PORT:-3000}:3000"
+    deploy:
+      resources:
+        limits:
+          cpus: "1.5"
+          memory: 1536M
+        reservations:
+          cpus: "0.25"
+          memory: 512M
+    # Compose v2 without swarm still honors mem_limit on many hosts:
+    mem_limit: 1536m
+    cpus: 1.5
 
 volumes:
   postgres-data:

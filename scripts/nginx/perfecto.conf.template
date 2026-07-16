@@ -1,6 +1,11 @@
 # Nginx reverse proxy for Perfecto (Docker app on localhost:3000).
 # Installed by scripts/ec2-nginx-setup.sh — do not edit paths on server without re-running certbot.
 
+# Abuse mitigation (AWS outbound DoS alert): throttle image optimizer + general request floods.
+limit_req_zone $binary_remote_addr zone=perfecto_general:10m rate=20r/s;
+limit_req_zone $binary_remote_addr zone=perfecto_image:10m rate=5r/s;
+limit_conn_zone $binary_remote_addr zone=perfecto_conn:10m;
+
 upstream perfecto_app {
     server 127.0.0.1:3000;
     keepalive 32;
@@ -35,8 +40,25 @@ server {
     ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
 
     client_max_body_size 25m;
+    limit_conn perfecto_conn 40;
+
+    # Legacy Next image optimizer path — rate-limit hard even if app disables it.
+    location /_next/image {
+        limit_req zone=perfecto_image burst=10 nodelay;
+        limit_req_status 429;
+        proxy_pass http://perfecto_app;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 30s;
+        proxy_connect_timeout 10s;
+    }
 
     location / {
+        limit_req zone=perfecto_general burst=40 nodelay;
+        limit_req_status 429;
         proxy_pass http://perfecto_app;
         proxy_http_version 1.1;
         proxy_set_header Host $host;

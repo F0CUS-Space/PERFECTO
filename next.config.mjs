@@ -57,10 +57,12 @@ const nextConfig = {
     optimizePackageImports: ["lucide-react", "@tanstack/react-query"],
   },
   images: {
-    remotePatterns: [
-      // S3 bucket (property photos, resumes-derived public assets, etc.)
-      { protocol: "https", hostname: "*.amazonaws.com" },
-    ],
+    // SECURITY (AWS outbound DoS alert 2026-07-15):
+    // Next.js `/_next/image` fetches remote URLs server-side and streams them to clients.
+    // With a broad remotePatterns allowlist this becomes an unauthenticated egress amplifier.
+    // Disable the optimizer so the Node process never downloads third-party/S3 objects for images.
+    // Local brand assets still work; remote/S3 URLs are rendered with browser-direct loads.
+    unoptimized: true,
   },
   async headers() {
     return [
