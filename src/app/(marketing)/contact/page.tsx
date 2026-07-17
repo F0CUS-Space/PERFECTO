@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Clock, Mail, MapPin, Phone } from "lucide-react";
+import { Clock, Instagram, Mail, Phone } from "lucide-react";
 
 import { Section } from "@/components/shared/section";
 import { PageHero } from "@/components/shared/page-hero";
@@ -22,8 +22,19 @@ export default async function ContactPage({ searchParams }: ContactPageProps) {
 
   const details = [
     { icon: Phone, label: "Phone", value: siteConfig.contact.phone },
-    { icon: Mail, label: "Email", value: siteConfig.contact.email },
-    { icon: MapPin, label: "Address", value: siteConfig.contact.address },
+    {
+      icon: Mail,
+      label: "Email",
+      value: siteConfig.contact.email,
+      href: `mailto:${siteConfig.contact.email}`,
+    },
+    {
+      icon: Instagram,
+      label: "Instagram",
+      value: "@perfectocleanings",
+      href: siteConfig.social.instagram,
+      external: true,
+    },
     { icon: Clock, label: "Hours", value: siteConfig.contact.hours },
   ];
 
@@ -46,14 +57,26 @@ export default async function ContactPage({ searchParams }: ContactPageProps) {
               Prefer to reach us directly? Here&apos;s how.
             </p>
             <div className="mt-8 space-y-5">
-              {details.map(({ icon: Icon, label, value }) => (
+              {details.map(({ icon: Icon, label, value, href, external }) => (
                 <div key={label} className="flex items-start gap-4">
                   <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-accent/10 text-brand-green">
                     <Icon className="h-5 w-5" />
                   </span>
                   <div>
                     <p className="text-sm font-medium text-brand-navy">{label}</p>
-                    <p className="text-sm text-muted-foreground">{value}</p>
+                    {href ? (
+                      <a
+                        href={href}
+                        className="text-sm text-muted-foreground transition-colors hover:text-brand-navy"
+                        {...(external
+                          ? { target: "_blank", rel: "noopener noreferrer" }
+                          : {})}
+                      >
+                        {value}
+                      </a>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">{value}</p>
+                    )}
                   </div>
                 </div>
               ))}

@@ -272,7 +272,7 @@ async function main() {
       location: "NOVA / DC / Maryland",
       compensation: "Up to $30/hour",
       summary:
-        "Join Perfecto's cleaning team across Northern Virginia, Washington DC, and Maryland. Enjoy flexible schedules, a supportive team, and real growth opportunities while making a difference in every facility we serve. We look for a strong work ethic, attention to detail, reliability, and a positive team-player attitude. Experience is a plus; training is provided. Apply online or reach us at info@perfectodmv.com · @perfectocleanings.",
+        "Join Perfecto's cleaning team across Northern Virginia, Washington DC, and Maryland. Enjoy flexible schedules, a supportive team, and real growth opportunities while making a difference in every facility we serve. We look for a strong work ethic, attention to detail, reliability, and a positive team-player attitude. Experience is a plus; training is provided. Apply online or reach us at inf0@perfectodmv.com · @perfectocleanings.",
       sortOrder: 1,
     },
     {
@@ -282,7 +282,7 @@ async function main() {
       location: "NOVA / DC / Maryland",
       compensation: "Up to $30/hour",
       summary:
-        "We're hiring cleaners for our growing commercial and facility team in NOVA, Washington DC, and Maryland. Benefits include flexible schedules, supportive teammates, and room to grow. Requirements: solid work ethic, eye for detail, reliability, and a positive attitude. Prior experience is a plus; we provide training. Contact info@perfectodmv.com or @perfectocleanings.",
+        "We're hiring cleaners for our growing commercial and facility team in NOVA, Washington DC, and Maryland. Benefits include flexible schedules, supportive teammates, and room to grow. Requirements: solid work ethic, eye for detail, reliability, and a positive attitude. Prior experience is a plus; we provide training. Contact inf0@perfectodmv.com or @perfectocleanings.",
       sortOrder: 2,
     },
   ];

@@ -8,8 +8,7 @@ export const siteConfig = {
     phone: "(703) 231-6088",
     /** E.164 for tel: links */
     phoneE164: "+17032316088",
-    email: "info@perfectodmv.com",
-    address: "123 Sparkle Avenue, Suite 100, Your City, ST 00000",
+    email: "inf0@perfectodmv.com",
     hours: "Mon–Sat, 8:00 AM – 6:00 PM",
   },
   social: {

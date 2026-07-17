@@ -4,7 +4,7 @@ import { env } from "@/env";
 import { siteConfig } from "@/config/site";
 
 /** Default inbox when CONTACT_INBOX is unset. */
-export const PRE_LAUNCH_CONTACT_INBOX = "info@perfectodmv.com";
+export const PRE_LAUNCH_CONTACT_INBOX = "inf0@perfectodmv.com";
 
 export function resolveContactInbox(): string {
   const configured = env.CONTACT_INBOX?.trim();
