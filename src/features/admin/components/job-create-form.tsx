@@ -20,6 +20,7 @@ export function JobCreateForm() {
   const [slug, setSlug] = useState("");
   const [type, setType] = useState<(typeof EMPLOYMENT_TYPES)[number]>("Full-time");
   const [location, setLocation] = useState<(typeof JOB_LOCATIONS)[number]>("Local");
+  const [compensation, setCompensation] = useState("");
   const [summary, setSummary] = useState("");
   const [isActive, setIsActive] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -41,6 +42,7 @@ export function JobCreateForm() {
         slug: slug || undefined,
         type,
         location,
+        compensation,
         summary,
         isActive,
       });
@@ -111,6 +113,16 @@ export function JobCreateForm() {
             ))}
           </select>
         </div>
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="new-job-compensation">Compensation</Label>
+        <Input
+          id="new-job-compensation"
+          required
+          value={compensation}
+          onChange={(e) => setCompensation(e.target.value)}
+          placeholder="Up to $30/hour"
+        />
       </div>
       <div className="space-y-2">
         <Label htmlFor="new-job-summary">Summary</Label>

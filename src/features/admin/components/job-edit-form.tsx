@@ -19,6 +19,7 @@ export function JobEditForm({ job }: { job: AdminJobPostingDetail }) {
   const [title, setTitle] = useState(job.title);
   const [type, setType] = useState(job.type);
   const [location, setLocation] = useState(job.location);
+  const [compensation, setCompensation] = useState(job.compensation);
   const [summary, setSummary] = useState(job.summary);
   const [isActive, setIsActive] = useState(job.isActive);
   const [sortOrder, setSortOrder] = useState(String(job.sortOrder));
@@ -32,6 +33,11 @@ export function JobEditForm({ job }: { job: AdminJobPostingDetail }) {
       return;
     }
 
+    if (!compensation.trim()) {
+      setError("Enter compensation.");
+      return;
+    }
+
     setError(null);
     setSuccess(false);
     startTransition(async () => {
@@ -39,6 +45,7 @@ export function JobEditForm({ job }: { job: AdminJobPostingDetail }) {
         title,
         type,
         location,
+        compensation,
         summary,
         isActive,
         sortOrder: Number(sortOrder),
@@ -118,6 +125,16 @@ export function JobEditForm({ job }: { job: AdminJobPostingDetail }) {
               </option>
             ))}
           </select>
+        </div>
+        <div className="space-y-2 sm:col-span-2">
+          <Label htmlFor={`job-compensation-${job.id}`}>Compensation</Label>
+          <Input
+            id={`job-compensation-${job.id}`}
+            required
+            value={compensation}
+            onChange={(e) => setCompensation(e.target.value)}
+            placeholder="Up to $30/hour"
+          />
         </div>
         <div className="space-y-2 sm:col-span-2">
           <Label htmlFor={`job-summary-${job.id}`}>Summary</Label>

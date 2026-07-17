@@ -483,14 +483,15 @@ model Agreement {
 // ---------------------------------------------------------------------------
 
 model JobPosting {
-  id        String   @id @default(cuid())
-  slug      String   @unique
-  title     String
-  type      String
-  location  String
-  summary   String
-  isActive  Boolean  @default(true)
-  sortOrder Int      @default(0)
+  id            String   @id @default(cuid())
+  slug          String   @unique
+  title         String
+  type          String
+  location      String
+  compensation  String
+  summary       String
+  isActive      Boolean  @default(true)
+  sortOrder     Int      @default(0)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

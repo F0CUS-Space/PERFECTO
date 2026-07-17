@@ -1,11 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Briefcase, MapPin } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { JobDeleteButton } from "@/features/admin/components/job-delete-button";
 import { JobEditForm } from "@/features/admin/components/job-edit-form";
 import { getAdminJobPostingById } from "@/features/admin/queries";
+import { JobMetaChips } from "@/features/recruitment/components/job-meta-chips";
 import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -44,14 +44,12 @@ export default async function AdminJobDetailPage({ params }: PageProps) {
                 {job.isActive ? "Active" : "Inactive"}
               </span>
             </div>
-            <div className="mt-3 flex flex-wrap gap-4 text-sm text-muted-foreground">
-              <span className="inline-flex items-center gap-1.5">
-                <Briefcase className="h-4 w-4" /> {job.type}
-              </span>
-              <span className="inline-flex items-center gap-1.5">
-                <MapPin className="h-4 w-4" /> {job.location}
-              </span>
-            </div>
+            <JobMetaChips
+              className="mt-3"
+              type={job.type}
+              location={job.location}
+              compensation={job.compensation}
+            />
             <p className="mt-4 text-muted-foreground">{job.summary}</p>
           </div>
 

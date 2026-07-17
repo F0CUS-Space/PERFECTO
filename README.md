@@ -113,12 +113,12 @@ Add to server `.env`:
 ```env
 RESEND_API_KEY=re_...
 EMAIL_FROM="Perfecto <onboarding@resend.dev>"
-CONTACT_INBOX=perfectocleanings@gmail.com
+CONTACT_INBOX=info@perfectodmv.com
 ```
 
 - Get an API key at [resend.com](https://resend.com).
 - Until your domain is verified, use `onboarding@resend.dev` as the sender.
-- Submissions go to `CONTACT_INBOX` (default: `perfectocleanings@gmail.com`).
+- Submissions go to `CONTACT_INBOX` (default: `info@perfectodmv.com`).
 - At go-live, verify your domain in Resend and set `EMAIL_FROM` to your business address.
 
 ### Stripe (M5 — booking payments)

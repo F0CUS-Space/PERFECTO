@@ -32,7 +32,7 @@ export default function BookPage() {
               <Link href="/contact?intent=estimate">Request an estimate</Link>
             </Button>
             <Button asChild size="lg" variant="outline">
-              <a href={`tel:${siteConfig.contact.phone.replace(/[^\d+]/g, "")}`}>
+              <a href={`tel:${siteConfig.contact.phoneE164}`}>
                 <Phone className="mr-2 h-4 w-4" />
                 Call {siteConfig.contact.phone}
               </a>

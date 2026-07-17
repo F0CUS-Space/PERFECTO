@@ -11,6 +11,7 @@ import { defaultProvider } from "@aws-sdk/credential-provider-node";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 import { env, requireEnv } from "@/env";
+import { isAppOwnedS3Key } from "@/lib/media-ref";
 import { logOutboundS3 } from "@/lib/outbound-log";
 
 let s3Client: S3Client | undefined;
@@ -151,6 +152,34 @@ export async function getViewUrl(key: string, expiresIn = 3600): Promise<string>
 
 export async function deleteObject(key: string) {
   await getClient().send(new DeleteObjectCommand({ Bucket: bucketName(), Key: key }));
+}
+
+/**
+ * Best-effort delete for CMS media refs that are app-owned S3 keys.
+ * Logs failures; never throws (safe after a successful DB update).
+ */
+export async function deleteOwnedObjectBestEffort(
+  ref: string | null | undefined,
+  context = "s3",
+): Promise<void> {
+  const key = ref?.trim();
+  if (!key || !isAppOwnedS3Key(key)) return;
+
+  const started = Date.now();
+  try {
+    await deleteObject(key);
+    logOutboundS3({ op: "delete", key, durationMs: Date.now() - started, ok: true });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "delete failed";
+    logOutboundS3({
+      op: "delete",
+      key,
+      durationMs: Date.now() - started,
+      ok: false,
+      error: message,
+    });
+    console.error(`[${context}] S3 delete failed`, key, error);
+  }
 }
 
 /** User-facing hint from AWS SDK errors. */

@@ -269,8 +269,9 @@ async function main() {
       title: "Cleaning Professional",
       type: "Full-time / Part-time",
       location: "NOVA / DC / Maryland",
+      compensation: "Up to $30/hour",
       summary:
-        "Join Perfecto's cleaning team — earn up to $30/hr across Northern Virginia, Washington DC, and Maryland. Enjoy competitive pay, flexible schedules, a supportive team, and real growth opportunities while making a difference in every facility we serve. We look for a strong work ethic, attention to detail, reliability, and a positive team-player attitude. Experience is a plus; training is provided. Apply online or reach us at PerfectoCleanings@gmail.com · @perfectocleanings.",
+        "Join Perfecto's cleaning team across Northern Virginia, Washington DC, and Maryland. Enjoy flexible schedules, a supportive team, and real growth opportunities while making a difference in every facility we serve. We look for a strong work ethic, attention to detail, reliability, and a positive team-player attitude. Experience is a plus; training is provided. Apply online or reach us at info@perfectodmv.com · @perfectocleanings.",
       sortOrder: 1,
     },
     {
@@ -278,8 +279,9 @@ async function main() {
       title: "Cleaning Team Member",
       type: "Full-time / Part-time",
       location: "NOVA / DC / Maryland",
+      compensation: "Up to $30/hour",
       summary:
-        "We're hiring cleaners for our growing commercial and facility team in NOVA, Washington DC, and Maryland — pay up to $30/hr. Benefits include competitive pay, flexible schedules, supportive teammates, and room to grow. Requirements: solid work ethic, eye for detail, reliability, and a positive attitude. Prior experience is a plus; we provide training. Contact PerfectoCleanings@gmail.com or @perfectocleanings.",
+        "We're hiring cleaners for our growing commercial and facility team in NOVA, Washington DC, and Maryland. Benefits include flexible schedules, supportive teammates, and room to grow. Requirements: solid work ethic, eye for detail, reliability, and a positive attitude. Prior experience is a plus; we provide training. Contact info@perfectodmv.com or @perfectocleanings.",
       sortOrder: 2,
     },
   ];
@@ -293,6 +295,7 @@ async function main() {
         title: job.title,
         type: job.type,
         location: job.location,
+        compensation: job.compensation,
         summary: job.summary,
         sortOrder: job.sortOrder,
         isActive: true,

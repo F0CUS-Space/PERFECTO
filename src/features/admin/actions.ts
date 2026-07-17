@@ -31,7 +31,7 @@ import {
 import { slugifyServiceName } from "@/features/admin/service-slug";
 import { EMPLOYMENT_TYPES, JOB_LOCATIONS } from "@/features/recruitment/job-options";
 import { isAllowedMediaRef } from "@/lib/media-ref";
-import { deleteObject } from "@/lib/s3";
+import { deleteObject, deleteOwnedObjectBestEffort } from "@/lib/s3";
 import { isS3Configured } from "@/lib/s3-ready";
 
 const bookingStatusSchema = z.enum([
@@ -476,6 +476,9 @@ export async function updateService(
   const { name, description, longDescription, includes, idealFor, pricingNote, basePriceDollars, isActive, isPopular, sortOrder, imageUrl } =
     parsed.data;
 
+  const nextImageUrl = imageUrl?.trim() ? imageUrl.trim() : null;
+  const previousImageUrl = service.imageUrl;
+
   await prisma.service.update({
     where: { id: serviceId },
     data: {
@@ -489,9 +492,13 @@ export async function updateService(
       isActive,
       isPopular,
       sortOrder,
-      imageUrl: imageUrl?.trim() ? imageUrl.trim() : null,
+      imageUrl: nextImageUrl,
     },
   });
+
+  if (previousImageUrl && previousImageUrl !== nextImageUrl) {
+    await deleteOwnedObjectBestEffort(previousImageUrl, "updateService");
+  }
 
   revalidateCatalogPaths(serviceId, service.slug);
 
@@ -609,6 +616,7 @@ export async function deleteService(serviceId: string): Promise<AdminActionResul
   }
 
   await prisma.service.delete({ where: { id: serviceId } });
+  await deleteOwnedObjectBestEffort(service.imageUrl, "deleteService");
   revalidateCatalogPaths();
   await logAdminAction({
     actorId: admin.id,
@@ -882,6 +890,11 @@ const jobPostingSchema = z.object({
   title: z.string().trim().min(2, "Enter a job title").max(120),
   type: z.enum(EMPLOYMENT_TYPES, { message: "Select an employment type" }),
   location: z.enum(JOB_LOCATIONS, { message: "Select a location" }),
+  compensation: z
+    .string()
+    .trim()
+    .min(2, "Enter compensation (e.g. Up to $30/hour)")
+    .max(80),
   summary: z.string().trim().min(10, "Enter a short summary").max(2000),
   isActive: z.boolean(),
   sortOrder: z.coerce.number().int().min(0).max(999),
@@ -911,7 +924,7 @@ export async function createJobPosting(
     return { ok: false, error: parsed.error.errors[0]?.message ?? "Invalid input." };
   }
 
-  const { title, type, location, summary, isActive, sortOrder, slug } = parsed.data;
+  const { title, type, location, compensation, summary, isActive, sortOrder, slug } = parsed.data;
   const baseSlug = slug?.trim() || slugifyServiceName(title);
   if (!baseSlug) {
     return { ok: false, error: "Could not generate a URL slug from the job title." };
@@ -927,6 +940,7 @@ export async function createJobPosting(
       title,
       type,
       location,
+      compensation,
       summary,
       isActive,
       sortOrder: nextSort,
@@ -962,11 +976,11 @@ export async function updateJobPosting(
     return { ok: false, error: "Job not found." };
   }
 
-  const { title, type, location, summary, isActive, sortOrder } = parsed.data;
+  const { title, type, location, compensation, summary, isActive, sortOrder } = parsed.data;
 
   await prisma.jobPosting.update({
     where: { id: jobId },
-    data: { title, type, location, summary, isActive, sortOrder },
+    data: { title, type, location, compensation, summary, isActive, sortOrder },
   });
 
   revalidateJobPaths(jobId);
@@ -1248,6 +1262,9 @@ export async function updateGalleryItem(
   if (!item) return { ok: false, error: "Gallery item not found." };
 
   const { type, title, category, imageUrl, beforeUrl, afterUrl, isActive, sortOrder } = parsed.data;
+  const nextImageUrl = imageUrl || null;
+  const nextBeforeUrl = beforeUrl || null;
+  const nextAfterUrl = afterUrl || null;
 
   await prisma.galleryItem.update({
     where: { id },
@@ -1255,13 +1272,23 @@ export async function updateGalleryItem(
       type,
       title,
       category,
-      imageUrl: imageUrl || null,
-      beforeUrl: beforeUrl || null,
-      afterUrl: afterUrl || null,
+      imageUrl: nextImageUrl,
+      beforeUrl: nextBeforeUrl,
+      afterUrl: nextAfterUrl,
       isActive,
       sortOrder: sortOrder ?? item.sortOrder,
     },
   });
+
+  if (item.imageUrl && item.imageUrl !== nextImageUrl) {
+    await deleteOwnedObjectBestEffort(item.imageUrl, "updateGalleryItem");
+  }
+  if (item.beforeUrl && item.beforeUrl !== nextBeforeUrl) {
+    await deleteOwnedObjectBestEffort(item.beforeUrl, "updateGalleryItem");
+  }
+  if (item.afterUrl && item.afterUrl !== nextAfterUrl) {
+    await deleteOwnedObjectBestEffort(item.afterUrl, "updateGalleryItem");
+  }
 
   revalidateGalleryPaths();
   await logAdminAction({
@@ -1282,6 +1309,11 @@ export async function deleteGalleryItem(id: string): Promise<AdminActionResult> 
   if (!item) return { ok: false, error: "Gallery item not found." };
 
   await prisma.galleryItem.delete({ where: { id } });
+  await Promise.all([
+    deleteOwnedObjectBestEffort(item.imageUrl, "deleteGalleryItem"),
+    deleteOwnedObjectBestEffort(item.beforeUrl, "deleteGalleryItem"),
+    deleteOwnedObjectBestEffort(item.afterUrl, "deleteGalleryItem"),
+  ]);
   revalidateGalleryPaths();
   await logAdminAction({
     actorId: admin.id,

@@ -13,7 +13,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
 import { submitJobApplication } from "../actions";
+import type { JobPostingRow } from "../queries";
 import { createJobApplicationSchema } from "../schema";
+import { JobMetaChips } from "./job-meta-chips";
 
 const MAX_RESUME_BYTES = 5 * 1024 * 1024;
 
@@ -24,11 +26,11 @@ type FormValues = Omit<
 
 export function JobApplicationForm({
   defaultPosition,
-  positions,
+  jobs,
   uploadsEnabled,
 }: {
   defaultPosition: string;
-  positions: string[];
+  jobs: Pick<JobPostingRow, "title" | "type" | "location" | "compensation">[];
   uploadsEnabled: boolean;
 }) {
   const router = useRouter();
@@ -39,11 +41,13 @@ export function JobApplicationForm({
   const [submitting, setSubmitting] = useState(false);
 
   const s3Ready = uploadsEnabled;
+  const positions = useMemo(() => jobs.map((job) => job.title), [jobs]);
   const schema = useMemo(() => createJobApplicationSchema(positions), [positions]);
 
   const {
     register,
     handleSubmit,
+    watch,
     formState: { errors },
   } = useForm<FormValues>({
     resolver: zodResolver(schema.omit({ resumeS3Key: true, resumeUrl: true })),
@@ -56,6 +60,9 @@ export function JobApplicationForm({
       companyWebsite: "",
     },
   });
+
+  const selectedPosition = watch("position");
+  const selectedJob = jobs.find((job) => job.title === selectedPosition) ?? jobs[0];
 
   const onSubmit = async (values: FormValues) => {
     setServerError(null);
@@ -159,6 +166,14 @@ export function JobApplicationForm({
             </option>
           ))}
         </select>
+        {selectedJob && (
+          <JobMetaChips
+            className="pt-1"
+            type={selectedJob.type}
+            location={selectedJob.location}
+            compensation={selectedJob.compensation}
+          />
+        )}
         <p className="text-xs text-muted-foreground">
           Only active job postings from our careers page are listed here.
         </p>

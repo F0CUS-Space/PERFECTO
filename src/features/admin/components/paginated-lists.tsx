@@ -231,12 +231,13 @@ export function PaginatedJobsTable({ jobs }: { jobs: AdminJobPostingRow[] }) {
     >
       {(visible) => (
         <div className="overflow-x-auto rounded-2xl border border-border">
-          <table className="w-full min-w-[760px] text-sm">
+          <table className="w-full min-w-[900px] text-sm">
             <thead className="border-b border-border bg-secondary/40 text-left">
               <tr>
                 <th className="px-4 py-3 font-medium text-muted-foreground">Title</th>
                 <th className="px-4 py-3 font-medium text-muted-foreground">Type</th>
                 <th className="px-4 py-3 font-medium text-muted-foreground">Location</th>
+                <th className="px-4 py-3 font-medium text-muted-foreground">Compensation</th>
                 <th className="px-4 py-3 font-medium text-muted-foreground">Applications</th>
                 <th className="px-4 py-3 font-medium text-muted-foreground">Status</th>
                 <th className="px-4 py-3 font-medium text-muted-foreground" />
@@ -251,6 +252,7 @@ export function PaginatedJobsTable({ jobs }: { jobs: AdminJobPostingRow[] }) {
                   </td>
                   <td className="px-4 py-3 text-muted-foreground">{job.type}</td>
                   <td className="px-4 py-3 text-muted-foreground">{job.location}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{job.compensation}</td>
                   <td className="px-4 py-3 text-muted-foreground">{job.applicationCount}</td>
                   <td className="px-4 py-3">
                     <span

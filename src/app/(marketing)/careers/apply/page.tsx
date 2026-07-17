@@ -23,9 +23,8 @@ interface PageProps {
 export default async function ApplyPage({ searchParams }: PageProps) {
   const { position } = await searchParams;
   const jobs = await getActiveJobPostings();
-  const positions = jobs.map((job) => job.title);
 
-  if (positions.length === 0) {
+  if (jobs.length === 0) {
     return (
       <>
         <PageHero
@@ -54,7 +53,7 @@ export default async function ApplyPage({ searchParams }: PageProps) {
       <Section className="[&>div]:py-10 md:[&>div]:py-14">
         <JobApplicationForm
           defaultPosition={defaultPosition}
-          positions={positions}
+          jobs={jobs}
           uploadsEnabled={isS3Configured()}
         />
       </Section>

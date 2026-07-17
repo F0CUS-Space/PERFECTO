@@ -7,6 +7,7 @@ export interface JobPostingRow {
   title: string;
   type: string;
   location: string;
+  compensation: string;
   summary: string;
   isActive: boolean;
   sortOrder: number;
@@ -34,6 +35,7 @@ function mapJobPosting(job: {
   title: string;
   type: string;
   location: string;
+  compensation: string;
   summary: string;
   isActive: boolean;
   sortOrder: number;
@@ -44,6 +46,7 @@ function mapJobPosting(job: {
     title: job.title,
     type: job.type,
     location: job.location,
+    compensation: job.compensation,
     summary: job.summary,
     isActive: job.isActive,
     sortOrder: job.sortOrder,

@@ -132,6 +132,7 @@ export interface AdminJobPostingRow {
   title: string;
   type: string;
   location: string;
+  compensation: string;
   summary: string;
   isActive: boolean;
   sortOrder: number;
