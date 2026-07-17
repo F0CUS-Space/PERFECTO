@@ -40,6 +40,7 @@ const bookingStatusSchema = z.enum([
   "IN_PROGRESS",
   "COMPLETED",
   "CANCELLED",
+  "REFUNDED",
 ]);
 
 const serviceImageRef = z

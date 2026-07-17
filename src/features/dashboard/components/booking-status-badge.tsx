@@ -8,6 +8,7 @@ const STATUS_LABELS: Record<BookingStatus, string> = {
   IN_PROGRESS: "In progress",
   COMPLETED: "Completed",
   CANCELLED: "Cancelled",
+  REFUNDED: "Refunded",
 };
 
 const STATUS_STYLES: Record<BookingStatus, string> = {
@@ -16,6 +17,7 @@ const STATUS_STYLES: Record<BookingStatus, string> = {
   IN_PROGRESS: "bg-brand-blue/10 text-brand-blue",
   COMPLETED: "bg-secondary text-muted-foreground",
   CANCELLED: "bg-destructive/10 text-destructive",
+  REFUNDED: "bg-muted text-muted-foreground",
 };
 
 export function BookingStatusBadge({

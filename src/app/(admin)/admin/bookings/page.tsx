@@ -15,6 +15,7 @@ const STATUSES: BookingStatus[] = [
   "IN_PROGRESS",
   "COMPLETED",
   "CANCELLED",
+  "REFUNDED",
 ];
 
 interface PageProps {

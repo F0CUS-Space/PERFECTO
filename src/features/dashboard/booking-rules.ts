@@ -1,6 +1,6 @@
 import type { BookingStatus } from "@prisma/client";
 
-const TERMINAL_STATUSES: BookingStatus[] = ["COMPLETED", "CANCELLED"];
+const TERMINAL_STATUSES: BookingStatus[] = ["COMPLETED", "CANCELLED", "REFUNDED"];
 
 export function isServiceDayPassed(scheduledDate: Date | string): boolean {
   const today = new Date();
@@ -54,7 +54,7 @@ export function canCustomerReviewBooking(input: {
   hasReview: boolean;
 }): boolean {
   if (input.hasReview) return false;
-  if (input.status === "CANCELLED") return false;
+  if (input.status === "CANCELLED" || input.status === "REFUNDED") return false;
   if (!input.depositSatisfied) return false;
   if (!isServiceDayPassed(input.scheduledDate)) return false;
   return true;

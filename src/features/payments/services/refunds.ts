@@ -26,6 +26,28 @@ function customerName(user: {
 }
 
 /**
+ * After a full refund (net captured ≤ 0), mark the booking REFUNDED so it leaves
+ * the active/upcoming queue. Partial refunds leave booking status unchanged.
+ * CANCELLED stays CANCELLED (admin already closed the job).
+ */
+async function syncBookingStatusAfterRefund(bookingId: string): Promise<void> {
+  const booking = await prisma.booking.findUnique({
+    where: { id: bookingId },
+    include: { payments: true },
+  });
+  if (!booking) return;
+
+  const netPaid = netCapturedFromPayments(booking.payments);
+  if (netPaid > 0) return;
+  if (booking.status === "REFUNDED" || booking.status === "CANCELLED") return;
+
+  await prisma.booking.update({
+    where: { id: bookingId },
+    data: { status: "REFUNDED" },
+  });
+}
+
+/**
  * Refunds a booking payment via Stripe and records a REFUND payment row.
  * Business logic only — auth, audit logging, and revalidation live in the admin action.
  */
@@ -107,6 +129,7 @@ export async function refundBookingPayment(params: {
   });
 
   await syncInvoiceAmountPaid(booking.id);
+  await syncBookingStatusAfterRefund(booking.id);
   await maybeSendRefundEmail(booking.id);
 
   return { ok: true, refundedCents: refund.amountCents };
@@ -186,6 +209,8 @@ export async function finalizeRefundFromCharge(charge: Stripe.Charge): Promise<v
       where: { type: "REFUND", providerPaymentIntentId: intentId, status: "PENDING" },
       data: { status: "REFUNDED" },
     });
+    await syncInvoiceAmountPaid(linked.bookingId);
+    await syncBookingStatusAfterRefund(linked.bookingId);
     return;
   }
 
@@ -210,5 +235,6 @@ export async function finalizeRefundFromCharge(charge: Stripe.Charge): Promise<v
   }
 
   await syncInvoiceAmountPaid(linked.bookingId);
+  await syncBookingStatusAfterRefund(linked.bookingId);
   await maybeSendRefundEmail(linked.bookingId);
 }

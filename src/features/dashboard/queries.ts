@@ -21,7 +21,7 @@ import type {
   CustomerPaymentRow,
 } from "./types";
 
-const TERMINAL_STATUSES: BookingStatus[] = ["COMPLETED", "CANCELLED"];
+const TERMINAL_STATUSES: BookingStatus[] = ["COMPLETED", "CANCELLED", "REFUNDED"];
 
 function isUpcoming(scheduledDate: Date, status: BookingStatus): boolean {
   if (TERMINAL_STATUSES.includes(status)) return false;

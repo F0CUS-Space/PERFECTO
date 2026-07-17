@@ -33,6 +33,7 @@ enum BookingStatus {
   IN_PROGRESS
   COMPLETED
   CANCELLED
+  REFUNDED
 }
 
 enum PaymentType {
