@@ -22,8 +22,8 @@ export function JobDeleteButton({
   const onDelete = () => {
     const message =
       applicationCount > 0
-        ? `"${jobTitle}" has ${applicationCount} application(s). It will be deactivated instead of deleted. Continue?`
-        : `Delete "${jobTitle}" permanently?`;
+        ? `"${jobTitle}" has ${applicationCount} application(s). The job will be deactivated, application records kept, and uploaded resume files removed. Continue?`
+        : `Deactivate "${jobTitle}" and remove it from the careers page?`;
 
     if (!window.confirm(message)) return;
 
@@ -42,11 +42,10 @@ export function JobDeleteButton({
 
   return (
     <div className="rounded-2xl border border-destructive/30 bg-destructive/5 p-5">
-      <p className="font-medium text-brand-navy">Delete job</p>
+      <p className="font-medium text-brand-navy">Remove job</p>
       <p className="mt-1 text-sm text-muted-foreground">
-        {applicationCount > 0
-          ? "Jobs with applications are deactivated so past applications keep their position name."
-          : "Remove this job posting from the careers page."}
+        Deactivates this posting. Application records stay in the admin; only uploaded resume files
+        are deleted from storage.
       </p>
       <Button
         type="button"
@@ -55,7 +54,7 @@ export function JobDeleteButton({
         onClick={onDelete}
         disabled={pending}
       >
-        {pending ? "Removing…" : applicationCount > 0 ? "Deactivate job" : "Delete job"}
+        {pending ? "Removing…" : "Deactivate job"}
       </Button>
       {error && <p className="mt-2 text-sm text-destructive">{error}</p>}
     </div>

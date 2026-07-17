@@ -115,7 +115,11 @@ export default async function BookingConfirmationPage({ params, searchParams }: 
         }
       />
       <Section>
-        <DepositConfirmationSync active={awaitingConfirmation} />
+        <DepositConfirmationSync
+          active={awaitingConfirmation}
+          bookingId={booking.id}
+          sessionId={sessionId}
+        />
         <Card className="mx-auto max-w-2xl border-accent/30">
           <CardHeader>
             <CardTitle>{booking.service.name}</CardTitle>

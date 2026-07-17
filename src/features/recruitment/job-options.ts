@@ -6,7 +6,12 @@ export const EMPLOYMENT_TYPES = [
   "Seasonal",
 ] as const;
 
-export const JOB_LOCATIONS = ["Local", "Remote", "Hybrid"] as const;
+export const JOB_LOCATIONS = [
+  "Local",
+  "NOVA / DC / Maryland",
+  "Remote",
+  "Hybrid",
+] as const;
 
 export type EmploymentType = (typeof EMPLOYMENT_TYPES)[number];
 export type JobLocation = (typeof JOB_LOCATIONS)[number];

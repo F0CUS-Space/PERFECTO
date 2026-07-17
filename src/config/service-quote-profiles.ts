@@ -46,7 +46,124 @@ export const FURNISHED_OPTIONS: { value: FurnishedStatus; label: string; hint?: 
 const ALL_FREQUENCIES: Frequency[] = ["ONE_TIME", "WEEKLY", "BIWEEKLY", "MONTHLY"];
 const RECURRING_FREQUENCIES: Frequency[] = ["WEEKLY", "BIWEEKLY", "MONTHLY"];
 
+/** Shared commercial / facility profile (office-style sizing). */
+function commercialFacilityProfile(
+  slug: string,
+  formTitle: string,
+  formDescription: string,
+  options?: {
+    defaultFrequency?: Frequency;
+    frequencyOptions?: Frequency[];
+    showFrequency?: boolean;
+    bathroomsLabel?: string;
+    propertySizeLabel?: string;
+    workstationsLabel?: string;
+    workstationsDefault?: number;
+    bathroomsDefault?: number;
+    sqftIncluded?: number;
+  },
+): ServiceQuoteProfile {
+  return {
+    slug,
+    formTitle,
+    formDescription,
+    pricingMode: "office",
+    showBedrooms: false,
+    showBathrooms: true,
+    showWorkstations: true,
+    showPropertySize: "required",
+    showPets: false,
+    showFurnished: false,
+    showFrequency: options?.showFrequency ?? true,
+    frequencyOptions: options?.frequencyOptions ?? RECURRING_FREQUENCIES,
+    defaultFrequency: options?.defaultFrequency ?? "WEEKLY",
+    sqftIncluded: options?.sqftIncluded ?? 2000,
+    labels: {
+      bedrooms: "Bedrooms",
+      bathrooms: options?.bathroomsLabel ?? "Restrooms",
+      propertySize: options?.propertySizeLabel ?? "Facility square footage",
+      workstations: options?.workstationsLabel ?? "Workstations / desks",
+      pets: "Pets",
+      furnished: "Property condition",
+    },
+    defaults: {
+      bedrooms: 0,
+      bathrooms: options?.bathroomsDefault ?? 2,
+      workstations: options?.workstationsDefault ?? 8,
+      hasPets: false,
+      furnished: "fully",
+    },
+  };
+}
+
 export const SERVICE_QUOTE_PROFILES: Record<string, ServiceQuoteProfile> = {
+  // --- Active commercial catalog ---
+  "government-municipal": commercialFacilityProfile(
+    "government-municipal",
+    "Tell us about the facility",
+    "Municipal buildings are sized by square footage, restrooms, and occupied work areas — share those details for an estimate.",
+    {
+      propertySizeLabel: "Building square footage",
+      workstationsLabel: "Offices / workstations",
+      bathroomsDefault: 4,
+      workstationsDefault: 20,
+      sqftIncluded: 5000,
+    },
+  ),
+  "schools-daycares": commercialFacilityProfile(
+    "schools-daycares",
+    "Tell us about the campus",
+    "Schools and daycares are sized by square footage, restrooms, and classroom/work areas.",
+    {
+      propertySizeLabel: "Campus / building square footage",
+      workstationsLabel: "Classrooms / rooms",
+      bathroomsDefault: 6,
+      workstationsDefault: 12,
+      sqftIncluded: 8000,
+    },
+  ),
+  offices: commercialFacilityProfile(
+    "offices",
+    "Tell us about your workspace",
+    "Offices are sized by square footage, workstations, and restrooms. Share those details for an accurate quote.",
+    {
+      propertySizeLabel: "Office square footage",
+      workstationsLabel: "Workstations / desks",
+      bathroomsDefault: 2,
+      workstationsDefault: 8,
+      sqftIncluded: 2000,
+    },
+  ),
+  "medical-dental": commercialFacilityProfile(
+    "medical-dental",
+    "Tell us about the practice",
+    "Clinics are sized by square footage, treatment/work areas, and restrooms.",
+    {
+      propertySizeLabel: "Suite square footage",
+      workstationsLabel: "Operatories / exam rooms",
+      bathroomsDefault: 2,
+      workstationsDefault: 4,
+      sqftIncluded: 1500,
+      frequencyOptions: ALL_FREQUENCIES,
+      defaultFrequency: "WEEKLY",
+    },
+  ),
+  "restaurants-nightlife": commercialFacilityProfile(
+    "restaurants-nightlife",
+    "Tell us about the venue",
+    "Hospitality venues are sized by guest-area square footage, seating/work zones, and restrooms.",
+    {
+      propertySizeLabel: "Venue square footage",
+      workstationsLabel: "Seating / service zones",
+      bathroomsDefault: 2,
+      workstationsDefault: 6,
+      sqftIncluded: 2500,
+      frequencyOptions: ["ONE_TIME", "WEEKLY", "BIWEEKLY", "MONTHLY"],
+      defaultFrequency: "WEEKLY",
+    },
+  ),
+
+  // --- Legacy profiles (kept so historical quotes / admin paths do not crash) ---
   "residential-cleaning": {
     slug: "residential-cleaning",
     formTitle: "Tell us about your home",
@@ -123,32 +240,11 @@ export const SERVICE_QUOTE_PROFILES: Record<string, ServiceQuoteProfile> = {
     },
     defaults: { bedrooms: 2, bathrooms: 2, workstations: 5, hasPets: false, furnished: "empty" },
   },
-  "office-cleaning": {
-    slug: "office-cleaning",
-    formTitle: "Tell us about your workspace",
-    formDescription:
-      "Offices are sized by square footage, workstations, and restrooms — not bedrooms. Share those details for an accurate quote.",
-    pricingMode: "office",
-    showBedrooms: false,
-    showBathrooms: true,
-    showWorkstations: true,
-    showPropertySize: "required",
-    showPets: false,
-    showFurnished: false,
-    showFrequency: true,
-    frequencyOptions: RECURRING_FREQUENCIES,
-    defaultFrequency: "WEEKLY",
-    sqftIncluded: 2000,
-    labels: {
-      bedrooms: "Bedrooms",
-      bathrooms: "Restrooms",
-      propertySize: "Office square footage",
-      workstations: "Workstations / desks",
-      pets: "Pets",
-      furnished: "Property condition",
-    },
-    defaults: { bedrooms: 0, bathrooms: 2, workstations: 8, hasPets: false, furnished: "fully" },
-  },
+  "office-cleaning": commercialFacilityProfile(
+    "office-cleaning",
+    "Tell us about your workspace",
+    "Offices are sized by square footage, workstations, and restrooms — not bedrooms. Share those details for an accurate quote.",
+  ),
   "recurring-cleaning": {
     slug: "recurring-cleaning",
     formTitle: "Tell us about your home",
@@ -176,7 +272,7 @@ export const SERVICE_QUOTE_PROFILES: Record<string, ServiceQuoteProfile> = {
   },
 };
 
-const FALLBACK_PROFILE = SERVICE_QUOTE_PROFILES["residential-cleaning"];
+const FALLBACK_PROFILE = SERVICE_QUOTE_PROFILES.offices;
 
 export function getServiceQuoteProfile(slug: string): ServiceQuoteProfile {
   return SERVICE_QUOTE_PROFILES[slug] ?? FALLBACK_PROFILE;

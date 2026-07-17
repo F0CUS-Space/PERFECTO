@@ -4,10 +4,16 @@ import type { User } from "@prisma/client";
 
 import { env } from "@/env";
 import { prisma } from "@/lib/prisma";
+import { getStripe } from "@/lib/stripe";
 import { isStripeConfigured } from "@/lib/stripe-ready";
 
 import {
+  reconcileBookingFromCheckoutSessionId,
+  settledCaptureFromCheckoutSession,
+} from "./confirm-deposit";
+import {
   createDepositCheckoutAttempt,
+  findPaidCapturesFromLinkedSessions,
   getOpenDepositCheckoutUrlForBooking,
   reconcileBookingPayments,
 } from "./reconcile-payments";
@@ -15,7 +21,7 @@ import { getPaymentService } from "./stripe-payment-service";
 
 export type CreateDepositCheckoutResult =
   | { ok: true; url: string }
-  | { ok: false; error: string };
+  | { ok: false; error: string; alreadyPaid?: boolean };
 
 /**
  * Core deposit checkout creation. Kept outside `"use server"` so other server
@@ -38,21 +44,26 @@ export async function createDepositCheckoutForUser(
     return { ok: false, error: "Booking not found." };
   }
 
-  const reconcile = await reconcileBookingPayments(booking.id);
+  // Recover any already-paid linked sessions before minting a new Checkout.
+  const paidCaptures = await findPaidCapturesFromLinkedSessions(booking.id);
+  const reconcile = await reconcileBookingPayments(booking.id, {
+    knownCaptures: paidCaptures,
+  });
 
-  if (reconcile.fullyPaid) {
-    return { ok: false, error: "This booking is already paid in full." };
-  }
-
-  if (reconcile.depositSatisfied) {
+  if (reconcile.fullyPaid || reconcile.depositSatisfied || reconcile.bookingConfirmed) {
     return {
       ok: false,
-      error: "Payment already received for this booking.",
+      alreadyPaid: true,
+      error: "Payment already received for this booking. Refresh the page to see confirmation.",
     };
   }
 
   if (booking.status === "CONFIRMED") {
-    return { ok: false, error: "This booking is already confirmed." };
+    return {
+      ok: false,
+      alreadyPaid: true,
+      error: "This booking is already confirmed.",
+    };
   }
 
   if (booking.status !== "PENDING_PAYMENT") {
@@ -74,17 +85,53 @@ export async function createDepositCheckoutForUser(
 
   const paymentService = getPaymentService();
 
-  const { url, sessionId } = await paymentService.createDepositCheckoutSession({
-    bookingId: booking.id,
-    paymentId: attempt.id,
-    userId: user.id,
-    amountCents: booking.depositAmount,
-    serviceName: booking.service.name,
-    customerEmail: user.email,
-    successUrl,
-    cancelUrl,
-    idempotencyKey: `deposit-checkout-${attempt.id}`,
-  });
+  let url: string;
+  let sessionId: string;
+  try {
+    ({ url, sessionId } = await paymentService.createDepositCheckoutSession({
+      bookingId: booking.id,
+      paymentId: attempt.id,
+      userId: user.id,
+      amountCents: booking.depositAmount,
+      serviceName: booking.service.name,
+      customerEmail: user.email,
+      successUrl,
+      cancelUrl,
+      idempotencyKey: `deposit-checkout-${attempt.id}`,
+    }));
+  } catch (error) {
+    console.error("[createDepositCheckout] stripe create failed", booking.id, error);
+    // Idempotency may return a session that is already paid — recover it.
+    const recovered = await recoverPaidSessionForAttempt(booking.id, attempt.id);
+    if (recovered) {
+      return {
+        ok: false,
+        alreadyPaid: true,
+        error: "Payment already received for this booking. Refresh the page to see confirmation.",
+      };
+    }
+    return { ok: false, error: "Unable to start checkout. Please try again." };
+  }
+
+  // If Stripe reused an idempotent session that is already paid, confirm instead of redirecting.
+  try {
+    const session = await getStripe().checkout.sessions.retrieve(sessionId, {
+      expand: ["payment_intent"],
+    });
+    if (session.payment_status === "paid") {
+      const knownCapture = settledCaptureFromCheckoutSession(session);
+      await reconcileBookingPayments(booking.id, {
+        knownCaptures: knownCapture ? [knownCapture] : [],
+      });
+      return {
+        ok: false,
+        alreadyPaid: true,
+        error: "Payment already received for this booking. Refresh the page to see confirmation.",
+      };
+    }
+  } catch (error) {
+    console.warn("[createDepositCheckout] post-create session inspect failed", sessionId, error);
+  }
 
   try {
     await prisma.payment.update({
@@ -92,7 +139,18 @@ export async function createDepositCheckoutForUser(
       data: { providerPaymentId: sessionId },
     });
   } catch (linkError) {
-    console.error("[createDepositCheckout] failed to link session; voiding", sessionId, linkError);
+    console.error("[createDepositCheckout] failed to link session", sessionId, linkError);
+
+    // Session may already be linked on another row, or already paid — reconcile before giving up.
+    const recovered = await recoverPaidSessionById(booking.id, sessionId);
+    if (recovered) {
+      return {
+        ok: false,
+        alreadyPaid: true,
+        error: "Payment already received for this booking. Refresh the page to see confirmation.",
+      };
+    }
+
     await paymentService.voidCheckoutSession(sessionId).catch((voidError) => {
       console.error("[createDepositCheckout] failed to void orphaned session", sessionId, voidError);
     });
@@ -100,4 +158,28 @@ export async function createDepositCheckoutForUser(
   }
 
   return { ok: true, url };
+}
+
+async function recoverPaidSessionForAttempt(
+  bookingId: string,
+  paymentId: string,
+): Promise<boolean> {
+  const payment = await prisma.payment.findUnique({ where: { id: paymentId } });
+  if (payment?.providerPaymentId?.startsWith("cs_")) {
+    return recoverPaidSessionById(bookingId, payment.providerPaymentId);
+  }
+  const captures = await findPaidCapturesFromLinkedSessions(bookingId);
+  if (captures.length === 0) return false;
+  const result = await reconcileBookingPayments(bookingId, { knownCaptures: captures });
+  return result.depositSatisfied || result.bookingConfirmed;
+}
+
+async function recoverPaidSessionById(bookingId: string, sessionId: string): Promise<boolean> {
+  if (!sessionId.startsWith("cs_")) return false;
+  try {
+    return await reconcileBookingFromCheckoutSessionId(bookingId, sessionId);
+  } catch (error) {
+    console.error("[createDepositCheckout] recover paid session failed", sessionId, error);
+    return false;
+  }
 }

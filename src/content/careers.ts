@@ -1,7 +1,7 @@
 export const careerPerks = [
-  "Competitive pay and tips",
-  "Flexible scheduling",
-  "Paid training and growth",
-  "Supportive, respectful team",
-  "All supplies and equipment provided",
+  "Competitive pay — up to $30/hr",
+  "Flexible schedules",
+  "Make a difference every day",
+  "Supportive team culture",
+  "Growth opportunities and training provided",
 ];

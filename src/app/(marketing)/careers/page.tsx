@@ -11,7 +11,7 @@ import { getActiveJobPostings } from "@/features/recruitment/queries";
 export const metadata: Metadata = {
   title: "Careers",
   description:
-    "Join the Perfecto team. We're hiring vetted, detail-obsessed cleaning professionals who take pride in their work.",
+    "Join the Perfecto team. Hiring cleaners in NOVA, Washington DC, and Maryland — up to $30/hr, flexible schedules, training provided.",
 };
 
 export const dynamic = "force-dynamic";
@@ -28,7 +28,7 @@ export default async function CareersPage() {
           </>
         }
         title="Build your career with Perfecto"
-        description="We're looking for dedicated, detail-obsessed professionals who take pride in their craft. Join a supportive team that invests in your growth."
+        description="We're hiring cleaners across NOVA, Washington DC, and Maryland — up to $30/hr, flexible schedules, and a supportive team that invests in your growth. Training provided."
         actions={
           jobOpenings.length > 0 ? (
             <Button asChild size="lg">

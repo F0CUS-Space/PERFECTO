@@ -130,7 +130,7 @@ export default async function ServiceDetailPage({
         <Reveal delay={240} className="mt-16 flex flex-col items-center gap-4 rounded-3xl border border-border bg-card px-6 py-10 text-center shadow-card sm:px-10">
           <h2 className="text-2xl font-bold text-brand-navy">Ready to book {service.name}?</h2>
           <p className="max-w-md text-sm text-muted-foreground">
-            Starting from {formatCurrency(service.basePrice)} — get an instant quote and schedule in minutes.
+            Starting from {formatCurrency(service.basePrice)} — request an estimate and we&apos;ll confirm scope with your team.
           </p>
           <Button asChild size="lg">
             <Link href="/contact?intent=estimate">

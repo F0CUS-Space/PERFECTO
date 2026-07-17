@@ -4,6 +4,7 @@ import { env } from "@/env";
 import { getStripe } from "@/lib/stripe";
 import { prisma } from "@/lib/prisma";
 import type { Booking, Invoice, Payment, Prisma } from "@prisma/client";
+import { Prisma as PrismaNamespace } from "@prisma/client";
 
 import { netCapturedFromPayments } from "@/features/payments/booking-amount-paid";
 import { generateInvoiceNumber } from "./invoice";
@@ -28,6 +29,12 @@ type BookingWithRelations = Booking & {
   invoice: Invoice | null;
 };
 
+function isUniqueViolation(error: unknown): boolean {
+  return (
+    error instanceof PrismaNamespace.PrismaClientKnownRequestError && error.code === "P2002"
+  );
+}
+
 async function recordSettledCapture(
   tx: Prisma.TransactionClient,
   booking: BookingWithRelations,
@@ -40,11 +47,32 @@ async function recordSettledCapture(
   // webhook) so refunds work even when confirmation happened via the redirect reconcile.
   const paymentIntentId = capture.providerPaymentIntentId;
 
+  // Dedupe by PaymentIntent so a session-based capture and a PI-based orphan recovery
+  // never double-count the same Stripe charge.
+  if (paymentIntentId) {
+    const byIntent = await tx.payment.findFirst({
+      where: {
+        provider: "stripe",
+        providerPaymentIntentId: paymentIntentId,
+        status: "SUCCEEDED",
+      },
+    });
+    if (byIntent) {
+      return byIntent.amount;
+    }
+  }
+
   const existing = await tx.payment.findFirst({
     where: { provider: "stripe", providerPaymentId: capture.providerPaymentId },
   });
 
   if (existing?.status === "SUCCEEDED") {
+    if (paymentIntentId && !existing.providerPaymentIntentId) {
+      await tx.payment.update({
+        where: { id: existing.id },
+        data: { providerPaymentIntentId: paymentIntentId },
+      });
+    }
     return existing.amount;
   }
 
@@ -71,41 +99,91 @@ async function recordSettledCapture(
       linked.status !== "SUCCEEDED" &&
       (!linked.providerPaymentId || linked.providerPaymentId === capture.providerPaymentId)
     ) {
-      await tx.payment.update({
-        where: { id: metadataPaymentId },
-        data: {
-          status: "SUCCEEDED",
-          providerPaymentId: capture.providerPaymentId,
-          providerPaymentIntentId: linked.providerPaymentIntentId ?? paymentIntentId,
-          amount,
-        },
-      });
-      return amount;
+      try {
+        await tx.payment.update({
+          where: { id: metadataPaymentId },
+          data: {
+            status: "SUCCEEDED",
+            providerPaymentId: capture.providerPaymentId,
+            providerPaymentIntentId: linked.providerPaymentIntentId ?? paymentIntentId,
+            amount,
+          },
+        });
+        return amount;
+      } catch (error) {
+        // Another row may already own this providerPaymentId — fall through to upsert.
+        if (!isUniqueViolation(error)) throw error;
+      }
     }
   }
 
   // Backstop for missed webhooks / duplicate captures. The @@unique([provider, providerPaymentId])
   // makes this idempotent even under concurrent reconciles (upsert instead of create).
   // V1.0 collects the full amount at booking, so every captured session is a DEPOSIT-type payment.
-  await tx.payment.upsert({
-    where: {
-      provider_providerPaymentId: {
-        provider: "stripe",
-        providerPaymentId: capture.providerPaymentId,
+  try {
+    await tx.payment.upsert({
+      where: {
+        provider_providerPaymentId: {
+          provider: "stripe",
+          providerPaymentId: capture.providerPaymentId,
+        },
       },
-    },
-    create: {
-      bookingId: booking.id,
-      type: "DEPOSIT",
-      amount,
-      status: "SUCCEEDED",
-      providerPaymentId: capture.providerPaymentId,
-      providerPaymentIntentId: paymentIntentId,
-    },
-    update: { status: "SUCCEEDED", amount },
-  });
+      create: {
+        bookingId: booking.id,
+        type: "DEPOSIT",
+        amount,
+        status: "SUCCEEDED",
+        providerPaymentId: capture.providerPaymentId,
+        providerPaymentIntentId: paymentIntentId,
+      },
+      update: {
+        status: "SUCCEEDED",
+        amount,
+        providerPaymentIntentId: paymentIntentId ?? undefined,
+      },
+    });
+  } catch (error) {
+    if (!isUniqueViolation(error)) throw error;
+    // Lost a race — the winning writer already stored the capture.
+  }
 
   return amount;
+}
+
+async function ensureBookingInvoice(bookingId: string, amountPaid: number, amountDue: number) {
+  const existing = await prisma.invoice.findUnique({ where: { bookingId } });
+  if (existing) {
+    if (existing.amountPaid !== amountPaid) {
+      await prisma.invoice.update({
+        where: { id: existing.id },
+        data: { amountPaid },
+      });
+    }
+    return;
+  }
+
+  try {
+    const invoiceNumber = await prisma.$transaction((tx) => generateInvoiceNumber(tx));
+    await prisma.invoice.create({
+      data: {
+        bookingId,
+        number: invoiceNumber,
+        amountDue,
+        amountPaid,
+      },
+    });
+  } catch (error) {
+    if (isUniqueViolation(error)) {
+      // Concurrent confirm created the invoice — just sync amountPaid.
+      await prisma.invoice.updateMany({
+        where: { bookingId },
+        data: { amountPaid },
+      });
+      return;
+    }
+    // Invoice must never block payment confirmation.
+    console.error("[reconcile] invoice ensure failed", bookingId, error);
+  }
 }
 
 export type ReconcileBookingPaymentsOptions = {
@@ -139,7 +217,9 @@ export async function reconcileBookingPayments(
   const found = await getPaymentReconciler().findSettledCaptures(bookingId);
   const byId = new Map<string, SettledCapture>();
   for (const capture of found) {
-    byId.set(capture.providerPaymentId, capture);
+    if (capture.amountCents > 0) {
+      byId.set(capture.providerPaymentId, capture);
+    }
   }
   for (const capture of options.knownCaptures ?? []) {
     if (capture.amountCents > 0) {
@@ -150,6 +230,8 @@ export async function reconcileBookingPayments(
 
   let didConfirm = false;
 
+  // Critical path: record captures + confirm booking. Invoice is best-effort
+  // afterwards so a counter/unique race can never roll back a paid confirmation.
   await prisma.$transaction(async (tx) => {
     for (const capture of captures) {
       await recordSettledCapture(tx, booking, capture);
@@ -171,23 +253,6 @@ export async function reconcileBookingPayments(
       if (didConfirm) {
         // Durable side-effect intent, committed atomically with the status change.
         await enqueueOutboxEvent(tx, OUTBOX_EVENT.BOOKING_CONFIRMED, { bookingId });
-      }
-
-      if (booking.invoice) {
-        await tx.invoice.update({
-          where: { id: booking.invoice.id },
-          data: { amountPaid },
-        });
-      } else {
-        const invoiceNumber = await generateInvoiceNumber(tx);
-        await tx.invoice.create({
-          data: {
-            bookingId,
-            number: invoiceNumber,
-            amountDue: booking.totalAmount,
-            amountPaid,
-          },
-        });
       }
     }
   });
@@ -212,6 +277,11 @@ export async function reconcileBookingPayments(
     );
   }
 
+  const depositSatisfied = amountPaid >= refreshed.depositAmount;
+  if (depositSatisfied) {
+    await ensureBookingInvoice(bookingId, amountPaid, refreshed.totalAmount);
+  }
+
   const newlyConfirmed = didConfirm;
 
   if (newlyConfirmed) {
@@ -225,7 +295,7 @@ export async function reconcileBookingPayments(
   return {
     amountPaid,
     amountDue: refreshed.totalAmount,
-    depositSatisfied: amountPaid >= refreshed.depositAmount,
+    depositSatisfied,
     fullyPaid: amountPaid >= refreshed.totalAmount,
     bookingConfirmed: refreshed.status === "CONFIRMED",
     newlyConfirmed,
@@ -247,7 +317,9 @@ export async function getOpenDepositCheckoutUrl(paymentId: string): Promise<stri
       return session.url;
     }
 
-    if (session.status === "expired") {
+    // Expired unpaid sessions can be unlinked so a fresh checkout can reuse the row.
+    // Paid/complete sessions keep providerPaymentId so findSettledCaptures can apply them.
+    if (session.status === "expired" && session.payment_status !== "paid") {
       await prisma.payment.update({
         where: { id: paymentId },
         data: { providerPaymentId: null },
@@ -282,6 +354,58 @@ export async function getOpenDepositCheckoutUrlForBooking(
   }
 
   return null;
+}
+
+/**
+ * Inspects locally linked Checkout Sessions and returns settled captures for any
+ * that are already paid. Used by createDepositCheckout before minting a new session.
+ */
+export async function findPaidCapturesFromLinkedSessions(
+  bookingId: string,
+): Promise<SettledCapture[]> {
+  if (!env.STRIPE_SECRET_KEY?.trim()) return [];
+
+  const payments = await prisma.payment.findMany({
+    where: { bookingId, providerPaymentId: { not: null } },
+    select: { providerPaymentId: true },
+  });
+
+  const stripe = getStripe();
+  const captures: SettledCapture[] = [];
+
+  for (const payment of payments) {
+    const id = payment.providerPaymentId;
+    if (!id?.startsWith("cs_")) continue;
+    try {
+      const session = await stripe.checkout.sessions.retrieve(id, {
+        expand: ["payment_intent"],
+      });
+      if (session.payment_status !== "paid") continue;
+      if (session.metadata?.bookingId && session.metadata.bookingId !== bookingId) continue;
+
+      const paymentIntent = session.payment_intent;
+      const intentAmount =
+        typeof paymentIntent === "object" && paymentIntent
+          ? Number(paymentIntent.amount_received || paymentIntent.amount) || 0
+          : 0;
+      const amountCents = session.amount_total && session.amount_total > 0
+        ? session.amount_total
+        : intentAmount;
+      if (amountCents <= 0) continue;
+
+      captures.push({
+        providerPaymentId: session.id,
+        providerPaymentIntentId:
+          typeof paymentIntent === "string" ? paymentIntent : (paymentIntent?.id ?? null),
+        amountCents,
+        metadataPaymentId: session.metadata?.paymentId ?? null,
+      });
+    } catch {
+      // Session may be invalid — ignore.
+    }
+  }
+
+  return captures;
 }
 
 /**

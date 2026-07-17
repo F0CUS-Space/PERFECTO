@@ -37,6 +37,7 @@ export class StripePaymentService implements PaymentService {
           },
         ],
         customer_email: input.customerEmail ?? undefined,
+        client_reference_id: input.bookingId,
         success_url: input.successUrl,
         cancel_url: input.cancelUrl,
         metadata: {

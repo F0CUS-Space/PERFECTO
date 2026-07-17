@@ -75,7 +75,7 @@ export function JobCreateForm() {
           id="new-job-slug"
           value={slug}
           onChange={(e) => setSlug(e.target.value)}
-          placeholder="residential-cleaning-professional"
+          placeholder="cleaning-professional"
         />
       </div>
       <div className="grid gap-4 sm:grid-cols-2">

@@ -20,7 +20,10 @@ import {
 import { requireAdmin } from "@/server/rbac";
 import { logAdminAction } from "@/features/admin/audit-log";
 import { refundBookingPayment } from "@/features/payments/services/refunds";
-import { voidPendingCheckoutAttempts } from "@/features/payments/services/reconcile-payments";
+import {
+  reconcileBookingPayments,
+  voidPendingCheckoutAttempts,
+} from "@/features/payments/services/reconcile-payments";
 import {
   notifyCustomersPromotion,
   notifyCustomersServiceUpdate,
@@ -28,6 +31,8 @@ import {
 import { slugifyServiceName } from "@/features/admin/service-slug";
 import { EMPLOYMENT_TYPES, JOB_LOCATIONS } from "@/features/recruitment/job-options";
 import { isAllowedMediaRef } from "@/lib/media-ref";
+import { deleteObject } from "@/lib/s3";
+import { isS3Configured } from "@/lib/s3-ready";
 
 const bookingStatusSchema = z.enum([
   "PENDING_PAYMENT",
@@ -396,6 +401,60 @@ export async function voidCheckoutAttempts(bookingId: string): Promise<AdminActi
   revalidateAuditLogPath();
 
   return { ok: true };
+}
+
+/**
+ * Manual Stripe reconcile for orphaned paid Checkout Sessions / missed webhooks.
+ * Safe to run repeatedly; uses linked sessions + PaymentIntent metadata search.
+ */
+export async function reconcileBookingPayment(bookingId: string): Promise<AdminActionResult> {
+  const admin = await requireAdmin();
+
+  if (!bookingId) {
+    return { ok: false, error: "Missing booking id." };
+  }
+
+  const booking = await prisma.booking.findUnique({ where: { id: bookingId } });
+  if (!booking) {
+    return { ok: false, error: "Booking not found." };
+  }
+
+  let result;
+  try {
+    result = await reconcileBookingPayments(bookingId);
+  } catch (error) {
+    console.error("[reconcileBookingPayment]", bookingId, error);
+    return { ok: false, error: "Could not reconcile payment. Please try again." };
+  }
+
+  revalidatePath("/admin/bookings");
+  revalidatePath(`/admin/bookings/${bookingId}`);
+  revalidatePath(`/book/confirmation/${bookingId}`);
+
+  if (result.newlyConfirmed) {
+    await logAdminAction({
+      actorId: admin.id,
+      action: "BOOKING_STATUS_UPDATE",
+      entityType: "booking",
+      entityId: bookingId,
+      summary: "Reconciled Stripe payment and confirmed booking",
+      metadata: {
+        amountPaid: result.amountPaid,
+        depositSatisfied: result.depositSatisfied,
+        newlyConfirmed: true,
+      },
+    });
+    revalidateAuditLogPath();
+  }
+
+  if (result.depositSatisfied || result.bookingConfirmed) {
+    return { ok: true };
+  }
+
+  return {
+    ok: false,
+    error: "No paid Stripe capture found for this booking yet.",
+  };
 }
 
 export async function updateService(
@@ -930,39 +989,55 @@ export async function deleteJobPosting(jobId: string): Promise<AdminActionResult
     return { ok: false, error: "Job not found." };
   }
 
-  const applicationCount = await prisma.jobApplication.count({
+  // Applications are linked by position title (no FK cascade). Keep rows; remove resume files only.
+  const applications = await prisma.jobApplication.findMany({
     where: { position: job.title },
+    select: { id: true, resumeS3Key: true },
   });
 
-  if (applicationCount > 0) {
-    await prisma.jobPosting.update({
-      where: { id: jobId },
-      data: { isActive: false },
-    });
-    revalidateJobPaths(jobId);
-    await logAdminAction({
-      actorId: admin.id,
-      action: "JOB_DELETE",
-      entityType: "job",
-      entityId: jobId,
-      summary: `Deactivated job posting "${job.title}" (has applications)`,
-      metadata: { deactivated: true },
-    });
-    revalidateAuditLogPath();
-    return { ok: true, deactivated: true };
+  let resumesDeleted = 0;
+  for (const app of applications) {
+    const key = app.resumeS3Key?.trim();
+    if (!key) continue;
+    if (isS3Configured()) {
+      try {
+        await deleteObject(key);
+        resumesDeleted += 1;
+      } catch (error) {
+        console.error("[deleteJobPosting] resume S3 delete failed", app.id, error);
+      }
+    }
   }
 
-  await prisma.jobPosting.delete({ where: { id: jobId } });
-  revalidateJobPaths();
+  if (applications.length > 0) {
+    await prisma.jobApplication.updateMany({
+      where: { position: job.title },
+      data: { resumeS3Key: null, resumeUrl: null },
+    });
+  }
+
+  // Soft-deactivate the posting so application history (and position name) survive.
+  await prisma.jobPosting.update({
+    where: { id: jobId },
+    data: { isActive: false },
+  });
+
+  revalidateJobPaths(jobId);
+  revalidatePath("/admin/applications");
   await logAdminAction({
     actorId: admin.id,
     action: "JOB_DELETE",
     entityType: "job",
     entityId: jobId,
-    summary: `Deleted job posting "${job.title}"`,
+    summary: `Deactivated job posting "${job.title}" (cleared ${resumesDeleted} resume file(s); kept ${applications.length} application record(s))`,
+    metadata: {
+      deactivated: true,
+      applicationsKept: applications.length,
+      resumesDeleted,
+    },
   });
   revalidateAuditLogPath();
-  return { ok: true };
+  return { ok: true, deactivated: true };
 }
 
 const promoteAdminSchema = z.object({

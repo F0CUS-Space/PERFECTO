@@ -3,15 +3,24 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
-const POLL_INTERVAL_MS = 3000;
-const MAX_POLLS = 13; // ~40s before we stop and show a manual fallback.
+import { syncCheckoutSession } from "../actions";
+
+const POLL_INTERVAL_MS = 2500;
+const MAX_POLLS = 16; // ~40s before we stop and show a manual fallback.
 
 /**
- * Polls for webhook/sync completion after Stripe redirect. Bounded: after
- * MAX_POLLS it stops and surfaces a manual refresh / contact fallback instead of
- * spinning forever when a webhook is delayed or dropped.
+ * After Stripe redirect, actively reconciles via session_id (not just refresh).
+ * Bounded: after MAX_POLLS it stops and surfaces a manual refresh / contact fallback.
  */
-export function DepositConfirmationSync({ active }: { active: boolean }) {
+export function DepositConfirmationSync({
+  active,
+  bookingId,
+  sessionId,
+}: {
+  active: boolean;
+  bookingId: string;
+  sessionId?: string | null;
+}) {
   const router = useRouter();
   const [gaveUp, setGaveUp] = useState(false);
 
@@ -20,19 +29,41 @@ export function DepositConfirmationSync({ active }: { active: boolean }) {
 
     setGaveUp(false);
     let polls = 0;
+    let cancelled = false;
 
-    const interval = window.setInterval(() => {
+    const tick = async () => {
+      if (cancelled) return;
       polls += 1;
+
+      const result = await syncCheckoutSession({
+        bookingId,
+        sessionId,
+      }).catch(() => null);
+
+      if (cancelled) return;
+
+      if (result?.ok && (result.depositSatisfied || result.bookingConfirmed)) {
+        router.refresh();
+        return;
+      }
+
       if (polls >= MAX_POLLS) {
-        window.clearInterval(interval);
         setGaveUp(true);
         return;
       }
-      router.refresh();
-    }, POLL_INTERVAL_MS);
 
-    return () => window.clearInterval(interval);
-  }, [active, router]);
+      router.refresh();
+      window.setTimeout(() => {
+        void tick();
+      }, POLL_INTERVAL_MS);
+    };
+
+    void tick();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [active, bookingId, sessionId, router]);
 
   if (!active || !gaveUp) return null;
 
@@ -48,7 +79,9 @@ export function DepositConfirmationSync({ active }: { active: boolean }) {
         type="button"
         onClick={() => {
           setGaveUp(false);
-          router.refresh();
+          void syncCheckoutSession({ bookingId, sessionId }).finally(() => {
+            router.refresh();
+          });
         }}
         className="mt-2 font-semibold text-amber-900 underline underline-offset-4"
       >

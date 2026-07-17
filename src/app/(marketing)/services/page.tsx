@@ -13,7 +13,7 @@ import { getActiveServices } from "@/features/services-catalog/queries";
 export const metadata: Metadata = {
   title: "Services",
   description:
-    "Explore Perfecto's premium residential and commercial cleaning services — residential, deep, move in/out, office, and recurring cleaning.",
+    "Explore Perfecto's commercial and facility cleaning — offices, schools, medical suites, government buildings, and hospitality venues.",
 };
 
 // Catalog is loaded at request time (marketing layout uses auth cookies).
@@ -33,11 +33,11 @@ export default async function ServicesPage() {
       <PageHero
         eyebrow={
           <>
-            <Sparkles className="h-3.5 w-3.5" /> Expert Home Care
+            <Sparkles className="h-3.5 w-3.5" /> Commercial & Facility Care
           </>
         }
-        title="Elevated standards for every space"
-        description="Experience the luxury of a pristine home with our specialized cleaning services, tailored to your lifestyle and delivered with meticulous care."
+        title="Elevated standards for every facility"
+        description="Nightly and weekly cleaning, disinfection, and periodic deep cleans for offices, schools, clinics, municipal buildings, and hospitality venues."
       />
 
       <Section>

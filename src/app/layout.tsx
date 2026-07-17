@@ -18,7 +18,7 @@ export const metadata: Metadata = {
     template: "%s | Perfecto Cleaning Services",
   },
   description:
-    "Premium residential and commercial cleaning. Get an instant quote, book online, and relax — clean spaces, perfect results.",
+    "Premium commercial and facility cleaning. Request an estimate, book online, and relax — clean spaces, perfect results.",
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"),
 };
 

@@ -3,7 +3,7 @@ export const siteConfig = {
   shortName: "Perfecto",
   tagline: "Clean spaces. Perfect results.",
   description:
-    "Premium residential and commercial cleaning, tailored to your lifestyle and delivered with meticulous care.",
+    "Premium commercial and facility cleaning for offices, schools, clinics, municipal buildings, and hospitality venues.",
   // Update these with the real business details before launch.
   contact: {
     phone: "+1 (555) 010-0000",

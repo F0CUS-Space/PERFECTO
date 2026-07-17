@@ -1,6 +1,5 @@
-// Rich marketing detail for each service, keyed by slug. The canonical name,
-// price, and short description come from the database (admin-managed); this map
-// supplies the longer-form content shown on individual service pages.
+// Accent gradients and local image fallbacks keyed by service slug.
+// Canonical name, price, description, includes, and idealFor come from the DB.
 
 export interface ServiceDetail {
   longDescription: string;
@@ -13,87 +12,87 @@ export interface ServiceDetail {
 }
 
 export const serviceDetails: Record<string, ServiceDetail> = {
-  "residential-cleaning": {
+  "government-municipal": {
     longDescription:
-      "Our signature residential service keeps your home consistently spotless. A dedicated, vetted professional handles every room with meticulous attention, so you can come home to a fresh, healthy space — every single time.",
+      "Reliable facility cleaning for city halls, courts, libraries, and public-safety buildings. We support after-hours schedules, high-traffic lobbies, and the appearance standards visitors and staff expect.",
     includes: [
-      "Dusting of all accessible surfaces",
-      "Vacuuming and mopping of all floors",
-      "Kitchen counters, sink, and exterior appliances",
-      "Bathroom sanitization (toilet, shower, sink, mirrors)",
-      "Trash removal and tidy-up",
-    ],
-    idealFor: ["Busy households", "Weekly or biweekly upkeep", "Allergy-conscious homes"],
-    accent: "from-brand-blue/15 to-brand-green/15",
-    image: "/images/service-residential.png",
-  },
-  "deep-cleaning": {
-    longDescription:
-      "An exhaustive, top-to-bottom restoration of your home. We reach the places routine cleaning misses — baseboards, grout, behind appliances, and inside fixtures — leaving every corner immaculate.",
-    includes: [
-      "Everything in a standard clean",
-      "Baseboards, door frames, and vents",
-      "Inside appliance and cabinet detailing (on request)",
-      "Grout and tile scrubbing",
-      "Detailed bathroom and kitchen degreasing",
-    ],
-    idealFor: ["First-time cleans", "Seasonal refreshes", "Pre-event preparation"],
-    accent: "from-brand-navy/15 to-brand-blue/15",
-    image: "/images/service-deep.png",
-  },
-  "move-in-out": {
-    longDescription:
-      "Moving is stressful enough. Our move in/out service delivers a comprehensive clean of an empty property so you can hand over the keys — or settle in — with total confidence.",
-    includes: [
-      "Full deep clean of every room",
-      "Inside all cabinets and closets",
-      "Inside oven, fridge, and appliances",
-      "Window sills and tracks",
-      "Wall spot-cleaning and fixtures",
-    ],
-    idealFor: ["Tenants and landlords", "New homeowners", "Realtors and property managers"],
-    accent: "from-brand-green/15 to-brand-mint/20",
-    image: "/images/service-move.png",
-  },
-  "office-cleaning": {
-    longDescription:
-      "A pristine workspace boosts focus, health, and first impressions. We tailor a cleaning plan to your office's schedule and footprint, keeping your team productive and your space presentable.",
-    includes: [
-      "Workstations and common areas",
+      "Nightly or weekly cleaning of lobbies, offices, and common areas",
       "Restroom sanitization and restocking",
-      "Kitchen and break room cleaning",
-      "Floor care across the office",
-      "Trash and recycling removal",
+      "Floor care for high-traffic corridors",
+      "Disinfection of high-touch surfaces",
+      "Periodic deep cleaning of public spaces",
     ],
-    idealFor: ["Small and mid-size offices", "Co-working spaces", "Retail and clinics"],
-    accent: "from-brand-blue/15 to-brand-navy/15",
-    image: "/images/service-office.png",
+    idealFor: ["City halls and municipal offices", "Courts and libraries", "Police and fire stations"],
+    accent: "from-brand-navy/15 to-brand-blue/15",
+    image: "/images/services/government-municipal.png",
   },
-  "recurring-cleaning": {
+  "schools-daycares": {
     longDescription:
-      "Set it and forget it. Our recurring plans keep your space consistently clean on a schedule that suits you, with the same trusted professional whenever possible and priority booking.",
+      "Campus and childcare cleaning built around student and staff safety. From classrooms to cafeterias and play areas, we keep learning environments fresh with scheduled cleaning, disinfection, and periodic deep cleans.",
     includes: [
-      "Customizable weekly, biweekly, or monthly visits",
-      "Consistent, vetted professional",
-      "Priority scheduling",
-      "Flexible add-ons each visit",
-      "Satisfaction guarantee",
+      "Classroom, hallway, and common-area cleaning",
+      "Restroom sanitization sized for school traffic",
+      "Cafeteria and break-area surface care",
+      "Disinfection of high-touch fixtures and furniture",
+      "Scheduled deep cleans between terms or peak seasons",
     ],
-    idealFor: ["Long-term upkeep", "Families and professionals", "Best value per visit"],
-    accent: "from-brand-mint/20 to-brand-green/15",
-    image: "/images/service-recurring.png",
+    idealFor: ["Public and private K–12 schools", "Montessori programs", "Childcare and daycare centers"],
+    accent: "from-brand-green/15 to-brand-mint/20",
+    image: "/images/services/schools-daycares.png",
+  },
+  "offices": {
+    longDescription:
+      "Professional office and co-working cleaning that keeps workspaces presentable for clients and healthier for teams. Nightly or weekly programs with disinfection and optional deep cleans on a cadence that fits your building.",
+    includes: [
+      "Workstations, meeting rooms, and common areas",
+      "Kitchen and break-room cleaning",
+      "Restroom sanitization and restocking",
+      "Trash and recycling removal",
+      "Disinfection of high-touch surfaces",
+    ],
+    idealFor: ["Professional offices", "Admin buildings", "Co-working spaces"],
+    accent: "from-brand-blue/15 to-brand-navy/15",
+    image: "/images/services/offices.png",
+  },
+  "medical-dental": {
+    longDescription:
+      "Cleaning for small medical and dental practices and outpatient clinics where presentation and hygiene matter. We focus on waiting rooms, treatment-adjacent areas, and high-touch surfaces with disinfection-forward routines.",
+    includes: [
+      "Waiting room and reception cleaning",
+      "Restroom sanitization",
+      "Disinfection of high-touch surfaces",
+      "Floor care suited to clinical foot traffic",
+      "Periodic deep cleaning between peak days",
+    ],
+    idealFor: ["Dental and medical offices", "Outpatient clinics", "Specialty practices"],
+    accent: "from-brand-mint/20 to-brand-blue/15",
+    image: "/images/services/medical-dental.png",
+  },
+  "restaurants-nightlife": {
+    longDescription:
+      "After-hours cleaning for restaurants, cafes, and nightclubs — kitchens-adjacent fronts of house, dining rooms, bars, and guest restrooms. Nightly resets, disinfection, and periodic deep cleans keep venues guest-ready.",
+    includes: [
+      "Dining room, bar, and lounge cleaning",
+      "Restroom sanitization after peak service",
+      "Floor care for high-traffic guest areas",
+      "Disinfection of high-touch surfaces",
+      "Periodic deep cleaning between busy seasons",
+    ],
+    idealFor: ["Restaurants and cafes", "Bars and nightclubs", "Hospitality venues"],
+    accent: "from-brand-green/15 to-brand-navy/15",
+    image: "/images/services/restaurants-nightlife.png",
   },
 };
 
 export const defaultServiceDetail: ServiceDetail = {
   longDescription:
-    "A professional cleaning service delivered with meticulous care by our vetted team. Get an instant quote to see transparent pricing tailored to your space.",
+    "Professional commercial and facility cleaning delivered with meticulous care by our vetted team. Request an estimate for transparent pricing tailored to your building.",
   includes: [
     "Vetted, trained professionals",
-    "Premium, eco-friendly supplies",
-    "100% satisfaction guarantee",
+    "Nightly or weekly cleaning programs",
+    "Disinfection and periodic deep cleaning",
   ],
-  idealFor: ["Homes and workspaces"],
+  idealFor: ["Commercial and institutional facilities"],
   accent: "from-brand-blue/15 to-brand-green/15",
-  image: "/images/service-residential.png",
+  image: "/images/services/offices.png",
 };

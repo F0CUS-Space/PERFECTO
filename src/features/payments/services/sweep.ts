@@ -27,9 +27,11 @@ type SweepOptions = {
 };
 
 /**
- * Re-reconciles bookings that are still PENDING_PAYMENT despite having a linked
- * Stripe session — i.e. the confirming webhook was missed or dropped. This is the
- * durability backstop for {@link reconcileBookingPayments}; safe to run repeatedly.
+ * Re-reconciles bookings that are still PENDING_PAYMENT. Includes:
+ * - rows with a linked Stripe session (missed webhook), and
+ * - rows with any payment attempt (orphan recovery via PaymentIntent search).
+ *
+ * Safe to run repeatedly.
  */
 export async function sweepStuckPendingBookings(options: SweepOptions = {}): Promise<SweepResult> {
   const olderThanMinutes = options.olderThanMinutes ?? 10;
@@ -45,7 +47,11 @@ export async function sweepStuckPendingBookings(options: SweepOptions = {}): Pro
       status: "PENDING_PAYMENT",
       createdAt: { gte: createdAfter },
       updatedAt: { lte: updatedBefore },
-      payments: { some: { providerPaymentId: { not: null } } },
+      OR: [
+        { payments: { some: { providerPaymentId: { not: null } } } },
+        // Orphan path: attempt rows exist but session link was lost — PI search can still recover.
+        { payments: { some: { type: "DEPOSIT" } } },
+      ],
     },
     select: { id: true },
     orderBy: { createdAt: "asc" },

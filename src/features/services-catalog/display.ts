@@ -33,16 +33,12 @@ export async function resolveServiceImageUrl(
   imageUrl: string | null | undefined,
   slug: string,
 ): Promise<string> {
-  // Prefer brand asset that ships in the Docker image; seeded /images/* paths are often missing.
-  const staticFallback =
-    serviceDetails[slug]?.image && !serviceDetails[slug]!.image.startsWith("/images/")
-      ? serviceDetails[slug]!.image
-      : "/brand/perfecto-icon.png";
+  const staticFallback = serviceDetails[slug]?.image ?? defaultServiceDetail.image;
   const value = imageUrl?.trim();
   if (!value) return staticFallback;
-  // Seeded marketing paths under /images/ were never added to /public — avoid broken next/image.
-  if (value.startsWith("/images/")) return staticFallback;
-  if (value.startsWith("http") || value.startsWith("/")) return value;
+  // Local public assets (seeded catalog paths under /images/services/...).
+  if (value.startsWith("/")) return value;
+  if (value.startsWith("http")) return value;
   if (isS3Configured()) {
     try {
       return await getViewUrl(value, 86400);

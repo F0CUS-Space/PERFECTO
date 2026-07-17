@@ -27,7 +27,7 @@ import { testimonials as fallbackTestimonials } from "@/content/testimonials";
 
 
 const steps = [
-  { icon: ClipboardList, title: "Choose your service", body: "Tell us about your space for an instant, transparent price." },
+  { icon: ClipboardList, title: "Choose your service", body: "Tell us about your facility and request a transparent estimate." },
   { icon: CalendarCheck, title: "Book a time", body: "Pick a date and preferred arrival time." },
   { icon: CreditCard, title: "Pay in full", body: "Secure your booking with a simple, safe checkout." },
   { icon: Sparkles, title: "Relax", body: "Our vetted pros arrive and deliver perfect results." },
@@ -51,10 +51,10 @@ export default async function HomePage() {
         brand={<HeroBrand />}
         eyebrow={
           <>
-            <Sparkles className="h-3.5 w-3.5" /> Premium Home & Office Care
+            <Sparkles className="h-3.5 w-3.5" /> Commercial & Facility Care
           </>
         }
-        description="Premium residential and commercial cleaning for homes and offices — tailored to your lifestyle and delivered with meticulous care. Request an estimate and we'll take it from there."
+        description="Premium commercial and facility cleaning for offices, schools, clinics, municipal buildings, and hospitality venues. Request an estimate and we'll take it from there."
         actions={
           <>
             <Button asChild size="lg">

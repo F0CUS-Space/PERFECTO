@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/card";
 import { BookingStatusForm } from "@/features/admin/components/booking-status-form";
 import { RefundPanel } from "@/features/admin/components/refund-panel";
+import { ReconcilePaymentButton } from "@/features/admin/components/reconcile-payment-button";
 import { VoidAttemptsButton } from "@/features/admin/components/void-attempts-button";
 import { getAdminBookingById } from "@/features/admin/queries";
 import { BookingStatusBadge } from "@/features/dashboard/components/booking-status-badge";
@@ -256,7 +257,7 @@ export default async function AdminBookingDetailPage({ params }: PageProps) {
             </Card>
           )}
 
-          {booking.payments.length > 0 && (
+          {(booking.payments.length > 0 || booking.status === "PENDING_PAYMENT") && (
             <Card>
               <CardHeader>
                 <CardTitle className="text-base">Payment attempts</CardTitle>
@@ -275,11 +276,17 @@ export default async function AdminBookingDetailPage({ params }: PageProps) {
                     </span>
                   </div>
                 ))}
-                {booking.payments.some((payment) => payment.status === "PENDING") && (
-                  <div className="pt-2">
-                    <VoidAttemptsButton bookingId={booking.id} />
-                  </div>
+                {booking.payments.length === 0 && (
+                  <p className="text-muted-foreground">No local payment rows yet.</p>
                 )}
+                <div className="space-y-3 pt-2">
+                  {booking.status === "PENDING_PAYMENT" && (
+                    <ReconcilePaymentButton bookingId={booking.id} />
+                  )}
+                  {booking.payments.some((payment) => payment.status === "PENDING") && (
+                    <VoidAttemptsButton bookingId={booking.id} />
+                  )}
+                </div>
               </CardContent>
             </Card>
           )}

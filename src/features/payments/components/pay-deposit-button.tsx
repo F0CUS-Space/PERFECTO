@@ -37,6 +37,9 @@ export function PayDepositButton({
         setError(result.error);
         setLoading(false);
         inFlight.current = false;
+        if (result.alreadyPaid) {
+          window.location.reload();
+        }
         return;
       }
 

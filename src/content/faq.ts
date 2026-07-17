@@ -5,9 +5,9 @@ export interface FaqItem {
 
 export const faqs: FaqItem[] = [
   {
-    question: "How do I get a price for my home?",
+    question: "How do I get a price for my facility?",
     answer:
-      "Use our instant quote calculator. Tell us your service type, the size of your home, bedrooms, bathrooms, pets, frequency, and any add-ons, and you'll see a transparent estimate immediately. Final pricing is confirmed after a quick review.",
+      "Request an estimate from our contact page. Tell us your facility type, approximate square footage, visit frequency, and any add-ons (window cleaning, carpet cleaning, disinfection, or a deep clean). Final pricing is confirmed after a quick review or walkthrough.",
   },
   {
     question: "Do I need to pay the full amount upfront?",
@@ -30,9 +30,9 @@ export const faqs: FaqItem[] = [
       "Yes. Our professionals arrive fully equipped with all the supplies and equipment needed to deliver a perfect clean. There's nothing you need to provide.",
   },
   {
-    question: "How do I provide access to my home?",
+    question: "How do I provide access to my building?",
     answer:
-      "During booking you can add access information — for example a door code, key location, or instructions to be home. Your details are stored securely and only shared with your assigned professional.",
+      "During booking you can add access information — for example a door code, key location, or after-hours entry instructions. Your details are stored securely and only shared with your assigned team.",
   },
   {
     question: "Can I reschedule or cancel my appointment?",

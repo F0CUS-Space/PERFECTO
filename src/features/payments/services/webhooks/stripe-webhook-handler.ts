@@ -78,7 +78,11 @@ export class StripeWebhookHandler implements ProviderWebhookHandler {
     switch (domainEvent) {
       case PAYMENT_EVENT.DEPOSIT_PAID: {
         const session = event.data.object as Stripe.Checkout.Session;
-        if (session.metadata?.type === "DEPOSIT") {
+        // Accept DEPOSIT (and legacy/missing type when bookingId is present) so a
+        // paid Checkout Session always confirms even if metadata was incomplete.
+        const type = session.metadata?.type;
+        const hasBooking = Boolean(session.metadata?.bookingId);
+        if (type === "DEPOSIT" || type === "BOOKING" || (!type && hasBooking)) {
           await confirmDepositFromCheckoutSession(session);
         }
         return;

@@ -19,21 +19,47 @@ function amountCentsFromSession(session: Stripe.Checkout.Session): number {
     return session.amount_total;
   }
   const intent = session.payment_intent;
-  if (typeof intent === "object" && intent && typeof intent.amount === "number") {
+  if (typeof intent === "object" && intent && typeof intent.amount_received === "number" && intent.amount_received > 0) {
+    return intent.amount_received;
+  }
+  if (typeof intent === "object" && intent && typeof intent.amount === "number" && intent.amount > 0) {
     return intent.amount;
   }
   return 0;
 }
 
-/** Builds a settled capture from a paid Checkout Session (webhook or redirect). */
+/**
+ * Builds a settled capture from a paid Checkout Session (webhook or redirect).
+ * Requires payment_status=paid. Accepts sessions with bookingId even when
+ * metadata.type is missing (older sessions / partial metadata) so redirect
+ * recovery cannot be blocked by a strict type check.
+ */
 export function settledCaptureFromCheckoutSession(
   session: Stripe.Checkout.Session,
+  options: { requireDepositType?: boolean } = {},
 ): SettledCapture | null {
   if (session.payment_status !== "paid") return null;
-  if (session.metadata?.type !== "DEPOSIT") return null;
+
+  const requireDepositType = options.requireDepositType ?? false;
+  if (requireDepositType && session.metadata?.type !== "DEPOSIT") return null;
+
+  // Prefer explicit deposit type, but allow booking-scoped paid sessions without it.
+  if (
+    session.metadata?.type &&
+    session.metadata.type !== "DEPOSIT" &&
+    session.metadata.type !== "BOOKING"
+  ) {
+    return null;
+  }
 
   const amountCents = amountCentsFromSession(session);
-  if (amountCents <= 0) return null;
+  if (amountCents <= 0) {
+    console.error(
+      "[confirm-deposit] paid session has no usable amount",
+      JSON.stringify({ sessionId: session.id, amountTotal: session.amount_total }),
+    );
+    return null;
+  }
 
   return {
     providerPaymentId: session.id,
@@ -54,7 +80,7 @@ export async function confirmDepositFromCheckoutSession(session: Stripe.Checkout
     throw new Error("Checkout session missing booking metadata.");
   }
 
-  if (session.metadata?.type !== "DEPOSIT") {
+  if (session.metadata?.type && session.metadata.type !== "DEPOSIT" && session.metadata.type !== "BOOKING") {
     return { skipped: true as const, reason: "not_deposit" };
   }
 
@@ -83,6 +109,13 @@ export async function confirmDepositFromCheckoutSession(session: Stripe.Checkout
   }
 
   const knownCapture = settledCaptureFromCheckoutSession(session);
+  if (!knownCapture) {
+    console.error(
+      "[confirm-deposit] paid session produced no capture",
+      JSON.stringify({ bookingId, sessionId: session.id, paymentStatus: session.payment_status }),
+    );
+  }
+
   const result = await reconcileBookingPayments(bookingId, {
     knownCaptures: knownCapture ? [knownCapture] : [],
   });
@@ -105,6 +138,11 @@ export async function confirmDepositFromCheckoutSession(session: Stripe.Checkout
 /**
  * Redirect-sync helper: load a Checkout Session by id and reconcile it onto the booking.
  * Used when Stripe returns `session_id` on the success URL.
+ *
+ * This path MUST work even when:
+ * - the local Payment row was never linked to the session
+ * - the webhook never arrived (missing STRIPE_WEBHOOK_SECRET / delivery failure)
+ * - metadata.type is absent on older sessions
  */
 export async function reconcileBookingFromCheckoutSessionId(
   bookingId: string,
@@ -116,20 +154,49 @@ export async function reconcileBookingFromCheckoutSessionId(
     expand: ["payment_intent"],
   });
 
-  if (session.metadata?.bookingId && session.metadata.bookingId !== bookingId) {
+  const sessionBookingId = session.metadata?.bookingId;
+  if (sessionBookingId && sessionBookingId !== bookingId) {
     console.error(
       "[confirm-deposit] redirect session/booking mismatch",
-      JSON.stringify({ bookingId, sessionId }),
+      JSON.stringify({ bookingId, sessionId, sessionBookingId }),
     );
     return false;
   }
 
+  // If metadata omitted bookingId (shouldn't happen), still apply the paid capture
+  // onto the booking from the success URL — the user reached this booking's page.
+  if (!sessionBookingId) {
+    console.warn(
+      "[confirm-deposit] redirect session missing bookingId metadata — applying to URL booking",
+      JSON.stringify({ bookingId, sessionId }),
+    );
+  }
+
+  if (session.payment_status !== "paid") {
+    console.warn(
+      "[confirm-deposit] redirect session not paid yet",
+      JSON.stringify({ bookingId, sessionId, paymentStatus: session.payment_status }),
+    );
+    // Still run provider reconcile in case a linked row already shows paid.
+    const fallback = await reconcileBookingPayments(bookingId);
+    return fallback.depositSatisfied;
+  }
+
   const knownCapture = settledCaptureFromCheckoutSession(session);
+  if (!knownCapture) {
+    console.error(
+      "[confirm-deposit] redirect could not build capture from paid session",
+      JSON.stringify({ bookingId, sessionId }),
+    );
+    const fallback = await reconcileBookingPayments(bookingId);
+    return fallback.depositSatisfied;
+  }
+
   const result = await reconcileBookingPayments(bookingId, {
-    knownCaptures: knownCapture ? [knownCapture] : [],
+    knownCaptures: [knownCapture],
   });
   await persistPaymentIntentId(session);
-  return result.depositSatisfied;
+  return result.depositSatisfied || result.bookingConfirmed;
 }
 
 /** @deprecated Use reconcileBookingPayments — kept for callers during redirect sync. */

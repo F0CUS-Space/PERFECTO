@@ -79,7 +79,7 @@ export function ServiceCreateForm() {
             id="new-slug"
             value={slug}
             onChange={(e) => setSlug(e.target.value)}
-            placeholder="residential-cleaning"
+            placeholder="offices"
           />
           <p className="text-xs text-muted-foreground">Lowercase letters, numbers, and hyphens only.</p>
         </div>
@@ -130,7 +130,7 @@ export function ServiceCreateForm() {
           label="What's included"
           value={includes}
           onChange={setIncludes}
-          placeholder="Dusting of all accessible surfaces"
+          placeholder="Nightly or weekly cleaning of common areas"
         />
         <StringListEditor
           id="new-ideal-for"
@@ -138,7 +138,7 @@ export function ServiceCreateForm() {
           value={idealFor}
           onChange={setIdealFor}
           maxItems={15}
-          placeholder="Busy households"
+          placeholder="Professional offices"
         />
         <ServiceImageUpload
           imageKey={imageUrl}
