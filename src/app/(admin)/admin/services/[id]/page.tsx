@@ -68,6 +68,7 @@ export default async function AdminServiceDetailPage({ params }: PageProps) {
             serviceId={service.id}
             serviceName={service.name}
             bookingCount={service.bookingCount}
+            isActive={service.isActive}
           />
         </div>
       </div>

@@ -10,20 +10,29 @@ export function ServiceDeleteButton({
   serviceId,
   serviceName,
   bookingCount,
+  isActive,
 }: {
   serviceId: string;
   serviceName: string;
   bookingCount: number;
+  isActive: boolean;
 }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
   const onDelete = () => {
-    const message =
-      bookingCount > 0
-        ? `"${serviceName}" has ${bookingCount} booking(s). It will be deactivated instead of deleted. Continue?`
-        : `Permanently delete "${serviceName}"? This cannot be undone.`;
+    let message: string;
+    if (!isActive) {
+      message =
+        bookingCount > 0
+          ? `Permanently delete inactive service "${serviceName}"? This will also remove ${bookingCount} booking(s) and related records (payments, photos, quotes, offers). This cannot be undone.`
+          : `Permanently delete inactive service "${serviceName}"? This cannot be undone.`;
+    } else if (bookingCount > 0) {
+      message = `"${serviceName}" has ${bookingCount} booking(s). It will be deactivated instead of deleted. Continue?`;
+    } else {
+      message = `Permanently delete "${serviceName}"? This cannot be undone.`;
+    }
 
     if (!window.confirm(message)) return;
 
@@ -39,11 +48,24 @@ export function ServiceDeleteButton({
     });
   };
 
+  const label = pending
+    ? "Removing…"
+    : !isActive
+      ? "Delete permanently"
+      : bookingCount > 0
+        ? "Deactivate service"
+        : "Delete service";
+
   return (
     <div className="space-y-2">
       <Button type="button" variant="outline" onClick={onDelete} disabled={pending}>
-        {pending ? "Removing…" : bookingCount > 0 ? "Deactivate service" : "Delete service"}
+        {label}
       </Button>
+      {!isActive && (
+        <p className="text-sm text-muted-foreground">
+          Inactive services can be removed permanently, including any bookings under this service.
+        </p>
+      )}
       {error && <p className="text-sm text-destructive">{error}</p>}
     </div>
   );

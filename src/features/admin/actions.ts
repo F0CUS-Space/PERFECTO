@@ -588,16 +588,28 @@ export async function deleteService(serviceId: string): Promise<AdminActionResul
 
   const service = await prisma.service.findUnique({
     where: { id: serviceId },
-    include: { _count: { select: { bookings: true, quotes: true } } },
+    include: {
+      _count: { select: { bookings: true, quotes: true, bookingOffers: true } },
+      bookings: {
+        select: {
+          id: true,
+          photos: { select: { s3Key: true } },
+        },
+      },
+    },
   });
 
   if (!service) {
     return { ok: false, error: "Service not found." };
   }
 
-  const hasHistory = service._count.bookings > 0 || service._count.quotes > 0;
+  const hasHistory =
+    service._count.bookings > 0 ||
+    service._count.quotes > 0 ||
+    service._count.bookingOffers > 0;
 
-  if (hasHistory) {
+  // Active services with history stay soft-deactivated so live catalog ops remain safe.
+  if (service.isActive && hasHistory) {
     await prisma.service.update({
       where: { id: serviceId },
       data: { isActive: false, isPopular: false },
@@ -615,8 +627,26 @@ export async function deleteService(serviceId: string): Promise<AdminActionResul
     return { ok: true, deactivated: true };
   }
 
-  await prisma.service.delete({ where: { id: serviceId } });
+  // Inactive (legacy) services — or active services with no dependents — can be hard-deleted.
+  // Explicit order: offers → bookings (cascades photos/payments/invoice/agreement/review) → quotes → service
+  // (AddOnOnService / PromotionOnService cascade from Service).
+  const bookingIds = service.bookings.map((b) => b.id);
+  const photoKeys = service.bookings.flatMap((b) => b.photos.map((p) => p.s3Key));
+
+  await prisma.$transaction(async (tx) => {
+    await tx.bookingOffer.deleteMany({
+      where: {
+        OR: [{ serviceId }, ...(bookingIds.length > 0 ? [{ bookingId: { in: bookingIds } }] : [])],
+      },
+    });
+    await tx.booking.deleteMany({ where: { serviceId } });
+    await tx.quote.deleteMany({ where: { serviceId } });
+    await tx.service.delete({ where: { id: serviceId } });
+  });
+
   await deleteOwnedObjectBestEffort(service.imageUrl, "deleteService");
+  await Promise.all(photoKeys.map((key) => deleteOwnedObjectBestEffort(key, "deleteService")));
+
   revalidateCatalogPaths();
   await logAdminAction({
     actorId: admin.id,
@@ -624,7 +654,12 @@ export async function deleteService(serviceId: string): Promise<AdminActionResul
     entityType: "service",
     entityId: serviceId,
     summary: `Deleted service "${service.name}"`,
-    metadata: { slug: service.slug },
+    metadata: {
+      slug: service.slug,
+      hardDeleted: true,
+      bookingsRemoved: service._count.bookings,
+      quotesRemoved: service._count.quotes,
+    },
   });
   revalidateAuditLogPath();
   return { ok: true };

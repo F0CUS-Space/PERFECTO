@@ -205,7 +205,8 @@ async function main() {
   }
   console.log(`Upserted ${services.length} commercial services.`);
 
-  // Deactivate legacy residential/office catalog (preserve rows for booking history).
+  // Soft-retire legacy residential/office catalog (hide from public; keep rows by default).
+  // Admins can permanently delete inactive services (and their bookings) from the admin UI when cleaning up.
   const deactivated = await prisma.service.updateMany({
     where: { slug: { in: [...LEGACY_SERVICE_SLUGS] } },
     data: { isActive: false, isPopular: false },
