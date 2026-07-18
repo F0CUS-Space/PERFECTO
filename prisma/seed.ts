@@ -1,6 +1,6 @@
 import { PrismaClient, Role } from "@prisma/client";
 
-import { serviceDetails } from "../src/content/services-detail";
+import { isAppOwnedS3Key } from "../src/lib/app-owned-s3-key";
 
 const prisma = new PrismaClient();
 
@@ -21,6 +21,15 @@ const LEGACY_ADDON_NAMES = [
   "Laundry & Folding",
   "Inside Cabinets",
 ] as const;
+
+/**
+ * Dynamic images: null until Admin upload; DB stores bare S3 keys only.
+ * Preserve Admin S3 keys; clear leftover /images/... (and any other non-key) refs.
+ */
+function seedImageField(current: string | null | undefined): string | null {
+  if (isAppOwnedS3Key(current)) return current!.trim();
+  return null;
+}
 
 async function main() {
   console.log("Seeding Perfecto database...");
@@ -50,6 +59,7 @@ async function main() {
   console.log(`Admin seeded: ${adminPhone} (dev login — OTP 123123)`);
 
   // --- Commercial / facility service catalog ---
+  // Dynamic images: null until Admin upload; DB stores bare S3 keys only.
   const services = [
     {
       slug: "government-municipal",
@@ -72,7 +82,6 @@ async function main() {
       isPopular: false,
       sortOrder: 1,
       isActive: true,
-      imageUrl: "/images/services/government-municipal.webp",
     },
     {
       slug: "schools-daycares",
@@ -95,7 +104,6 @@ async function main() {
       isPopular: false,
       sortOrder: 2,
       isActive: true,
-      imageUrl: "/images/services/schools-daycares.webp",
     },
     {
       slug: "offices",
@@ -119,7 +127,6 @@ async function main() {
       isPopular: true,
       sortOrder: 3,
       isActive: true,
-      imageUrl: "/images/services/offices.webp",
     },
     {
       slug: "medical-dental",
@@ -142,7 +149,6 @@ async function main() {
       isPopular: false,
       sortOrder: 4,
       isActive: true,
-      imageUrl: "/images/services/medical-dental.webp",
     },
     {
       slug: "restaurants-nightlife",
@@ -165,12 +171,14 @@ async function main() {
       isPopular: false,
       sortOrder: 5,
       isActive: true,
-      imageUrl: "/images/services/restaurants-nightlife.webp",
     },
   ];
 
   for (const service of services) {
-    const detail = serviceDetails[service.slug];
+    const existing = await prisma.service.findUnique({
+      where: { slug: service.slug },
+      select: { imageUrl: true },
+    });
     await prisma.service.upsert({
       where: { slug: service.slug },
       // Idempotent catalog refresh: keep seed content in sync for redeploys / EC2 db:seed.
@@ -185,7 +193,7 @@ async function main() {
         isPopular: service.isPopular,
         sortOrder: service.sortOrder,
         isActive: service.isActive,
-        imageUrl: service.imageUrl ?? detail?.image ?? null,
+        imageUrl: seedImageField(existing?.imageUrl),
       },
       create: {
         slug: service.slug,
@@ -199,7 +207,7 @@ async function main() {
         isPopular: service.isPopular,
         sortOrder: service.sortOrder,
         isActive: service.isActive,
-        imageUrl: service.imageUrl ?? detail?.image ?? null,
+        imageUrl: null,
       },
     });
   }
@@ -314,8 +322,8 @@ async function main() {
     `Seeded ${jobPostings.length} job posting(s); deactivated ${deactivatedJobs.count} legacy job(s).`,
   );
 
-  // Facility showcase cards — local public paths (same pattern as service covers).
-  // Admin can replace with S3 keys via gallery upload (gallery/<uuid>/<filename>).
+  // Gallery metadata only — image fields stay null until Admin upload (bare S3 keys).
+  // Marketing pages fall back to src/content/gallery.ts when DB refs are empty.
   // Legacy residential before/after assets are deactivated (files removed from public/).
   await prisma.galleryItem.updateMany({
     where: {
@@ -338,39 +346,52 @@ async function main() {
 
   const gallerySeed = [
     {
+      type: "BEFORE_AFTER" as const,
+      title: "Office Suite Reset",
+      category: "Offices",
+      sortOrder: 1,
+    },
+    {
+      type: "BEFORE_AFTER" as const,
+      title: "Clinic Waiting Room",
+      category: "Medical",
+      sortOrder: 2,
+    },
+    {
+      type: "BEFORE_AFTER" as const,
+      title: "Dining Room Ready",
+      category: "Hospitality",
+      sortOrder: 3,
+    },
+    {
       type: "CARD" as const,
       title: "Polished Office Suite",
       category: "Offices",
-      imageUrl: "/images/services/offices.webp",
-      sortOrder: 1,
+      sortOrder: 10,
     },
     {
       type: "CARD" as const,
       title: "School Corridor Ready",
       category: "Schools",
-      imageUrl: "/images/services/schools-daycares.webp",
-      sortOrder: 2,
+      sortOrder: 11,
     },
     {
       type: "CARD" as const,
       title: "Municipal Lobby Shine",
       category: "Government",
-      imageUrl: "/images/services/government-municipal.webp",
-      sortOrder: 3,
+      sortOrder: 12,
     },
     {
       type: "CARD" as const,
       title: "Clinic Waiting Room Reset",
       category: "Medical",
-      imageUrl: "/images/services/medical-dental.webp",
-      sortOrder: 4,
+      sortOrder: 13,
     },
     {
       type: "CARD" as const,
       title: "Guest-Ready Dining Room",
       category: "Hospitality",
-      imageUrl: "/images/services/restaurants-nightlife.webp",
-      sortOrder: 5,
+      sortOrder: 14,
     },
   ];
 
@@ -383,15 +404,23 @@ async function main() {
         where: { id: existing.id },
         data: {
           category: item.category,
-          imageUrl: item.imageUrl,
-          beforeUrl: null,
-          afterUrl: null,
+          imageUrl: seedImageField(existing.imageUrl),
+          beforeUrl: seedImageField(existing.beforeUrl),
+          afterUrl: seedImageField(existing.afterUrl),
           sortOrder: item.sortOrder,
           isActive: true,
         },
       });
     } else {
-      await prisma.galleryItem.create({ data: { ...item, isActive: true } });
+      await prisma.galleryItem.create({
+        data: {
+          ...item,
+          imageUrl: null,
+          beforeUrl: null,
+          afterUrl: null,
+          isActive: true,
+        },
+      });
     }
   }
   console.log(`Seeded ${gallerySeed.length} gallery items.`);

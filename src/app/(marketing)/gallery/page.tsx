@@ -19,9 +19,12 @@ export const metadata: Metadata = {
 
 export default async function GalleryPage() {
   const dbItems = await getActiveGalleryItems();
+  const dbBeforeAfter = dbItems.filter(
+    (item) => item.type === "BEFORE_AFTER" && item.beforeUrl && item.afterUrl,
+  );
   const beforeAfter =
-    dbItems.length > 0
-      ? dbItems.filter((item) => item.type === "BEFORE_AFTER" && item.beforeUrl && item.afterUrl)
+    dbBeforeAfter.length > 0
+      ? dbBeforeAfter
       : beforeAfterPairs.map((pair) => ({
           id: pair.title,
           title: pair.title,
@@ -29,9 +32,10 @@ export default async function GalleryPage() {
           beforeUrl: pair.before,
           afterUrl: pair.after,
         }));
+  const dbCards = dbItems.filter((item) => item.type === "CARD" && item.imageUrl);
   const cards =
-    dbItems.length > 0
-      ? dbItems.filter((item) => item.type === "CARD" && item.imageUrl)
+    dbCards.length > 0
+      ? dbCards
       : fallbackCards.map((item) => ({
           id: item.title,
           title: item.title,

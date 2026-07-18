@@ -11,8 +11,27 @@ export interface GalleryItem {
   image: string;
 }
 
-/** Static before/after fallbacks — empty until real facility pairs are uploaded via admin (S3). */
-export const beforeAfterPairs: BeforeAfterPair[] = [];
+/** Static before/after fallbacks when the DB has no BEFORE_AFTER rows. */
+export const beforeAfterPairs: BeforeAfterPair[] = [
+  {
+    title: "Office Suite Reset",
+    category: "Offices",
+    before: "/images/gallery/office-before.png",
+    after: "/images/gallery/office-after.png",
+  },
+  {
+    title: "Clinic Waiting Room",
+    category: "Medical",
+    before: "/images/gallery/medical-before.png",
+    after: "/images/gallery/medical-after.png",
+  },
+  {
+    title: "Dining Room Ready",
+    category: "Hospitality",
+    before: "/images/gallery/restaurant-before.png",
+    after: "/images/gallery/restaurant-after.png",
+  },
+];
 
 export const galleryItems: GalleryItem[] = [
   {
