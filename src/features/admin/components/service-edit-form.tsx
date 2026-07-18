@@ -64,7 +64,7 @@ export function ServiceEditForm({ service }: { service: AdminServiceRow | AdminS
         <div>
           <p className="font-semibold text-brand-navy">{service.slug}</p>
           <p className="text-xs text-muted-foreground">
-            Current base: {formatCurrency(service.basePrice)}
+            Estimate default: {formatCurrency(service.basePrice)}
           </p>
         </div>
         <label className="flex items-center gap-2 text-sm">
@@ -97,7 +97,7 @@ export function ServiceEditForm({ service }: { service: AdminServiceRow | AdminS
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor={`price-${service.id}`}>Base price (USD)</Label>
+          <Label htmlFor={`price-${service.id}`}>Estimate default (USD)</Label>
           <Input
             id={`price-${service.id}`}
             type="number"
@@ -106,6 +106,9 @@ export function ServiceEditForm({ service }: { service: AdminServiceRow | AdminS
             value={basePriceDollars}
             onChange={(e) => setBasePriceDollars(e.target.value)}
           />
+          <p className="text-xs text-muted-foreground">
+            Internal starting amount for staff estimates — not shown as a public price.
+          </p>
         </div>
         <div className="space-y-2">
           <Label htmlFor={`sort-${service.id}`}>Sort order</Label>

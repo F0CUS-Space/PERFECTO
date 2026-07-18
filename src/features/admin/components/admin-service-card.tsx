@@ -2,7 +2,6 @@ import Image from "next/image";
 import Link from "next/link";
 
 import { Badge } from "@/components/ui/badge";
-import { formatCurrency } from "@/lib/utils";
 
 import type { AdminServiceRow } from "../types";
 
@@ -36,10 +35,6 @@ export function AdminServiceCard({ service }: { service: AdminServiceRow }) {
         <h3 className="font-semibold text-brand-navy">{service.name}</h3>
         <p className="mt-1 line-clamp-2 flex-1 text-sm text-muted-foreground">
           {service.description}
-        </p>
-        <p className="mt-3 text-sm text-muted-foreground">
-          From{" "}
-          <span className="font-bold text-brand-navy">{formatCurrency(service.basePrice)}</span>
         </p>
       </div>
     </Link>

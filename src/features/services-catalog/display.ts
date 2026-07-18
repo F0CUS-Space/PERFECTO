@@ -28,6 +28,14 @@ export function getServicePageContent(service: Service): ServicePageContent {
   };
 }
 
+/** Prefer WebP catalog assets when DB still points at legacy PNG paths. */
+function normalizeLocalServiceImagePath(value: string): string {
+  if (value.startsWith("/images/services/") && value.endsWith(".png")) {
+    return value.replace(/\.png$/i, ".webp");
+  }
+  return value;
+}
+
 /** Resolve hero/card image — S3 key, local path, or static fallback by slug. */
 export async function resolveServiceImageUrl(
   imageUrl: string | null | undefined,
@@ -37,7 +45,7 @@ export async function resolveServiceImageUrl(
   const value = imageUrl?.trim();
   if (!value) return staticFallback;
   // Local public assets (seeded catalog paths under /images/services/...).
-  if (value.startsWith("/")) return value;
+  if (value.startsWith("/")) return normalizeLocalServiceImagePath(value);
   if (value.startsWith("http")) return value;
   if (isS3Configured()) {
     try {

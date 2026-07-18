@@ -72,7 +72,7 @@ async function main() {
       isPopular: false,
       sortOrder: 1,
       isActive: true,
-      imageUrl: "/images/services/government-municipal.png",
+      imageUrl: "/images/services/government-municipal.webp",
     },
     {
       slug: "schools-daycares",
@@ -95,7 +95,7 @@ async function main() {
       isPopular: false,
       sortOrder: 2,
       isActive: true,
-      imageUrl: "/images/services/schools-daycares.png",
+      imageUrl: "/images/services/schools-daycares.webp",
     },
     {
       slug: "offices",
@@ -119,7 +119,7 @@ async function main() {
       isPopular: true,
       sortOrder: 3,
       isActive: true,
-      imageUrl: "/images/services/offices.png",
+      imageUrl: "/images/services/offices.webp",
     },
     {
       slug: "medical-dental",
@@ -142,7 +142,7 @@ async function main() {
       isPopular: false,
       sortOrder: 4,
       isActive: true,
-      imageUrl: "/images/services/medical-dental.png",
+      imageUrl: "/images/services/medical-dental.webp",
     },
     {
       slug: "restaurants-nightlife",
@@ -165,7 +165,7 @@ async function main() {
       isPopular: false,
       sortOrder: 5,
       isActive: true,
-      imageUrl: "/images/services/restaurants-nightlife.png",
+      imageUrl: "/images/services/restaurants-nightlife.webp",
     },
   ];
 
@@ -341,35 +341,35 @@ async function main() {
       type: "CARD" as const,
       title: "Polished Office Suite",
       category: "Offices",
-      imageUrl: "/images/services/offices.png",
+      imageUrl: "/images/services/offices.webp",
       sortOrder: 1,
     },
     {
       type: "CARD" as const,
       title: "School Corridor Ready",
       category: "Schools",
-      imageUrl: "/images/services/schools-daycares.png",
+      imageUrl: "/images/services/schools-daycares.webp",
       sortOrder: 2,
     },
     {
       type: "CARD" as const,
       title: "Municipal Lobby Shine",
       category: "Government",
-      imageUrl: "/images/services/government-municipal.png",
+      imageUrl: "/images/services/government-municipal.webp",
       sortOrder: 3,
     },
     {
       type: "CARD" as const,
       title: "Clinic Waiting Room Reset",
       category: "Medical",
-      imageUrl: "/images/services/medical-dental.png",
+      imageUrl: "/images/services/medical-dental.webp",
       sortOrder: 4,
     },
     {
       type: "CARD" as const,
       title: "Guest-Ready Dining Room",
       category: "Hospitality",
-      imageUrl: "/images/services/restaurants-nightlife.png",
+      imageUrl: "/images/services/restaurants-nightlife.webp",
       sortOrder: 5,
     },
   ];

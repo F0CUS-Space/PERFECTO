@@ -422,8 +422,9 @@ async function mapServiceRow(service: {
 export async function getAdminServices(): Promise<AdminServiceRow[]> {
   if (!isDatabaseConfigured()) return [];
 
+  // Active catalog first; inactive legacy rows (e.g. residential) sink to the bottom.
   const services = await prisma.service.findMany({
-    orderBy: { sortOrder: "asc" },
+    orderBy: [{ isActive: "desc" }, { sortOrder: "asc" }],
   });
 
   return Promise.all(services.map(mapServiceRow));

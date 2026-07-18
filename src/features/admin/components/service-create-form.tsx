@@ -96,7 +96,7 @@ export function ServiceCreateForm() {
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
-            <Label htmlFor="new-price">Base price (USD)</Label>
+            <Label htmlFor="new-price">Estimate default (USD)</Label>
             <Input
               id="new-price"
               type="number"
@@ -106,6 +106,9 @@ export function ServiceCreateForm() {
               value={basePriceDollars}
               onChange={(e) => setBasePriceDollars(e.target.value)}
             />
+            <p className="text-xs text-muted-foreground">
+              Internal starting amount for staff estimates — not shown as a public price.
+            </p>
           </div>
         </div>
       </div>

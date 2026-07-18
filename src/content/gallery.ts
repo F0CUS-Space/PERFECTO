@@ -18,26 +18,26 @@ export const galleryItems: GalleryItem[] = [
   {
     title: "Polished Office Suite",
     category: "Offices",
-    image: "/images/services/offices.png",
+    image: "/images/services/offices.webp",
   },
   {
     title: "School Corridor Ready",
     category: "Schools",
-    image: "/images/services/schools-daycares.png",
+    image: "/images/services/schools-daycares.webp",
   },
   {
     title: "Municipal Lobby Shine",
     category: "Government",
-    image: "/images/services/government-municipal.png",
+    image: "/images/services/government-municipal.webp",
   },
   {
     title: "Clinic Waiting Room Reset",
     category: "Medical",
-    image: "/images/services/medical-dental.png",
+    image: "/images/services/medical-dental.webp",
   },
   {
     title: "Guest-Ready Dining Room",
     category: "Hospitality",
-    image: "/images/services/restaurants-nightlife.png",
+    image: "/images/services/restaurants-nightlife.webp",
   },
 ];

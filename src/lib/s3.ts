@@ -130,12 +130,23 @@ export async function putObject(
   }
 }
 
+/** Short-lived cache so list pages don't re-presign the same key every request. */
+const viewUrlCache = new Map<string, { url: string; expiresAt: number }>();
+
 /** Presigned GET for private bucket thumbnails and admin reads. */
 export async function getViewUrl(key: string, expiresIn = 3600): Promise<string> {
   const started = Date.now();
+  const cacheKey = `${bucketName()}:${key}:${expiresIn}`;
+  const cached = viewUrlCache.get(cacheKey);
+  // Refresh a minute early so clients never receive a near-expired URL.
+  if (cached && cached.expiresAt > Date.now() + 60_000) {
+    return cached.url;
+  }
+
   try {
     const command = new GetObjectCommand({ Bucket: bucketName(), Key: key });
     const url = await getSignedUrl(getClient(), command, { expiresIn });
+    viewUrlCache.set(cacheKey, { url, expiresAt: Date.now() + expiresIn * 1000 });
     logOutboundS3({ op: "get-presign", key, durationMs: Date.now() - started, ok: true });
     return url;
   } catch (error) {

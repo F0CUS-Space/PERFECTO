@@ -78,7 +78,7 @@ export default async function HomePage() {
           <Tilt className="relative" max={6}>
             <div className="relative aspect-[4/3] w-full overflow-hidden rounded-[1.75rem] border border-white/60 shadow-soft">
               <Image
-                src="/images/services/offices.png"
+                src="/images/services/offices.webp"
                 alt="A bright, professionally cleaned modern office"
                 fill
                 priority

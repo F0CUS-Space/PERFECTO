@@ -54,7 +54,7 @@ export function HomeAboutSection() {
             <Tilt max={6}>
               <div className="relative aspect-[4/3] overflow-hidden rounded-3xl border border-white/60 shadow-soft">
                 <Image
-                  src="/images/services/offices.png"
+                  src="/images/services/offices.webp"
                   alt="A professionally cleaned modern office workspace"
                   fill
                   sizes="(max-width: 768px) 100vw, 50vw"

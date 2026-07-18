@@ -51,8 +51,11 @@ export default async function AdminServiceDetailPage({ params }: PageProps) {
             </p>
             <h1 className="text-3xl font-bold text-brand-navy">{service.name}</h1>
             <p className="mt-2 text-muted-foreground">{service.description}</p>
-            <p className="mt-3 text-lg font-semibold text-brand-navy">
-              Base price: {formatCurrency(service.basePrice)}
+            <p className="mt-3 text-sm text-muted-foreground">
+              Estimate default:{" "}
+              <span className="font-semibold text-brand-navy">
+                {formatCurrency(service.basePrice)}
+              </span>
             </p>
           </div>
 

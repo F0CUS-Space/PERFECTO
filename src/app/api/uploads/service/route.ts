@@ -1,14 +1,11 @@
 import { NextResponse } from "next/server";
 
 import { MAX_PHOTO_BYTES } from "@/config/booking";
+import { optimizeServiceImage } from "@/lib/optimize-image";
 import { formatS3Error, getViewUrl, putObject } from "@/lib/s3";
 import { isS3Configured } from "@/lib/s3-ready";
 import { getRequestIp, rateLimit } from "@/lib/rate-limit";
 import { requireAdmin } from "@/server/rbac";
-
-function sanitizeFilename(name: string) {
-  return name.replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 120);
-}
 
 /** Admin service hero image upload. */
 export async function POST(request: Request) {
@@ -46,11 +43,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Each image must be under 5 MB." }, { status: 400 });
     }
 
-    const safeName = sanitizeFilename(file.name || "service.jpg");
-    const key = `services/${crypto.randomUUID()}/${safeName}`;
-    const buffer = Buffer.from(await file.arrayBuffer());
+    const raw = Buffer.from(await file.arrayBuffer());
+    const optimized = await optimizeServiceImage(raw);
+    const key = `services/${crypto.randomUUID()}/service.${optimized.extension}`;
 
-    await putObject(key, buffer, file.type);
+    await putObject(key, optimized.buffer, optimized.contentType);
     const viewUrl = await getViewUrl(key, 3600);
 
     return NextResponse.json({ key, viewUrl });

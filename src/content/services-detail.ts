@@ -25,7 +25,7 @@ export const serviceDetails: Record<string, ServiceDetail> = {
     ],
     idealFor: ["City halls and municipal offices", "Courts and libraries", "Police and fire stations"],
     accent: "from-brand-navy/15 to-brand-blue/15",
-    image: "/images/services/government-municipal.png",
+    image: "/images/services/government-municipal.webp",
   },
   "schools-daycares": {
     longDescription:
@@ -39,7 +39,7 @@ export const serviceDetails: Record<string, ServiceDetail> = {
     ],
     idealFor: ["Public and private K–12 schools", "Montessori programs", "Childcare and daycare centers"],
     accent: "from-brand-green/15 to-brand-mint/20",
-    image: "/images/services/schools-daycares.png",
+    image: "/images/services/schools-daycares.webp",
   },
   "offices": {
     longDescription:
@@ -53,7 +53,7 @@ export const serviceDetails: Record<string, ServiceDetail> = {
     ],
     idealFor: ["Professional offices", "Admin buildings", "Co-working spaces"],
     accent: "from-brand-blue/15 to-brand-navy/15",
-    image: "/images/services/offices.png",
+    image: "/images/services/offices.webp",
   },
   "medical-dental": {
     longDescription:
@@ -67,7 +67,7 @@ export const serviceDetails: Record<string, ServiceDetail> = {
     ],
     idealFor: ["Dental and medical offices", "Outpatient clinics", "Specialty practices"],
     accent: "from-brand-mint/20 to-brand-blue/15",
-    image: "/images/services/medical-dental.png",
+    image: "/images/services/medical-dental.webp",
   },
   "restaurants-nightlife": {
     longDescription:
@@ -81,7 +81,7 @@ export const serviceDetails: Record<string, ServiceDetail> = {
     ],
     idealFor: ["Restaurants and cafes", "Bars and nightclubs", "Hospitality venues"],
     accent: "from-brand-green/15 to-brand-navy/15",
-    image: "/images/services/restaurants-nightlife.png",
+    image: "/images/services/restaurants-nightlife.webp",
   },
 };
 
@@ -95,5 +95,5 @@ export const defaultServiceDetail: ServiceDetail = {
   ],
   idealFor: ["Commercial and institutional facilities"],
   accent: "from-brand-blue/15 to-brand-green/15",
-  image: "/images/services/offices.png",
+  image: "/images/services/offices.webp",
 };
