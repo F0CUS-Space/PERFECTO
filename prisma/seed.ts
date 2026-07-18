@@ -314,42 +314,62 @@ async function main() {
     `Seeded ${jobPostings.length} job posting(s); deactivated ${deactivatedJobs.count} legacy job(s).`,
   );
 
+  // Facility showcase cards — local public paths (same pattern as service covers).
+  // Admin can replace with S3 keys via gallery upload (gallery/<uuid>/<filename>).
+  // Legacy residential before/after assets are deactivated (files removed from public/).
+  await prisma.galleryItem.updateMany({
+    where: {
+      OR: [
+        { beforeUrl: { contains: "gallery-living" } },
+        { afterUrl: { contains: "gallery-living" } },
+        { beforeUrl: { contains: "gallery-kitchen" } },
+        { afterUrl: { contains: "gallery-kitchen" } },
+        { imageUrl: { contains: "service-residential" } },
+        { imageUrl: { contains: "service-recurring" } },
+        { imageUrl: { contains: "service-deep" } },
+        { imageUrl: { contains: "service-move" } },
+        { imageUrl: { contains: "service-office" } },
+        { imageUrl: { contains: "hero-living-room" } },
+        { title: { in: ["Lobby floor reset", "Kitchen / break area deep clean"] } },
+      ],
+    },
+    data: { isActive: false },
+  });
+
   const gallerySeed = [
-    {
-      type: "BEFORE_AFTER" as const,
-      title: "Lobby floor reset",
-      category: "Offices",
-      beforeUrl: "/images/gallery-living-before.png",
-      afterUrl: "/images/gallery-living-after.png",
-      sortOrder: 1,
-    },
-    {
-      type: "BEFORE_AFTER" as const,
-      title: "Kitchen / break area deep clean",
-      category: "Restaurants",
-      beforeUrl: "/images/gallery-kitchen-before.png",
-      afterUrl: "/images/gallery-kitchen-after.png",
-      sortOrder: 2,
-    },
     {
       type: "CARD" as const,
       title: "Polished Office Suite",
       category: "Offices",
       imageUrl: "/images/services/offices.png",
-      sortOrder: 3,
+      sortOrder: 1,
     },
     {
       type: "CARD" as const,
       title: "School Corridor Ready",
       category: "Schools",
       imageUrl: "/images/services/schools-daycares.png",
-      sortOrder: 4,
+      sortOrder: 2,
     },
     {
       type: "CARD" as const,
       title: "Municipal Lobby Shine",
       category: "Government",
       imageUrl: "/images/services/government-municipal.png",
+      sortOrder: 3,
+    },
+    {
+      type: "CARD" as const,
+      title: "Clinic Waiting Room Reset",
+      category: "Medical",
+      imageUrl: "/images/services/medical-dental.png",
+      sortOrder: 4,
+    },
+    {
+      type: "CARD" as const,
+      title: "Guest-Ready Dining Room",
+      category: "Hospitality",
+      imageUrl: "/images/services/restaurants-nightlife.png",
       sortOrder: 5,
     },
   ];
@@ -358,7 +378,19 @@ async function main() {
     const existing = await prisma.galleryItem.findFirst({
       where: { title: item.title, type: item.type },
     });
-    if (!existing) {
+    if (existing) {
+      await prisma.galleryItem.update({
+        where: { id: existing.id },
+        data: {
+          category: item.category,
+          imageUrl: item.imageUrl,
+          beforeUrl: null,
+          afterUrl: null,
+          sortOrder: item.sortOrder,
+          isActive: true,
+        },
+      });
+    } else {
       await prisma.galleryItem.create({ data: { ...item, isActive: true } });
     }
   }

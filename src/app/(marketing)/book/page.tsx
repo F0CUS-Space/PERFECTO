@@ -10,7 +10,7 @@ import { siteConfig } from "@/config/site";
 export const metadata: Metadata = {
   title: "Get an estimate",
   description:
-    "Contact Perfecto for a personalized cleaning estimate. We'll follow up with pricing and a secure pay link.",
+    "Contact Perfecto for a personalized facility cleaning estimate. We'll follow up with a quote and a secure pay link.",
 };
 
 export default function BookPage() {
@@ -18,14 +18,14 @@ export default function BookPage() {
     <>
       <PageHero
         title="Get your estimate"
-        description="Tell us about your space and we'll prepare a personalized quote. Once you're ready, you'll receive a secure link to pick a time and pay."
+        description="Tell us about your facility and we'll prepare a personalized quote. Once you're ready, you'll receive a secure link to pick a time and pay."
         containerClassName="py-12 md:py-20"
       />
       <Section className="[&>div]:py-10 md:[&>div]:py-16">
         <div className="mx-auto max-w-2xl space-y-8 text-center">
           <p className="text-muted-foreground">
-            Online self-serve booking has moved to staff-prepared estimates so every job is priced
-            accurately for your home or business.
+            Online self-serve booking has moved to staff-prepared estimates so every job is scoped
+            and priced accurately for your facility.
           </p>
           <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
             <Button asChild size="lg">

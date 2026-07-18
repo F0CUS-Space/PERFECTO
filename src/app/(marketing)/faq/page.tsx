@@ -14,7 +14,7 @@ import { faqs } from "@/content/faq";
 
 export const metadata: Metadata = {
   title: "FAQ",
-  description: "Answers to common questions about Perfecto's cleaning services, booking, deposits, and guarantees.",
+  description: "Answers to common questions about Perfecto's facility cleaning, estimates, booking, and guarantees.",
 };
 
 export default function FaqPage() {
@@ -22,7 +22,7 @@ export default function FaqPage() {
     <>
       <PageHero
         title="Frequently asked questions"
-        description="Everything you need to know about booking, pricing, and our guarantees."
+        description="Everything you need to know about estimates, booking, and our guarantees."
       />
 
       <Section>

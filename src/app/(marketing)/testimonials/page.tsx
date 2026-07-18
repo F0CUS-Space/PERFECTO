@@ -20,7 +20,7 @@ export default async function TestimonialsPage() {
     <>
       <PageHero
         title="What our customers say"
-        description="Real feedback from homeowners and businesses who trust Perfecto."
+        description="Real feedback from facilities and organizations who trust Perfecto."
       />
       <Section>
         <Reveal>

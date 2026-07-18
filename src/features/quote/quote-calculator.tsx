@@ -91,7 +91,7 @@ export function QuoteCalculator({ catalog, embedded, claimPromotion }: QuoteCalc
             {catalog.map((service) => (
               <option key={service.id} value={service.id}>
                 {service.name}
-                {service.isPopular ? " ★" : ""} — from {formatCurrency(service.basePrice)}
+                {service.isPopular ? " ★" : ""}
               </option>
             ))}
           </select>

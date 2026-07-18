@@ -19,6 +19,7 @@ import { ServiceCard } from "@/components/shared/service-card";
 import { TestimonialCard } from "@/components/shared/testimonial-card";
 import { PageHero } from "@/components/shared/page-hero";
 import { HomeAboutSection } from "@/components/marketing/home-about-section";
+import { resolveServiceImageUrl } from "@/features/services-catalog/display";
 import { getHomeFeaturedServices } from "@/features/services-catalog/queries";
 import { getFeaturedTestimonials } from "@/features/reviews/queries";
 import { testimonials as fallbackTestimonials } from "@/content/testimonials";
@@ -27,20 +28,26 @@ import { testimonials as fallbackTestimonials } from "@/content/testimonials";
 
 
 const steps = [
-  { icon: ClipboardList, title: "Choose your service", body: "Tell us about your facility and request a transparent estimate." },
-  { icon: CalendarCheck, title: "Book a time", body: "Pick a date and preferred arrival time." },
-  { icon: CreditCard, title: "Pay in full", body: "Secure your booking with a simple, safe checkout." },
-  { icon: Sparkles, title: "Relax", body: "Our vetted pros arrive and deliver perfect results." },
+  { icon: ClipboardList, title: "Request an estimate", body: "Tell us about your facility — type, size, and visit cadence." },
+  { icon: CalendarCheck, title: "Confirm scope", body: "Our team prepares a personalized quote and scheduling options." },
+  { icon: CreditCard, title: "Pay via secure link", body: "When you're ready, pay and book through your estimate pay link." },
+  { icon: Sparkles, title: "We deliver", body: "Our vetted pros arrive and keep your facility guest-ready." },
 ];
 
 const valueProps = [
   { icon: ShieldCheck, title: "Fully Insured", body: "Comprehensive bonding and insurance coverage for total peace of mind.", tone: "blue" as const },
-  { icon: Leaf, title: "Eco-Friendly", body: "Premium, non-toxic products that are safe for pets and the environment.", tone: "green" as const },
+  { icon: Leaf, title: "Eco-Friendly", body: "Premium, non-toxic products suited to occupied workplaces and public spaces.", tone: "green" as const },
   { icon: Star, title: "Vetted Pros", body: "Every cleaner undergoes a rigorous background check and quality training.", tone: "blue" as const },
 ];
 
 export default async function HomePage() {
   const services = await getHomeFeaturedServices(3);
+  const servicesWithImages = await Promise.all(
+    services.map(async (service) => ({
+      service,
+      imageSrc: await resolveServiceImageUrl(service.imageUrl, service.slug),
+    })),
+  );
   const featured = await getFeaturedTestimonials();
   const testimonials = featured.length > 0 ? featured : fallbackTestimonials;
 
@@ -71,8 +78,8 @@ export default async function HomePage() {
           <Tilt className="relative" max={6}>
             <div className="relative aspect-[4/3] w-full overflow-hidden rounded-[1.75rem] border border-white/60 shadow-soft">
               <Image
-                src="/images/hero-living-room.png"
-                alt="A bright, immaculately cleaned modern living room"
+                src="/images/services/offices.png"
+                alt="A bright, professionally cleaned modern office"
                 fill
                 priority
                 sizes="(max-width: 1024px) 100vw, 50vw"
@@ -120,9 +127,9 @@ export default async function HomePage() {
           />
         </Reveal>
         <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {services.map((service, i) => (
+          {servicesWithImages.map(({ service, imageSrc }, i) => (
             <Reveal key={service.id} delay={i * 80}>
-              <ServiceCard service={service} />
+              <ServiceCard service={service} imageSrc={imageSrc} />
             </Reveal>
           ))}
         </div>
@@ -136,7 +143,7 @@ export default async function HomePage() {
       {/* How it works */}
       <Section muted>
         <Reveal>
-          <SectionHeading eyebrow="How It Works" title="Booking a perfect clean is effortless" />
+          <SectionHeading eyebrow="How It Works" title="From estimate to a perfect clean" />
         </Reveal>
         <div className="mt-12 grid gap-6 md:grid-cols-4">
           {steps.map(({ icon: Icon, title, body }, i) => (
@@ -215,10 +222,10 @@ export default async function HomePage() {
               <div className="absolute inset-y-0 left-0 w-1/3 -skew-x-12 bg-white/5 animate-shimmer" />
             </div>
             <h2 className="relative mx-auto max-w-2xl text-balance text-3xl font-bold text-white md:text-4xl">
-              Ready to experience perfection?
+              Ready to elevate your facility?
             </h2>
             <p className="relative mx-auto mt-3 max-w-xl text-pretty text-white/70">
-              Book your clean today and reclaim your time. Clean spaces, perfect results.
+              Request an estimate today. Clean spaces, perfect results — on your schedule.
             </p>
             <div className="relative mt-8 flex flex-col justify-center gap-3 sm:flex-row">
               <Button asChild size="lg" variant="accent">

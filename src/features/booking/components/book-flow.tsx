@@ -32,8 +32,7 @@ function BookFlowAuthPrompt() {
       <CardHeader className="text-center">
         <CardTitle className="text-brand-navy">Sign in to book</CardTitle>
         <CardDescription>
-          Create an account or sign in with your phone number to see pricing and schedule your
-          clean.
+          Create an account or sign in with your phone number to continue with your booking.
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-3 sm:flex-row sm:justify-center">
@@ -81,7 +80,7 @@ export function BookFlow({ catalog, claimPromotion }: BookFlowProps) {
     <div className="space-y-4">
       <div className="flex justify-end">
         <Button type="button" variant="ghost" size="sm" onClick={startOver}>
-          Change service or pricing
+          Change service
         </Button>
       </div>
       <BookingWizard />

@@ -12,7 +12,7 @@ export const faqs: FaqItem[] = [
   {
     question: "Do I need to pay the full amount upfront?",
     answer:
-      "No. To confirm a booking we collect full payment upfront. You'll always see the total clearly before you pay.",
+      "Yes. To confirm a booking we collect full payment upfront via your estimate pay link. You'll always see the total clearly before you pay.",
   },
   {
     question: "Are your cleaners insured and vetted?",
@@ -22,7 +22,7 @@ export const faqs: FaqItem[] = [
   {
     question: "What cleaning products do you use?",
     answer:
-      "We use premium, eco-friendly, non-toxic products that are safe for children, pets, and the environment. If you have specific product preferences or sensitivities, let us know in your booking notes.",
+      "We use premium, eco-friendly, non-toxic products suited to occupied workplaces and public spaces. If you have specific product preferences or sensitivities, let us know when you request an estimate.",
   },
   {
     question: "Do you bring your own supplies and equipment?",
@@ -32,7 +32,7 @@ export const faqs: FaqItem[] = [
   {
     question: "How do I provide access to my building?",
     answer:
-      "During booking you can add access information — for example a door code, key location, or after-hours entry instructions. Your details are stored securely and only shared with your assigned team.",
+      "When you accept an estimate you can share access information — for example a door code, key location, or after-hours entry instructions. Your details are stored securely and only shared with your assigned team.",
   },
   {
     question: "Can I reschedule or cancel my appointment?",

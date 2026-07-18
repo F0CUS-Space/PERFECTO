@@ -4,7 +4,7 @@ import { ArrowRight } from "lucide-react";
 
 import type { Service } from "@prisma/client";
 
-import { cn, formatCurrency } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { defaultServiceDetail, serviceDetails } from "@/content/services-detail";
 
@@ -45,12 +45,7 @@ export function ServiceCard({
           {service.description}
         </p>
         <div className="mt-5 flex items-center justify-between">
-          <span className="text-sm text-muted-foreground">
-            From{" "}
-            <span className="text-base font-bold text-brand-navy">
-              {formatCurrency(service.basePrice)}
-            </span>
-          </span>
+          <span className="text-sm font-medium text-brand-blue">Get estimate</span>
           <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-secondary text-brand-navy transition-colors group-hover:bg-brand-blue group-hover:text-white">
             <ArrowRight className="h-4 w-4" />
           </span>

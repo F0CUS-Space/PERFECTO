@@ -7,30 +7,37 @@ export interface BeforeAfterPair {
 
 export interface GalleryItem {
   title: string;
-  category: "Residential" | "Deep Clean" | "Office" | "Move In/Out";
+  category: "Offices" | "Schools" | "Government" | "Medical" | "Hospitality";
   image: string;
 }
 
-export const beforeAfterPairs: BeforeAfterPair[] = [
-  {
-    title: "Living room reset",
-    category: "Residential",
-    before: "/images/gallery-living-before.png",
-    after: "/images/gallery-living-after.png",
-  },
-  {
-    title: "Kitchen deep clean",
-    category: "Deep Clean",
-    before: "/images/gallery-kitchen-before.png",
-    after: "/images/gallery-kitchen-after.png",
-  },
-];
+/** Static before/after fallbacks — empty until real facility pairs are uploaded via admin (S3). */
+export const beforeAfterPairs: BeforeAfterPair[] = [];
 
 export const galleryItems: GalleryItem[] = [
-  { title: "Sparkling Living Room", category: "Residential", image: "/images/service-residential.png" },
-  { title: "Spotless Kitchen", category: "Deep Clean", image: "/images/service-recurring.png" },
-  { title: "Pristine Bath & Kitchen", category: "Deep Clean", image: "/images/service-deep.png" },
-  { title: "Move-Out Ready", category: "Move In/Out", image: "/images/service-move.png" },
-  { title: "Polished Office", category: "Office", image: "/images/service-office.png" },
-  { title: "Luxury Living", category: "Residential", image: "/images/hero-living-room.png" },
+  {
+    title: "Polished Office Suite",
+    category: "Offices",
+    image: "/images/services/offices.png",
+  },
+  {
+    title: "School Corridor Ready",
+    category: "Schools",
+    image: "/images/services/schools-daycares.png",
+  },
+  {
+    title: "Municipal Lobby Shine",
+    category: "Government",
+    image: "/images/services/government-municipal.png",
+  },
+  {
+    title: "Clinic Waiting Room Reset",
+    category: "Medical",
+    image: "/images/services/medical-dental.png",
+  },
+  {
+    title: "Guest-Ready Dining Room",
+    category: "Hospitality",
+    image: "/images/services/restaurants-nightlife.png",
+  },
 ];

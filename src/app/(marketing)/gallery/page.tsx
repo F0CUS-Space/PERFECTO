@@ -57,7 +57,7 @@ export default async function GalleryPage() {
             <SectionHeading
               eyebrow="The Transformation"
               title="Drag to see the difference"
-              description="Real results from our deep-clean specialists."
+              description="Real results from our facility cleaning specialists."
             />
           </Reveal>
           <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -108,7 +108,7 @@ export default async function GalleryPage() {
           </div>
           <div className="mt-12 flex justify-center">
             <Button asChild size="lg">
-              <Link href="/contact?intent=estimate">Book your clean</Link>
+              <Link href="/contact?intent=estimate">Get estimate</Link>
             </Button>
           </div>
         </Section>

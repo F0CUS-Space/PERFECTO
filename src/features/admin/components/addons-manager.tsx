@@ -151,7 +151,7 @@ export function AddOnsManager({ addOns }: { addOns: AdminAddOnRow[] }) {
               required
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Inside Fridge"
+              placeholder="Window Cleaning"
             />
           </div>
           <div className="space-y-2">

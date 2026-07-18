@@ -1,5 +1,6 @@
 // Accent gradients and local image fallbacks keyed by service slug.
-// Canonical name, price, description, includes, and idealFor come from the DB.
+// Canonical name, description, includes, and idealFor come from the DB.
+// Public pages never show catalog prices — staff estimates set customer amounts.
 
 export interface ServiceDetail {
   longDescription: string;
@@ -86,7 +87,7 @@ export const serviceDetails: Record<string, ServiceDetail> = {
 
 export const defaultServiceDetail: ServiceDetail = {
   longDescription:
-    "Professional commercial and facility cleaning delivered with meticulous care by our vetted team. Request an estimate for transparent pricing tailored to your building.",
+    "Professional commercial and facility cleaning delivered with meticulous care by our vetted team. Request an estimate tailored to your building.",
   includes: [
     "Vetted, trained professionals",
     "Nightly or weekly cleaning programs",

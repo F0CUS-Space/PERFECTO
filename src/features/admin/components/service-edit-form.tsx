@@ -143,7 +143,7 @@ export function ServiceEditForm({ service }: { service: AdminServiceRow | AdminS
           value={idealFor}
           onChange={setIdealFor}
           maxItems={15}
-          placeholder="Busy households"
+          placeholder="Professional offices"
         />
         <ServiceImageUpload
           imageKey={imageUrl}

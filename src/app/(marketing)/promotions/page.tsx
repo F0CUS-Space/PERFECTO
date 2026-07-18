@@ -24,7 +24,7 @@ export default async function PromotionsPage() {
           </>
         }
         title="Offers & promotions"
-        description="Claim an offer and the discount is applied automatically when you book."
+        description="Claim an offer and ask our team to apply it when they prepare your estimate."
       />
 
       <Section>
@@ -33,7 +33,7 @@ export default async function PromotionsPage() {
             <Sparkles className="mx-auto h-8 w-8 text-brand-green" />
             <h2 className="mt-4 text-lg font-semibold text-brand-navy">No active promotions</h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              Check back soon — or get an instant quote to see today&apos;s pricing.
+              Check back soon — or request an estimate for a personalized quote.
             </p>
             <Button asChild className="mt-5">
               <Link href="/contact?intent=estimate">Get estimate</Link>

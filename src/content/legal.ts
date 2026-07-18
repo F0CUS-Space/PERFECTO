@@ -150,7 +150,7 @@ export const legalDocuments: Record<string, LegalDocument> = {
       {
         heading: "4. Health & Safety",
         body: [
-          "Our professionals may pause or stop a service if conditions are unsafe. Please disclose any hazards, pets, or special conditions in advance.",
+          "Our professionals may pause or stop a service if conditions are unsafe. Please disclose any hazards, restricted areas, or special conditions in advance.",
         ],
       },
     ],
@@ -370,7 +370,7 @@ export const legalDocuments: Record<string, LegalDocument> = {
       {
         heading: "2. Services",
         body: [
-          `${company} provides residential and commercial cleaning services. Service details, inclusions, and pricing are described at the time of booking and may be confirmed or adjusted after an on-site assessment.`,
+          `${company} provides commercial and facility cleaning services. Service details, inclusions, and pricing are confirmed in your staff-prepared estimate and may be adjusted after an on-site assessment.`,
         ],
       },
       {

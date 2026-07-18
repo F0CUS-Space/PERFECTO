@@ -11,17 +11,17 @@ const values = [
   {
     icon: Sparkles,
     title: "Craftsmanship",
-    body: "We treat every space as if it were our own, obsessing over the details others overlook.",
+    body: "We treat every facility as a flagship space, obsessing over the details others overlook.",
   },
   {
     icon: ShieldCheck,
     title: "Trust",
-    body: "Vetted, insured professionals and transparent pricing — no surprises, ever.",
+    body: "Vetted, insured professionals and staff-prepared estimates — no surprises, ever.",
   },
   {
     icon: Heart,
     title: "Care",
-    body: "Eco-friendly products and genuine respect for your home, family, and time.",
+    body: "Eco-friendly products and genuine respect for your building, staff, and schedule.",
   },
   {
     icon: Users,
@@ -44,8 +44,8 @@ export function HomeAboutSection() {
         <Reveal>
           <SectionHeading
             eyebrow="About Perfecto"
-            title="We're redefining what a cleaning service can be"
-            description="Perfecto was founded on a simple belief: a clean home is a foundation for a better life. We combine meticulous craftsmanship with modern convenience to give you back your time — and your peace of mind."
+            title="We're redefining what facility cleaning can be"
+            description="Perfecto was founded on a simple belief: a well-kept workplace is a foundation for better operations. We combine meticulous craftsmanship with clear estimates so your team can focus on the work that matters."
           />
         </Reveal>
 
@@ -54,8 +54,8 @@ export function HomeAboutSection() {
             <Tilt max={6}>
               <div className="relative aspect-[4/3] overflow-hidden rounded-3xl border border-white/60 shadow-soft">
                 <Image
-                  src="/images/hero-living-room.png"
-                  alt="A beautifully clean, premium living space"
+                  src="/images/services/offices.png"
+                  alt="A professionally cleaned modern office workspace"
                   fill
                   sizes="(max-width: 768px) 100vw, 50vw"
                   className="object-cover"
@@ -70,13 +70,13 @@ export function HomeAboutSection() {
               <div className="mt-4 space-y-4 text-muted-foreground">
                 <p>
                   What began as a commitment to do cleaning the right way has grown into a premium
-                  service trusted by households and businesses alike. Every booking is backed by
-                  vetted professionals, premium eco-friendly products, and a 100% satisfaction
-                  guarantee.
+                  commercial service trusted by offices, schools, clinics, municipal buildings, and
+                  hospitality venues. Every engagement is backed by vetted professionals, premium
+                  eco-friendly products, and a 100% satisfaction guarantee.
                 </p>
                 <p>
-                  We built our platform to make excellence effortless: see your price, book in
-                  minutes, pay securely, and relax while we deliver perfect results.
+                  We make excellence straightforward: request an estimate, confirm scope with our
+                  team, pay securely via your pay link, and relax while we deliver perfect results.
                 </p>
               </div>
               <div className="mt-8 flex flex-wrap gap-3">

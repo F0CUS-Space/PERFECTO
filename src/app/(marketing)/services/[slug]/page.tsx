@@ -4,7 +4,7 @@ import Image from "next/image";
 import { notFound } from "next/navigation";
 import { ArrowRight, Sparkles } from "lucide-react";
 
-import { cn, formatCurrency } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Section } from "@/components/shared/section";
 import { PageHero } from "@/components/shared/page-hero";
@@ -89,12 +89,9 @@ export default async function ServiceDetailPage({
           </Tilt>
         }
       >
-        <div className="text-sm text-muted-foreground">
-          Starting from{" "}
-          <span className="text-2xl font-bold text-brand-navy">
-            {formatCurrency(service.basePrice)}
-          </span>
-        </div>
+        <p className="text-sm text-muted-foreground">
+          Pricing is confirmed after a staff estimate tailored to your facility.
+        </p>
       </PageHero>
 
       <Section>
@@ -128,9 +125,9 @@ export default async function ServiceDetailPage({
         </div>
 
         <Reveal delay={240} className="mt-16 flex flex-col items-center gap-4 rounded-3xl border border-border bg-card px-6 py-10 text-center shadow-card sm:px-10">
-          <h2 className="text-2xl font-bold text-brand-navy">Ready to book {service.name}?</h2>
+          <h2 className="text-2xl font-bold text-brand-navy">Ready for {service.name}?</h2>
           <p className="max-w-md text-sm text-muted-foreground">
-            Starting from {formatCurrency(service.basePrice)} — request an estimate and we&apos;ll confirm scope with your team.
+            Request an estimate and we&apos;ll confirm scope, schedule, and pricing with your team.
           </p>
           <Button asChild size="lg">
             <Link href="/contact?intent=estimate">

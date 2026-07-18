@@ -57,7 +57,7 @@ export default async function ServicesPage() {
         <div className="mt-12 grid gap-6 md:grid-cols-3">
           {[
             { icon: ShieldCheck, title: "Fully Insured", body: "Comprehensive bonding and insurance coverage.", tone: "blue" },
-            { icon: Leaf, title: "Eco-Friendly", body: "Premium, non-toxic products safe for pets and family.", tone: "green" },
+            { icon: Leaf, title: "Eco-Friendly", body: "Premium, non-toxic products suited to occupied workplaces.", tone: "green" },
             { icon: Star, title: "Vetted Pros", body: "Rigorous background checks and ongoing training.", tone: "blue" },
           ].map(({ icon: Icon, title, body, tone }, i) => (
             <Reveal key={title} delay={i * 90}>
