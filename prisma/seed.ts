@@ -1,7 +1,5 @@
 import { PrismaClient, Role } from "@prisma/client";
 
-import { isAppOwnedS3Key } from "../src/lib/app-owned-s3-key";
-
 const prisma = new PrismaClient();
 
 /** Legacy catalog slugs — deactivate (do not hard-delete; bookings may reference them). */
@@ -21,6 +19,19 @@ const LEGACY_ADDON_NAMES = [
   "Laundry & Folding",
   "Inside Cabinets",
 ] as const;
+
+/**
+ * App-owned S3 key prefixes (mirrored from src/lib/app-owned-s3-key for migrate image).
+ * Seed runs in Dockerfile.migrate which only copies prisma/ (+ optional src/content) — no src/lib.
+ */
+const APP_OWNED_S3_PREFIXES = ["services/", "gallery/", "bookings/"] as const;
+
+function isAppOwnedS3Key(value: string | null | undefined): boolean {
+  const val = value?.trim();
+  if (!val) return false;
+  if (val.startsWith("/") || /^[a-z][a-z0-9+.-]*:/i.test(val)) return false;
+  return APP_OWNED_S3_PREFIXES.some((prefix) => val.startsWith(prefix));
+}
 
 /**
  * Dynamic images: null until Admin upload; DB stores bare S3 keys only.
