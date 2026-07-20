@@ -18,7 +18,13 @@ const presignSchema = z.object({
     .refine(isAllowedImageContentType, "Only JPEG, PNG, or WebP images are allowed."),
 });
 
-/** Returns a presigned PUT URL for staging booking property photos. */
+/**
+ * Returns a presigned PUT URL for staging booking property photos.
+ *
+ * Browser PUT stores the original bytes (JPG/PNG/WebP as uploaded) — no server
+ * WebP re-encode. Prefer POST /api/uploads/booking-photo for optimized uploads.
+ * The booking UI already uses the server route; keep this for compatibility.
+ */
 export async function POST(request: Request) {
   const limit = await rateLimit(`upload-presign:${getRequestIp(request)}`, 30, 10 * 60 * 1000);
   if (!limit.ok) {

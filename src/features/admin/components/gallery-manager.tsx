@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { Loader2, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -38,6 +38,42 @@ function ImagePreview({ src, label }: { src: string | null; label: string }) {
   return (
     <div className="relative aspect-video w-full max-w-xs overflow-hidden rounded-xl border border-border bg-secondary/30">
       <Image src={src} alt={label} fill className="object-cover" sizes="320px" unoptimized />
+    </div>
+  );
+}
+
+function GalleryImagePicker({
+  hasImage,
+  disabled,
+  onFile,
+}: {
+  hasImage: boolean;
+  disabled: boolean;
+  onFile: (file: File | null) => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  return (
+    <div>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        disabled={disabled}
+        onClick={() => inputRef.current?.click()}
+      >
+        {hasImage ? "Replace image" : "Choose image"}
+      </Button>
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        className="sr-only"
+        disabled={disabled}
+        onChange={(e) => {
+          onFile(e.target.files?.[0] ?? null);
+          e.target.value = "";
+        }}
+      />
     </div>
   );
 }
@@ -157,7 +193,11 @@ function GalleryItemForm({
         <div className="space-y-2">
           <Label>Image</Label>
           <ImagePreview src={imagePreview} label={title || "Gallery image"} />
-          <Input type="file" accept="image/jpeg,image/png,image/webp" disabled={uploadingField === "imageUrl"} onChange={(e) => onFile("imageUrl", e.target.files?.[0] ?? null)} />
+          <GalleryImagePicker
+            hasImage={Boolean(imagePreview || imageUrl)}
+            disabled={uploadingField === "imageUrl"}
+            onFile={(file) => void onFile("imageUrl", file)}
+          />
           {uploadingField === "imageUrl" && (
             <p className="flex items-center gap-2 text-xs text-muted-foreground">
               <Loader2 className="h-3 w-3 animate-spin" /> Uploading…
@@ -169,7 +209,11 @@ function GalleryItemForm({
           <div className="space-y-2">
             <Label>Before image</Label>
             <ImagePreview src={beforePreview} label={`${title} before`} />
-            <Input type="file" accept="image/jpeg,image/png,image/webp" disabled={uploadingField === "beforeUrl"} onChange={(e) => onFile("beforeUrl", e.target.files?.[0] ?? null)} />
+            <GalleryImagePicker
+              hasImage={Boolean(beforePreview || beforeUrl)}
+              disabled={uploadingField === "beforeUrl"}
+              onFile={(file) => void onFile("beforeUrl", file)}
+            />
             {uploadingField === "beforeUrl" && (
               <p className="flex items-center gap-2 text-xs text-muted-foreground">
                 <Loader2 className="h-3 w-3 animate-spin" /> Uploading…
@@ -179,7 +223,11 @@ function GalleryItemForm({
           <div className="space-y-2">
             <Label>After image</Label>
             <ImagePreview src={afterPreview} label={`${title} after`} />
-            <Input type="file" accept="image/jpeg,image/png,image/webp" disabled={uploadingField === "afterUrl"} onChange={(e) => onFile("afterUrl", e.target.files?.[0] ?? null)} />
+            <GalleryImagePicker
+              hasImage={Boolean(afterPreview || afterUrl)}
+              disabled={uploadingField === "afterUrl"}
+              onFile={(file) => void onFile("afterUrl", file)}
+            />
             {uploadingField === "afterUrl" && (
               <p className="flex items-center gap-2 text-xs text-muted-foreground">
                 <Loader2 className="h-3 w-3 animate-spin" /> Uploading…

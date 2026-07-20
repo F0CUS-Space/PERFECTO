@@ -1,10 +1,10 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Loader2 } from "lucide-react";
 
-import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 
 interface ServiceImageUploadProps {
@@ -31,6 +31,7 @@ export function ServiceImageUpload({
   onChange,
   label = "Service image",
 }: ServiceImageUploadProps) {
+  const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -57,6 +58,8 @@ export function ServiceImageUpload({
     }
   };
 
+  const hasImage = Boolean(previewUrl || imageKey);
+
   return (
     <div className="space-y-2">
       <Label>{label}</Label>
@@ -65,15 +68,28 @@ export function ServiceImageUpload({
           <Image src={previewUrl} alt="Service preview" fill className="object-cover" sizes="320px" unoptimized />
         </div>
       )}
-      <Input
-        type="file"
-        accept="image/jpeg,image/png,image/webp"
-        disabled={uploading}
-        onChange={(e) => {
-          void onFile(e.target.files?.[0] ?? null);
-          e.target.value = "";
-        }}
-      />
+      <div>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          disabled={uploading}
+          onClick={() => inputRef.current?.click()}
+        >
+          {hasImage ? "Replace image" : "Choose image"}
+        </Button>
+        <input
+          ref={inputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          className="sr-only"
+          disabled={uploading}
+          onChange={(e) => {
+            void onFile(e.target.files?.[0] ?? null);
+            e.target.value = "";
+          }}
+        />
+      </div>
       {uploading && (
         <p className="flex items-center gap-2 text-xs text-muted-foreground">
           <Loader2 className="h-3 w-3 animate-spin" /> Uploading…

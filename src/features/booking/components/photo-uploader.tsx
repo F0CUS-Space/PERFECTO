@@ -171,6 +171,7 @@ export function PhotoUploader({ photos, onChange }: PhotoUploaderProps) {
       {showUploader && (
         <p className="text-xs text-muted-foreground">
           Optional — up to {MAX_PROPERTY_PHOTOS} photos help our team prepare (5 MB max each).
+          Images are optimized on upload for faster loading.
         </p>
       )}
 

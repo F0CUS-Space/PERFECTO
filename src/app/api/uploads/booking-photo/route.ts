@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { MAX_PHOTO_BYTES } from "@/config/booking";
-import { optimizeServiceImage } from "@/lib/optimize-image";
+import { optimizeBookingPhoto } from "@/lib/optimize-image";
 import { getViewUrl, putObject } from "@/lib/s3";
 import { isS3Configured } from "@/lib/s3-ready";
 import { getRequestIp, rateLimit } from "@/lib/rate-limit";
@@ -10,6 +10,8 @@ import { getCurrentUser } from "@/server/auth";
 
 /**
  * Server-side photo upload — avoids S3 CORS configuration in the browser.
+ * Re-encodes to WebP (key ends in .webp, Content-Type image/webp).
+ * Prefer this over /api/uploads/presign (browser PUT skips server re-encode).
  * Accepts multipart/form-data with a single "file" field.
  */
 export async function POST(request: Request) {
@@ -56,7 +58,7 @@ export async function POST(request: Request) {
     const raw = Buffer.from(await file.arrayBuffer());
     assertAllowedImageUpload(raw, file.type, file.name);
 
-    const optimized = await optimizeServiceImage(raw);
+    const optimized = await optimizeBookingPhoto(raw);
     // Flat under user staging prefix (ownership check uses bookings/staging/{userId}/).
     const key = `bookings/staging/${user.id}/${crypto.randomUUID()}.${optimized.extension}`;
 

@@ -8,7 +8,7 @@ import { getRequestIp, rateLimit } from "@/lib/rate-limit";
 import { UploadValidationError, assertAllowedImageUpload } from "@/lib/upload-validation";
 import { requireAdmin } from "@/server/rbac";
 
-/** Admin gallery image upload. */
+/** Admin gallery image upload — re-encodes to WebP (.webp key, image/webp). */
 export async function POST(request: Request) {
   const limit = await rateLimit(`upload-gallery:${getRequestIp(request)}`, 40, 10 * 60 * 1000);
   if (!limit.ok) {
