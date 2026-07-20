@@ -14,7 +14,7 @@ import {
 import {
   createDepositCheckoutAttempt,
   findPaidCapturesFromLinkedSessions,
-  getOpenDepositCheckoutUrlForBooking,
+  lookupOpenDepositCheckoutForBooking,
   reconcileBookingPayments,
 } from "./reconcile-payments";
 import { getPaymentService } from "./stripe-payment-service";
@@ -70,9 +70,30 @@ export async function createDepositCheckoutForUser(
     return { ok: false, error: "This booking cannot accept payment in its current state." };
   }
 
-  const existingUrl = await getOpenDepositCheckoutUrlForBooking(booking.id);
-  if (existingUrl) {
-    return { ok: true, url: existingUrl };
+  const existingCheckout = await lookupOpenDepositCheckoutForBooking(booking.id);
+  if (existingCheckout.status === "open") {
+    return { ok: true, url: existingCheckout.url };
+  }
+  if (existingCheckout.status === "linked_unresolved") {
+    // Session is linked but not an open URL (e.g. already paid, or Stripe blip).
+    // Recover paid captures once more before refusing to mint a duplicate Checkout.
+    const linkedPaid = await findPaidCapturesFromLinkedSessions(booking.id);
+    if (linkedPaid.length > 0) {
+      const recovered = await reconcileBookingPayments(booking.id, {
+        knownCaptures: linkedPaid,
+      });
+      if (recovered.fullyPaid || recovered.depositSatisfied || recovered.bookingConfirmed) {
+        return {
+          ok: false,
+          alreadyPaid: true,
+          error: "Payment already received for this booking. Refresh the page to see confirmation.",
+        };
+      }
+    }
+    return {
+      ok: false,
+      error: "A checkout is already in progress. Please wait a moment and try again.",
+    };
   }
 
   const attempt = await createDepositCheckoutAttempt(booking.id, booking.depositAmount);

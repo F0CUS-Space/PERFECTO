@@ -12,6 +12,7 @@ and [`IMPLEMENTATION_PLAN.md`](./IMPLEMENTATION_PLAN.md) for full context.
 
 - **Next.js 15** (App Router, RSC) · **TypeScript** · **TailwindCSS** + **shadcn/ui**
 - **Prisma** + **PostgreSQL** (self-hosted via Docker)
+- **Redis** (global rate limits + catalog cache via Docker Compose)
 - **Firebase Auth** (phone OTP; email verification optional)
 - **Stripe** (booking payments) · **AWS S3** (uploads) · **Resend** (email)
 - **TanStack Query** + **Zustand** · **React Hook Form** + **Zod**
@@ -25,8 +26,8 @@ npm install
 # 2. Configure environment
 cp .env.example .env   # then fill in your keys
 
-# 3. Start PostgreSQL (Docker)
-docker compose up -d db
+# 3. Start PostgreSQL + Redis (Docker)
+docker compose up -d db redis
 
 # 4. Apply schema + seed data
 npm run prisma:migrate
@@ -36,9 +37,14 @@ npm run db:seed
 npm run dev            # http://localhost:3000
 ```
 
+Set `REDIS_URL=redis://localhost:6379` in `.env` for local `npm run dev` (Compose publishes
+Redis on localhost only). Without Redis, the app still runs: rate limits fall back to
+in-memory and catalog caching is skipped. In Compose, the app service uses
+`REDIS_URL=redis://redis:6379` for **global** rate limits across instances.
+
 ## Production (EC2 + Docker)
 
-The entire stack (app + PostgreSQL) runs via Docker Compose on EC2. Deploys are automated
+The entire stack (app + PostgreSQL + Redis) runs via Docker Compose on EC2. Deploys are automated
 via GitHub Actions on every push to `main`.
 
 ### One-time EC2 setup

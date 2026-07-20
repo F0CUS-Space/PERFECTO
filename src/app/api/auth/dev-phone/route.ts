@@ -34,7 +34,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Not available." }, { status: 404 });
   }
 
-  const limit = rateLimit(`auth-dev-phone:${getRequestIp(request)}`, 30, 5 * 60 * 1000);
+  const limit = await rateLimit(`auth-dev-phone:${getRequestIp(request)}`, 30, 5 * 60 * 1000);
   if (!limit.ok) {
     return NextResponse.json(
       { error: "Too many attempts. Please wait a moment and try again." },

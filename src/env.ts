@@ -16,6 +16,10 @@ const envSchema = z.object({
   // Database (PostgreSQL)
   DATABASE_URL: z.string().optional(),
 
+  // Redis — shared rate limits + catalog cache (docker-compose service `redis`).
+  // Optional locally: when unset, rate limits fall back to in-memory and cache is skipped.
+  REDIS_URL: z.string().optional(),
+
   // Firebase Admin (server)
   FIREBASE_PROJECT_ID: z.string().optional(),
   FIREBASE_CLIENT_EMAIL: z.string().optional(),

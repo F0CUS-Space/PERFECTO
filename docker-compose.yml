@@ -18,6 +18,22 @@ services:
       timeout: 5s
       retries: 10
 
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    # Localhost-only publish for `npm run dev` / redis-cli. Not exposed on the
+    # public interface (bind 127.0.0.1). App containers use redis://redis:6379.
+    ports:
+      - "127.0.0.1:${REDIS_HOST_PORT:-6379}:6379"
+    volumes:
+      - redis-data:/data
+    command: ["redis-server", "--appendonly", "yes"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
   migrate:
     build:
       context: .
@@ -50,6 +66,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      redis:
+        condition: service_healthy
       migrate:
         condition: service_completed_successfully
     env_file:
@@ -57,6 +75,8 @@ services:
     environment:
       # Inside the compose network the database host is "db", not "localhost".
       DATABASE_URL: postgresql://${POSTGRES_USER:-perfecto}:${POSTGRES_PASSWORD:-perfecto}@db:5432/${POSTGRES_DB:-perfecto}?schema=public
+      # Inside the compose network Redis is the service hostname "redis".
+      REDIS_URL: redis://redis:6379
       AWS_REGION: ${AWS_REGION:-us-east-1}
       S3_BUCKET_NAME: ${S3_BUCKET_NAME:-}
       # Omit blank AWS keys from .env when using EC2 IAM role — empty values block the role chain.
@@ -78,3 +98,4 @@ services:
 
 volumes:
   postgres-data:
+  redis-data:

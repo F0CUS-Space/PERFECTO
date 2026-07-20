@@ -6,7 +6,7 @@ import { getRequestIp, rateLimit } from "@/lib/rate-limit";
 
 /** Whether property photo uploads are available and credentials resolve. */
 export async function GET(request: Request) {
-  const limit = rateLimit(`upload-status:${getRequestIp(request)}`, 30, 5 * 60 * 1000);
+  const limit = await rateLimit(`upload-status:${getRequestIp(request)}`, 30, 5 * 60 * 1000);
   if (!limit.ok) {
     return NextResponse.json(
       { enabled: false, reason: "Too many checks. Please wait." },
@@ -17,15 +17,17 @@ export async function GET(request: Request) {
   if (!isS3Configured()) {
     return NextResponse.json({
       enabled: false,
-      reason: "Set S3_BUCKET_NAME in .env (and AWS_REGION).",
+      reason: "Photo uploads are not configured.",
     });
   }
 
   const check = await verifyS3Access();
   if (!check.ok) {
+    // Keep AWS / credential details in server logs only.
+    console.error("[uploads/status] S3 check failed:", check.message);
     return NextResponse.json({
       enabled: false,
-      reason: check.message,
+      reason: "Photo uploads are temporarily unavailable. Please try again later.",
     });
   }
 

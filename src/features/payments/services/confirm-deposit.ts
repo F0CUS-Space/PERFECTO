@@ -108,6 +108,13 @@ export async function confirmDepositFromCheckoutSession(session: Stripe.Checkout
     return { skipped: true as const, reason: "owner_mismatch" };
   }
 
+  if (before.status === "CANCELLED" || before.status === "REFUNDED") {
+    console.error(
+      "[confirm-deposit] paid session for terminal booking — recording capture for refund review, not confirming",
+      JSON.stringify({ bookingId, sessionId: session.id, status: before.status }),
+    );
+  }
+
   const knownCapture = settledCaptureFromCheckoutSession(session);
   if (!knownCapture) {
     console.error(
@@ -163,13 +170,28 @@ export async function reconcileBookingFromCheckoutSessionId(
     return false;
   }
 
-  // If metadata omitted bookingId (shouldn't happen), still apply the paid capture
-  // onto the booking from the success URL — the user reached this booking's page.
+  // Refuse to credit a paid session that is not bound to this booking. Fall back
+  // to linked-row reconcile only — never apply an unbound capture (payment IDOR).
   if (!sessionBookingId) {
     console.warn(
-      "[confirm-deposit] redirect session missing bookingId metadata — applying to URL booking",
+      "[confirm-deposit] redirect session missing bookingId metadata — not applying capture",
       JSON.stringify({ bookingId, sessionId }),
     );
+    const fallback = await reconcileBookingPayments(bookingId);
+    return fallback.depositSatisfied;
+  }
+
+  const bookingOwner = await prisma.booking.findUnique({
+    where: { id: bookingId },
+    select: { userId: true },
+  });
+  const sessionUserId = session.metadata?.userId;
+  if (sessionUserId && bookingOwner && sessionUserId !== bookingOwner.userId) {
+    console.error(
+      "[confirm-deposit] redirect session/booking owner mismatch",
+      JSON.stringify({ bookingId, sessionId }),
+    );
+    return false;
   }
 
   if (session.payment_status !== "paid") {

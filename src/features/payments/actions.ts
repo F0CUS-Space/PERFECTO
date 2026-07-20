@@ -6,6 +6,7 @@ import { createDepositCheckoutForUser } from "./services/create-deposit-checkout
 import { reconcileBookingFromCheckoutSessionId } from "./services/confirm-deposit";
 import { reconcileBookingPayments } from "./services/reconcile-payments";
 import { prisma } from "@/lib/prisma";
+import { getClientIp, rateLimit } from "@/lib/rate-limit";
 
 export type CreateDepositCheckoutResult =
   | { ok: true; url: string }
@@ -17,6 +18,22 @@ export async function createDepositCheckout(
 ): Promise<CreateDepositCheckoutResult> {
   try {
     const user = await requireUser();
+
+    const userLimit = await rateLimit(`deposit-checkout:${user.id}`, 10, 10 * 60 * 1000);
+    if (!userLimit.ok) {
+      return {
+        ok: false,
+        error: "Too many checkout attempts. Please wait a few minutes and try again.",
+      };
+    }
+    const ipLimit = await rateLimit(`deposit-checkout-ip:${await getClientIp()}`, 20, 10 * 60 * 1000);
+    if (!ipLimit.ok) {
+      return {
+        ok: false,
+        error: "Too many checkout attempts. Please wait a few minutes and try again.",
+      };
+    }
+
     return await createDepositCheckoutForUser(bookingId, user);
   } catch (error) {
     console.error("[createDepositCheckout]", error);

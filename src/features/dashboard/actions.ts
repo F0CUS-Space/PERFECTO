@@ -13,6 +13,7 @@ import {
   notifyAdminsBookingCancelled,
   notifyAdminsBookingRescheduled,
 } from "@/features/notifications/create-notifications";
+import { voidPendingCheckoutAttempts } from "@/features/payments/services/reconcile-payments";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/server/rbac";
 
@@ -61,6 +62,11 @@ export async function cancelCustomerBooking(
   await prisma.booking.update({
     where: { id: booking.id },
     data: { status: "CANCELLED" },
+  });
+
+  // Expire any open Stripe Checkout so a cancelled booking cannot still be paid.
+  await voidPendingCheckoutAttempts(booking.id).catch((error) => {
+    console.error("[cancelCustomerBooking] void checkout failed", booking.id, error);
   });
 
   await notifyAdminsBookingCancelled(booking.id);

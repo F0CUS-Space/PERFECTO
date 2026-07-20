@@ -5,6 +5,7 @@ import { Suspense } from "react";
 import { PageHero } from "@/components/shared/page-hero";
 import { Section } from "@/components/shared/section";
 import { PhoneAuthForm } from "@/features/auth/phone-auth-form";
+import { safeNextPath } from "@/lib/auth/safe-next-path";
 import { getCurrentUser } from "@/server/auth";
 
 export const metadata: Metadata = {
@@ -20,7 +21,8 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   const { next } = await searchParams;
   const user = await getCurrentUser();
   if (user) {
-    redirect(next ?? (user.role === "ADMIN" ? "/admin" : "/dashboard"));
+    const fallback = user.role === "ADMIN" ? "/admin" : "/dashboard";
+    redirect(safeNextPath(next, fallback));
   }
 
   return (

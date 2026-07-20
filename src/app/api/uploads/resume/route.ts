@@ -1,19 +1,20 @@
 import { NextResponse } from "next/server";
 
-import { formatS3Error, getViewUrl, putObject } from "@/lib/s3";
+import { getViewUrl, putObject } from "@/lib/s3";
 import { isS3Configured } from "@/lib/s3-ready";
 import { getRequestIp, rateLimit } from "@/lib/rate-limit";
+import {
+  UploadValidationError,
+  assertPdfUpload,
+  sanitizeUploadFilename,
+} from "@/lib/upload-validation";
 
 const MAX_RESUME_BYTES = 5 * 1024 * 1024;
-
-function sanitizeFilename(name: string) {
-  return name.replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 120);
-}
 
 /** Public resume upload for job applications (PDF only). */
 export async function POST(request: Request) {
   // Public, unauthenticated S3 write — throttle per IP to limit abuse/cost.
-  const limit = rateLimit(`resume-upload:${getRequestIp(request)}`, 5, 10 * 60 * 1000);
+  const limit = await rateLimit(`resume-upload:${getRequestIp(request)}`, 5, 10 * 60 * 1000);
   if (!limit.ok) {
     return NextResponse.json(
       { error: "Too many uploads. Please wait a few minutes and try again." },
@@ -36,29 +37,25 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "No file provided." }, { status: 400 });
     }
 
-    const isPdf =
-      file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
-    if (!isPdf) {
-      return NextResponse.json({ error: "Only PDF resumes are allowed." }, { status: 400 });
-    }
-
     if (file.size > MAX_RESUME_BYTES) {
       return NextResponse.json({ error: "Resume must be under 5 MB." }, { status: 400 });
     }
 
-    const safeName = sanitizeFilename(file.name || "resume.pdf");
-    const key = `applications/${crypto.randomUUID()}/${safeName}`;
     const buffer = Buffer.from(await file.arrayBuffer());
+    assertPdfUpload(buffer, file.type, file.name);
+
+    const safeName = sanitizeUploadFilename(file.name || "resume.pdf");
+    const key = `applications/${crypto.randomUUID()}/${safeName.endsWith(".pdf") ? safeName : `${safeName}.pdf`}`;
 
     await putObject(key, buffer, "application/pdf");
     const viewUrl = await getViewUrl(key, 3600);
 
     return NextResponse.json({ key, viewUrl });
   } catch (error) {
+    if (error instanceof UploadValidationError) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
     console.error("[uploads/resume]", error);
-    return NextResponse.json(
-      { error: `Unable to upload resume. ${formatS3Error(error)}` },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Unable to upload resume." }, { status: 500 });
   }
 }

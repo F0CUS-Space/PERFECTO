@@ -72,7 +72,7 @@ export async function submitJobApplication(
     return { ok: true, applicationId: "", confirmationEmailSent: false };
   }
 
-  const limit = rateLimit(`job-application:${await getClientIp()}`, 5, 10 * 60 * 1000);
+  const limit = await rateLimit(`job-application:${await getClientIp()}`, 5, 10 * 60 * 1000);
   if (!limit.ok) {
     return {
       ok: false,
@@ -89,6 +89,13 @@ export async function submitJobApplication(
 
   const { fullName, email, phone, position, coverNote, resumeS3Key, resumeUrl } = parsed.data;
   const normalizedEmail = email.toLowerCase();
+
+  if (!resumeS3Key.startsWith("applications/") || resumeS3Key.includes("..")) {
+    return {
+      ok: false,
+      error: "Resume upload is invalid. Please re-upload your PDF and try again.",
+    };
+  }
 
   try {
     const existing = await prisma.jobApplication.findFirst({

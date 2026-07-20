@@ -157,7 +157,7 @@ function GalleryItemForm({
         <div className="space-y-2">
           <Label>Image</Label>
           <ImagePreview src={imagePreview} label={title || "Gallery image"} />
-          <Input type="file" accept="image/*" disabled={uploadingField === "imageUrl"} onChange={(e) => onFile("imageUrl", e.target.files?.[0] ?? null)} />
+          <Input type="file" accept="image/jpeg,image/png,image/webp" disabled={uploadingField === "imageUrl"} onChange={(e) => onFile("imageUrl", e.target.files?.[0] ?? null)} />
           {uploadingField === "imageUrl" && (
             <p className="flex items-center gap-2 text-xs text-muted-foreground">
               <Loader2 className="h-3 w-3 animate-spin" /> Uploading…
@@ -169,7 +169,7 @@ function GalleryItemForm({
           <div className="space-y-2">
             <Label>Before image</Label>
             <ImagePreview src={beforePreview} label={`${title} before`} />
-            <Input type="file" accept="image/*" disabled={uploadingField === "beforeUrl"} onChange={(e) => onFile("beforeUrl", e.target.files?.[0] ?? null)} />
+            <Input type="file" accept="image/jpeg,image/png,image/webp" disabled={uploadingField === "beforeUrl"} onChange={(e) => onFile("beforeUrl", e.target.files?.[0] ?? null)} />
             {uploadingField === "beforeUrl" && (
               <p className="flex items-center gap-2 text-xs text-muted-foreground">
                 <Loader2 className="h-3 w-3 animate-spin" /> Uploading…
@@ -179,7 +179,7 @@ function GalleryItemForm({
           <div className="space-y-2">
             <Label>After image</Label>
             <ImagePreview src={afterPreview} label={`${title} after`} />
-            <Input type="file" accept="image/*" disabled={uploadingField === "afterUrl"} onChange={(e) => onFile("afterUrl", e.target.files?.[0] ?? null)} />
+            <Input type="file" accept="image/jpeg,image/png,image/webp" disabled={uploadingField === "afterUrl"} onChange={(e) => onFile("afterUrl", e.target.files?.[0] ?? null)} />
             {uploadingField === "afterUrl" && (
               <p className="flex items-center gap-2 text-xs text-muted-foreground">
                 <Loader2 className="h-3 w-3 animate-spin" /> Uploading…

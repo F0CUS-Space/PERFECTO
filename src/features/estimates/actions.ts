@@ -2,13 +2,13 @@
 
 import type { Prisma } from "@prisma/client";
 import { randomBytes } from "crypto";
-import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { ZodError } from "zod";
 
 import { env } from "@/env";
 import { prisma } from "@/lib/prisma";
 import { sendEmail } from "@/lib/email";
+import { getClientIp, rateLimit } from "@/lib/rate-limit";
 import { requireAdmin, requireUser, UnauthorizedError, ForbiddenError } from "@/server/rbac";
 import { logAdminAction } from "@/features/admin/audit-log";
 import {
@@ -64,16 +64,15 @@ function payLinkUrl(token: string): string {
   return `${base}/book/offer/${token}`;
 }
 
-async function getClientIp(): Promise<string | undefined> {
-  const headersList = await headers();
-  return (
-    headersList.get("x-forwarded-for")?.split(",")[0]?.trim() ??
-    headersList.get("x-real-ip") ??
-    undefined
-  );
-}
-
 async function sendEstimateEmail(offerId: string): Promise<EstimateActionResult> {
+  const limit = await rateLimit(`estimate-send:${await getClientIp()}`, 20, 10 * 60 * 1000);
+  if (!limit.ok) {
+    return {
+      ok: false,
+      error: "Too many estimate emails sent. Please wait a few minutes and try again.",
+    };
+  }
+
   const offer = await prisma.bookingOffer.findUnique({
     where: { id: offerId },
     include: {
@@ -390,6 +389,7 @@ export async function completeBookingOffer(raw: unknown): Promise<EstimateAction
     }
 
     const ipAddress = await getClientIp();
+    const ipForAgreement = ipAddress === "unknown" ? null : ipAddress;
 
     const booking = await prisma.$transaction(async (tx) => {
       const created = await tx.booking.create({
@@ -423,7 +423,7 @@ export async function completeBookingOffer(raw: unknown): Promise<EstimateAction
           acceptedCancellation: input.agreement.acceptedCancellation,
           acceptedLiability: input.agreement.acceptedLiability,
           signatureName: input.agreement.signatureName.trim(),
-          ipAddress: ipAddress ?? null,
+          ipAddress: ipForAgreement,
         },
       });
 

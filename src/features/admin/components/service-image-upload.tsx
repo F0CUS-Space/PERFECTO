@@ -67,7 +67,7 @@ export function ServiceImageUpload({
       )}
       <Input
         type="file"
-        accept="image/*"
+        accept="image/jpeg,image/png,image/webp"
         disabled={uploading}
         onChange={(e) => {
           void onFile(e.target.files?.[0] ?? null);

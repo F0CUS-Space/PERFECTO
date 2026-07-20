@@ -25,6 +25,9 @@ import {
 function classify(eventType: string): PaymentEventType {
   switch (eventType) {
     case "checkout.session.completed":
+    // Defense-in-depth: card Checkout is paid on completed, but if async methods
+    // are ever enabled, confirmation must wait for this event.
+    case "checkout.session.async_payment_succeeded":
       return PAYMENT_EVENT.DEPOSIT_PAID;
     case "checkout.session.async_payment_failed":
     case "payment_intent.payment_failed":

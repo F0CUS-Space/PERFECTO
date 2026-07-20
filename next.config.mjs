@@ -52,7 +52,7 @@ const nextConfig = {
   // Don't advertise the framework in response headers.
   poweredByHeader: false,
   // Keep Node-only server SDKs out of the webpack bundle (they use `node:` built-ins).
-  serverExternalPackages: ["firebase-admin", "stripe", "sharp"],
+  serverExternalPackages: ["firebase-admin", "stripe", "sharp", "ioredis"],
   experimental: {
     optimizePackageImports: ["lucide-react", "@tanstack/react-query"],
   },

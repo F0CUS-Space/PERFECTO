@@ -2,6 +2,7 @@ import "server-only";
 
 import { prisma } from "@/lib/prisma";
 import { isDatabaseConfigured } from "@/lib/db-ready";
+import { CacheKeys, CacheTtl, cacheRemember } from "@/lib/cache";
 
 import {
   formatPromotionDiscountLabel,
@@ -59,16 +60,18 @@ const promotionInclude = {
 /** Active promotions for the public promotions page. */
 export async function getActivePromotions(): Promise<PublicPromotion[]> {
   if (!isDatabaseConfigured()) return [];
-  try {
-    const promotions = await prisma.promotion.findMany({
-      where: { isActive: true },
-      include: promotionInclude,
-      orderBy: { createdAt: "desc" },
-    });
-    return promotions.map(mapPromotion);
-  } catch {
-    return [];
-  }
+  return cacheRemember(CacheKeys.promotionsActive, CacheTtl.promotions, async () => {
+    try {
+      const promotions = await prisma.promotion.findMany({
+        where: { isActive: true },
+        include: promotionInclude,
+        orderBy: { createdAt: "desc" },
+      });
+      return promotions.map(mapPromotion);
+    } catch {
+      return [];
+    }
+  });
 }
 
 /** Load a single active promotion for the claim/booking flow. */

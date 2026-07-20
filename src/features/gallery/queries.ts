@@ -2,6 +2,7 @@ import "server-only";
 
 import { prisma } from "@/lib/prisma";
 import { isDatabaseConfigured } from "@/lib/db-ready";
+import { CacheKeys, CacheTtl, cacheRemember } from "@/lib/cache";
 import { getViewUrl } from "@/lib/s3";
 import { isS3Configured } from "@/lib/s3-ready";
 
@@ -32,23 +33,26 @@ async function resolveImageUrl(value: string | null): Promise<string | null> {
 export async function getActiveGalleryItems(): Promise<GalleryItemRow[]> {
   if (!isDatabaseConfigured()) return [];
 
-  const items = await prisma.galleryItem.findMany({
-    where: { isActive: true },
-    orderBy: [{ sortOrder: "asc" }, { title: "asc" }],
-  });
+  // TTL 120s: listing is read-heavy; signed URL refresh happens on miss/invalidate.
+  return cacheRemember(CacheKeys.galleryActive, CacheTtl.gallery, async () => {
+    const items = await prisma.galleryItem.findMany({
+      where: { isActive: true },
+      orderBy: [{ sortOrder: "asc" }, { title: "asc" }],
+    });
 
-  return Promise.all(
-    items.map(async (item) => ({
-      id: item.id,
-      type: item.type,
-      title: item.title,
-      category: item.category,
-      imageUrl: await resolveImageUrl(item.imageUrl),
-      beforeUrl: await resolveImageUrl(item.beforeUrl),
-      afterUrl: await resolveImageUrl(item.afterUrl),
-      sortOrder: item.sortOrder,
-    })),
-  );
+    return Promise.all(
+      items.map(async (item) => ({
+        id: item.id,
+        type: item.type,
+        title: item.title,
+        category: item.category,
+        imageUrl: await resolveImageUrl(item.imageUrl),
+        beforeUrl: await resolveImageUrl(item.beforeUrl),
+        afterUrl: await resolveImageUrl(item.afterUrl),
+        sortOrder: item.sortOrder,
+      })),
+    );
+  });
 }
 
 export interface AdminGalleryItemRow {

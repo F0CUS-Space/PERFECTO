@@ -15,7 +15,7 @@ export interface ActionResult {
 }
 
 export async function submitContactForm(input: ContactInput): Promise<ActionResult> {
-  const limit = rateLimit(`contact:${await getClientIp()}`, 5, 10 * 60 * 1000);
+  const limit = await rateLimit(`contact:${await getClientIp()}`, 5, 10 * 60 * 1000);
   if (!limit.ok) {
     return {
       success: false,

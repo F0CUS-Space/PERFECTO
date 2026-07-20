@@ -1,5 +1,7 @@
 import "server-only";
 
+import { redactPhone } from "@/lib/redact";
+
 /**
  * SMS abstraction.
  *
@@ -14,6 +16,8 @@ export interface SmsProvider {
 
 export const noopSmsProvider: SmsProvider = {
   async sendMessage(to, body) {
-    console.warn(`[sms] No server SMS provider configured. Would send to ${to}: ${body}`);
+    console.warn(
+      `[sms] No server SMS provider configured. Would send to ${redactPhone(to)} (${body.length} chars)`,
+    );
   },
 };

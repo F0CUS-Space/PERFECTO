@@ -7,6 +7,11 @@ import type { ApplicationStatus, BookingStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { sendEmail } from "@/lib/email";
 import { env } from "@/env";
+import {
+  invalidateCatalogCache,
+  invalidateGalleryCache,
+  invalidatePromotionsCache,
+} from "@/lib/cache";
 import { parseScheduleDate } from "@/config/booking";
 import {
   adminAccessGrantedEmail,
@@ -90,13 +95,14 @@ function revalidateAuditLogPath() {
   revalidatePath("/admin/audit-log");
 }
 
-function revalidateCatalogPaths(serviceId?: string, slug?: string) {
+async function revalidateCatalogPaths(serviceId?: string, slug?: string) {
   revalidatePath("/admin/services");
   if (serviceId) revalidatePath(`/admin/services/${serviceId}`);
   revalidatePath("/admin/add-ons");
   revalidatePath("/services");
   if (slug) revalidatePath(`/services/${slug}`);
   revalidatePath("/book");
+  await invalidateCatalogCache();
 }
 
 function revalidateJobPaths(jobId?: string) {
@@ -284,6 +290,12 @@ export async function updateBookingStatus(
     where: { id: bookingId },
     data: { status: parsed.data },
   });
+
+  if (parsed.data === "CANCELLED" && previousStatus !== "CANCELLED") {
+    await voidPendingCheckoutAttempts(bookingId).catch((error) => {
+      console.error("[updateBookingStatus] void checkout failed", bookingId, error);
+    });
+  }
 
   let emailFailed = false;
   if (parsed.data === "COMPLETED" && previousStatus !== "COMPLETED") {
@@ -501,7 +513,7 @@ export async function updateService(
     await deleteOwnedObjectBestEffort(previousImageUrl, "updateService");
   }
 
-  revalidateCatalogPaths(serviceId, service.slug);
+  await revalidateCatalogPaths(serviceId, service.slug);
 
   await logAdminAction({
     actorId: admin.id,
@@ -563,7 +575,7 @@ export async function createService(
     },
   });
 
-  revalidateCatalogPaths(service.id, service.slug);
+  await revalidateCatalogPaths(service.id, service.slug);
 
   await logAdminAction({
     actorId: admin.id,
@@ -615,7 +627,7 @@ export async function deleteService(serviceId: string): Promise<AdminActionResul
       where: { id: serviceId },
       data: { isActive: false, isPopular: false },
     });
-    revalidateCatalogPaths(serviceId);
+    await revalidateCatalogPaths(serviceId);
     await logAdminAction({
       actorId: admin.id,
       action: "SERVICE_DELETE",
@@ -648,7 +660,7 @@ export async function deleteService(serviceId: string): Promise<AdminActionResul
   await deleteOwnedObjectBestEffort(service.imageUrl, "deleteService");
   await Promise.all(photoKeys.map((key) => deleteOwnedObjectBestEffort(key, "deleteService")));
 
-  revalidateCatalogPaths();
+  await revalidateCatalogPaths();
   await logAdminAction({
     actorId: admin.id,
     action: "SERVICE_DELETE",
@@ -690,7 +702,7 @@ export async function setServiceAddOns(
     ),
   ]);
 
-  revalidateCatalogPaths(serviceId);
+  await revalidateCatalogPaths(serviceId);
 
   await logAdminAction({
     actorId: admin.id,
@@ -728,7 +740,7 @@ export async function createAddOn(
     },
   });
 
-  revalidateCatalogPaths();
+  await revalidateCatalogPaths();
   await logAdminAction({
     actorId: admin.id,
     action: "ADDON_CREATE",
@@ -772,7 +784,7 @@ export async function updateAddOn(
     },
   });
 
-  revalidateCatalogPaths();
+  await revalidateCatalogPaths();
   await logAdminAction({
     actorId: admin.id,
     action: "ADDON_UPDATE",
@@ -803,7 +815,7 @@ export async function deleteAddOn(addOnId: string): Promise<AdminActionResult> {
       where: { id: addOnId },
       data: { isActive: false },
     });
-    revalidateCatalogPaths();
+    await revalidateCatalogPaths();
     await logAdminAction({
       actorId: admin.id,
       action: "ADDON_DELETE",
@@ -817,7 +829,7 @@ export async function deleteAddOn(addOnId: string): Promise<AdminActionResult> {
   }
 
   await prisma.addOn.delete({ where: { id: addOnId } });
-  revalidateCatalogPaths();
+  await revalidateCatalogPaths();
   await logAdminAction({
     actorId: admin.id,
     action: "ADDON_DELETE",
@@ -1209,9 +1221,10 @@ export async function promoteUserToAdmin(phone: string): Promise<AdminActionResu
   return promoteUserToAdminById(user.id);
 }
 
-function revalidateGalleryPaths() {
+async function revalidateGalleryPaths() {
   revalidatePath("/admin/gallery");
   revalidatePath("/gallery");
+  await invalidateGalleryCache();
 }
 
 function revalidateReviewPaths() {
@@ -1271,7 +1284,7 @@ export async function createGalleryItem(
     },
   });
 
-  revalidateGalleryPaths();
+  await revalidateGalleryPaths();
   await logAdminAction({
     actorId: admin.id,
     action: "GALLERY_CREATE",
@@ -1326,7 +1339,7 @@ export async function updateGalleryItem(
     await deleteOwnedObjectBestEffort(item.afterUrl, "updateGalleryItem");
   }
 
-  revalidateGalleryPaths();
+  await revalidateGalleryPaths();
   await logAdminAction({
     actorId: admin.id,
     action: "GALLERY_UPDATE",
@@ -1350,7 +1363,7 @@ export async function deleteGalleryItem(id: string): Promise<AdminActionResult> 
     deleteOwnedObjectBestEffort(item.beforeUrl, "deleteGalleryItem"),
     deleteOwnedObjectBestEffort(item.afterUrl, "deleteGalleryItem"),
   ]);
-  revalidateGalleryPaths();
+  await revalidateGalleryPaths();
   await logAdminAction({
     actorId: admin.id,
     action: "GALLERY_DELETE",
@@ -1447,9 +1460,10 @@ async function syncPromotionServices(promotionId: string, serviceIds: string[]) 
   });
 }
 
-function revalidatePromotionPaths() {
+async function revalidatePromotionPaths() {
   revalidatePath("/admin/promotions");
   revalidatePath("/promotions");
+  await invalidatePromotionsCache();
 }
 
 export async function createPromotion(
@@ -1473,7 +1487,7 @@ export async function createPromotion(
 
   await syncPromotionServices(promotion.id, parsed.data.serviceIds);
 
-  revalidatePromotionPaths();
+  await revalidatePromotionPaths();
   await logAdminAction({
     actorId: admin.id,
     action: "PROMOTION_CREATE",
@@ -1524,7 +1538,7 @@ export async function updatePromotion(
 
   await syncPromotionServices(promotion.id, parsed.data.serviceIds);
 
-  revalidatePromotionPaths();
+  await revalidatePromotionPaths();
   await logAdminAction({
     actorId: admin.id,
     action: "PROMOTION_UPDATE",
@@ -1559,7 +1573,7 @@ export async function deletePromotion(promotionId: string): Promise<AdminActionR
 
   await prisma.promotion.delete({ where: { id: promotionId } });
 
-  revalidatePromotionPaths();
+  await revalidatePromotionPaths();
   await logAdminAction({
     actorId: admin.id,
     action: "PROMOTION_DELETE",

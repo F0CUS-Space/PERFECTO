@@ -11,7 +11,7 @@ const bodySchema = z.object({
 });
 
 export async function POST(request: Request) {
-  const limit = rateLimit(`auth-session:${getRequestIp(request)}`, 30, 5 * 60 * 1000);
+  const limit = await rateLimit(`auth-session:${getRequestIp(request)}`, 30, 5 * 60 * 1000);
   if (!limit.ok) {
     return NextResponse.json(
       { error: "Too many sign-in attempts. Please wait a moment and try again." },
@@ -37,7 +37,7 @@ export async function POST(request: Request) {
     return response;
   } catch (error) {
     console.error("[auth/session]", error);
-    const message = error instanceof Error ? error.message : "Unable to create session.";
-    return NextResponse.json({ error: message }, { status: 401 });
+    return NextResponse.json({ error: "Unable to create session." }, { status: 401 });
   }
 }
+

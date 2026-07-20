@@ -4,6 +4,7 @@ import type { BookingOfferStatus, Prisma } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
 import { isDatabaseConfigured } from "@/lib/db-ready";
+import { CacheKeys, CacheTtl, cacheRemember } from "@/lib/cache";
 import { adminDisplayName } from "@/features/admin/audit-log";
 
 import type {
@@ -51,28 +52,30 @@ function isOfferExpired(status: BookingOfferStatus, expiresAt: Date): boolean {
 export async function getEstimateCatalog(): Promise<EstimateCatalogService[]> {
   if (!isDatabaseConfigured()) return [];
 
-  const services = await prisma.service.findMany({
-    where: { isActive: true },
-    orderBy: { sortOrder: "asc" },
-    include: {
-      addOns: {
-        where: { addOn: { isActive: true } },
-        include: { addOn: true },
-        orderBy: { addOn: { name: "asc" } },
+  return cacheRemember(CacheKeys.estimateCatalog, CacheTtl.catalog, async () => {
+    const services = await prisma.service.findMany({
+      where: { isActive: true },
+      orderBy: { sortOrder: "asc" },
+      include: {
+        addOns: {
+          where: { addOn: { isActive: true } },
+          include: { addOn: true },
+          orderBy: { addOn: { name: "asc" } },
+        },
       },
-    },
-  });
+    });
 
-  return services.map((service) => ({
-    id: service.id,
-    name: service.name,
-    basePrice: service.basePrice,
-    addOns: service.addOns.map(({ addOn }) => ({
-      id: addOn.id,
-      name: addOn.name,
-      price: addOn.price,
-    })),
-  }));
+    return services.map((service) => ({
+      id: service.id,
+      name: service.name,
+      basePrice: service.basePrice,
+      addOns: service.addOns.map(({ addOn }) => ({
+        id: addOn.id,
+        name: addOn.name,
+        price: addOn.price,
+      })),
+    }));
+  });
 }
 
 export async function searchEstimateCustomers(q: string): Promise<EstimateCustomerHit[]> {

@@ -11,6 +11,7 @@ import {
 } from "firebase/auth";
 import { AlertTriangle, ArrowLeft, Loader2, Mail, Phone, UserPlus } from "lucide-react";
 
+import { safeNextPath } from "@/lib/auth/safe-next-path";
 import { getFirebaseAuth } from "@/lib/firebase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -61,7 +62,7 @@ const COPY: Record<
 export function PhoneAuthForm({ mode = "login" }: { mode?: AuthMode }) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const nextPath = searchParams.get("next") || "/dashboard";
+  const nextPath = safeNextPath(searchParams.get("next"), "/dashboard");
   const copy = COPY[mode];
   const devMode = isAuthDevMode();
 

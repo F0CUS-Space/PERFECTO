@@ -1,9 +1,10 @@
 "use server";
 
-import { headers } from "next/headers";
+import { Prisma } from "@prisma/client";
 import { z } from "zod";
 
 import { prisma } from "@/lib/prisma";
+import { getClientIp, rateLimit } from "@/lib/rate-limit";
 import { requireUser, UnauthorizedError } from "@/server/rbac";
 
 import { getScheduleAvailabilityError, toScheduleDateString } from "@/features/booking/services/schedule-availability";
@@ -13,19 +14,26 @@ export type CreateBookingResult =
   | { ok: true; bookingId: string }
   | { ok: false; error: string };
 
-async function getClientIp(): Promise<string | undefined> {
-  const headersList = await headers();
-  return (
-    headersList.get("x-forwarded-for")?.split(",")[0]?.trim() ??
-    headersList.get("x-real-ip") ??
-    undefined
-  );
-}
-
 /** Creates a booking with agreement snapshot; deposit payment is handled in M5. */
 export async function createBooking(raw: unknown): Promise<CreateBookingResult> {
   try {
     const user = await requireUser();
+
+    const userLimit = await rateLimit(`create-booking:${user.id}`, 10, 10 * 60 * 1000);
+    if (!userLimit.ok) {
+      return {
+        ok: false,
+        error: "Too many booking attempts. Please wait a few minutes and try again.",
+      };
+    }
+    const ipLimit = await rateLimit(`create-booking-ip:${await getClientIp()}`, 20, 10 * 60 * 1000);
+    if (!ipLimit.ok) {
+      return {
+        ok: false,
+        error: "Too many booking attempts. Please wait a few minutes and try again.",
+      };
+    }
+
     const input = createBookingSchema.parse(raw);
 
     const availabilityError = await getScheduleAvailabilityError(
@@ -58,6 +66,11 @@ export async function createBooking(raw: unknown): Promise<CreateBookingResult> 
       return { ok: false, error: "This quote belongs to another account." };
     }
 
+    const stagingPrefix = `bookings/staging/${user.id}/`;
+    if (input.photos.some((photo) => !photo.s3Key.startsWith(stagingPrefix))) {
+      return { ok: false, error: "One or more photos are invalid. Please re-upload and try again." };
+    }
+
     const depositAmount = quote.estimatedTotal;
     const balanceAmount = 0;
 
@@ -79,6 +92,7 @@ export async function createBooking(raw: unknown): Promise<CreateBookingResult> 
     }
 
     const ipAddress = await getClientIp();
+    const ipForAgreement = ipAddress === "unknown" ? null : ipAddress;
 
     const booking = await prisma.$transaction(async (tx) => {
       const created = await tx.booking.create({
@@ -126,7 +140,7 @@ export async function createBooking(raw: unknown): Promise<CreateBookingResult> 
           acceptedCancellation: input.agreement.acceptedCancellation,
           acceptedLiability: input.agreement.acceptedLiability,
           signatureName: input.agreement.signatureName.trim(),
-          ipAddress: ipAddress ?? null,
+          ipAddress: ipForAgreement,
         },
       });
 
@@ -153,6 +167,9 @@ export async function createBooking(raw: unknown): Promise<CreateBookingResult> 
     }
     if (error instanceof z.ZodError) {
       return { ok: false, error: error.errors[0]?.message ?? "Invalid booking details." };
+    }
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      return { ok: false, error: "This quote has already been used for a booking." };
     }
     console.error("[createBooking]", error);
     return { ok: false, error: "Unable to create your booking. Please try again." };

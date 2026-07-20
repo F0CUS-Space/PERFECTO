@@ -3,6 +3,7 @@ import "server-only";
 import { Resend } from "resend";
 
 import { env, requireEnv } from "@/env";
+import { redactEmail } from "@/lib/redact";
 
 let resendClient: Resend | undefined;
 
@@ -40,7 +41,8 @@ function encodeAttachmentContent(content: Buffer | string): string {
  */
 export async function sendEmail({ to, subject, html, replyTo, attachments }: SendEmailParams) {
   if (!env.RESEND_API_KEY) {
-    console.warn(`[email] RESEND_API_KEY not set — skipping email "${subject}" to ${to}`);
+    const recipients = (Array.isArray(to) ? to : [to]).map(redactEmail).join(", ");
+    console.warn(`[email] RESEND_API_KEY not set — skipping email "${subject}" to ${recipients}`);
     return { skipped: true as const };
   }
 

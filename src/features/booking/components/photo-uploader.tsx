@@ -79,8 +79,9 @@ export function PhotoUploader({ photos, onChange }: PhotoUploaderProps) {
     }
 
     const file = files[0];
-    if (!file.type.startsWith("image/")) {
-      setError("Only image files are allowed");
+    const allowed = new Set(["image/jpeg", "image/jpg", "image/png", "image/webp"]);
+    if (!allowed.has(file.type.toLowerCase())) {
+      setError("Use a JPEG, PNG, or WebP image");
       return;
     }
     if (file.size > MAX_PHOTO_BYTES) {
@@ -144,7 +145,7 @@ export function PhotoUploader({ photos, onChange }: PhotoUploaderProps) {
             )}
             <input
               type="file"
-              accept="image/*"
+              accept="image/jpeg,image/png,image/webp"
               className="sr-only"
               disabled={uploading}
               onChange={(e) => {

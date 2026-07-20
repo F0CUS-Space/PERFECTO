@@ -55,8 +55,11 @@ export async function POST(request: Request) {
     attachSessionCookie(response, sessionCookie);
     return response;
   } catch (error) {
+    if (error instanceof z.ZodError) {
+      return NextResponse.json({ error: "Invalid request." }, { status: 400 });
+    }
     console.error("[auth/change-phone]", error);
-    const message = error instanceof Error ? error.message : "Unable to update phone.";
-    return NextResponse.json({ error: message }, { status: 400 });
+    return NextResponse.json({ error: "Unable to update phone." }, { status: 400 });
   }
 }
+

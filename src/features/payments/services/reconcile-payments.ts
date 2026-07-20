@@ -325,20 +325,51 @@ export async function getOpenDepositCheckoutUrl(paymentId: string): Promise<stri
         data: { providerPaymentId: null },
       });
     }
-  } catch {
-    await prisma.payment.update({
-      where: { id: paymentId },
-      data: { providerPaymentId: null },
-    });
+  } catch (error) {
+    // Never unlink on transient Stripe/network errors — clearing providerPaymentId here
+    // can mint a second Checkout while the first is still open or already paid.
+    const code =
+      error && typeof error === "object" && "code" in error
+        ? String((error as { code?: unknown }).code)
+        : "";
+    if (code === "resource_missing") {
+      await prisma.payment.update({
+        where: { id: paymentId },
+        data: { providerPaymentId: null },
+      });
+    } else {
+      console.warn(
+        "[getOpenDepositCheckoutUrl] retrieve failed — keeping session link",
+        payment.providerPaymentId,
+        error instanceof Error ? error.message : error,
+      );
+    }
   }
 
   return null;
 }
 
+export type OpenDepositCheckoutLookup =
+  | { status: "open"; url: string }
+  | { status: "none" }
+  /** A linked session exists but Stripe did not return a reusable open URL (retry later). */
+  | { status: "linked_unresolved" };
+
 /** Reuses any in-progress checkout before starting a new one. */
 export async function getOpenDepositCheckoutUrlForBooking(
   bookingId: string,
 ): Promise<string | null> {
+  const result = await lookupOpenDepositCheckoutForBooking(bookingId);
+  return result.status === "open" ? result.url : null;
+}
+
+/**
+ * Like {@link getOpenDepositCheckoutUrlForBooking}, but distinguishes "no session"
+ * from "session linked but not reusable yet" so callers do not mint a duplicate Checkout.
+ */
+export async function lookupOpenDepositCheckoutForBooking(
+  bookingId: string,
+): Promise<OpenDepositCheckoutLookup> {
   const pending = await prisma.payment.findMany({
     where: {
       bookingId,
@@ -348,12 +379,29 @@ export async function getOpenDepositCheckoutUrlForBooking(
     orderBy: { createdAt: "desc" },
   });
 
+  let sawLinkedSession = false;
+
   for (const payment of pending) {
+    if (payment.providerPaymentId?.startsWith("cs_")) {
+      sawLinkedSession = true;
+    }
     const url = await getOpenDepositCheckoutUrl(payment.id);
-    if (url) return url;
+    if (url) return { status: "open", url };
   }
 
-  return null;
+  // Re-check: getOpenDepositCheckoutUrl may have cleared expired/missing links.
+  if (sawLinkedSession) {
+    const stillLinked = await prisma.payment.count({
+      where: {
+        bookingId,
+        status: "PENDING",
+        providerPaymentId: { startsWith: "cs_" },
+      },
+    });
+    if (stillLinked > 0) return { status: "linked_unresolved" };
+  }
+
+  return { status: "none" };
 }
 
 /**

@@ -1,3 +1,4 @@
+import { timingSafeEqual } from "crypto";
 import { NextResponse, type NextRequest } from "next/server";
 
 import { env } from "@/env";
@@ -8,6 +9,18 @@ import { Role } from "@prisma/client";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+/** Constant-time string compare to avoid CRON_SECRET timing leaks. */
+function safeEqual(a: string, b: string): boolean {
+  const aBuf = Buffer.from(a);
+  const bBuf = Buffer.from(b);
+  if (aBuf.length !== bBuf.length) {
+    // Compare against self so length mismatch still does work proportional to `a`.
+    timingSafeEqual(aBuf, aBuf);
+    return false;
+  }
+  return timingSafeEqual(aBuf, bBuf);
+}
+
 /**
  * Authorizes a maintenance trigger. Accepts either:
  *  - a `Bearer <CRON_SECRET>` header (for schedulers / the shell script), or
@@ -17,12 +30,14 @@ async function isAuthorized(request: NextRequest): Promise<boolean> {
   const secret = env.CRON_SECRET?.trim();
   if (secret) {
     const header = request.headers.get("authorization");
-    if (header && header === `Bearer ${secret}`) return true;
+    const expected = `Bearer ${secret}`;
+    if (header && safeEqual(header, expected)) return true;
   }
 
   const user = await getCurrentUser().catch(() => null);
   return user?.role === Role.ADMIN;
 }
+
 
 async function handle(request: NextRequest) {
   if (!(await isAuthorized(request))) {
