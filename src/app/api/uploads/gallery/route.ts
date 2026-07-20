@@ -44,7 +44,8 @@ export async function POST(request: Request) {
     assertAllowedImageUpload(raw, file.type, file.name);
 
     const optimized = await optimizeServiceImage(raw);
-    const key = `gallery/${crypto.randomUUID()}/gallery.${optimized.extension}`;
+    // Flat key: gallery/{uuid}.webp — older nested keys (gallery/{uuid}/gallery.webp) still resolve via DB.
+    const key = `gallery/${crypto.randomUUID()}.${optimized.extension}`;
 
     await putObject(key, optimized.buffer, optimized.contentType);
     const viewUrl = await getViewUrl(key, 3600);

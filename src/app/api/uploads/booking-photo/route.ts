@@ -57,7 +57,8 @@ export async function POST(request: Request) {
     assertAllowedImageUpload(raw, file.type, file.name);
 
     const optimized = await optimizeServiceImage(raw);
-    const key = `bookings/staging/${user.id}/${crypto.randomUUID()}/photo.${optimized.extension}`;
+    // Flat under user staging prefix (ownership check uses bookings/staging/{userId}/).
+    const key = `bookings/staging/${user.id}/${crypto.randomUUID()}.${optimized.extension}`;
 
     await putObject(key, optimized.buffer, optimized.contentType);
     const viewUrl = await getViewUrl(key, 3600);

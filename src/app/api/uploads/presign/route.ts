@@ -43,7 +43,8 @@ export async function POST(request: Request) {
   try {
     const body = presignSchema.parse(await request.json());
     const safeName = sanitizeUploadFilename(body.filename);
-    const key = `bookings/staging/${user.id}/${crypto.randomUUID()}/${safeName}`;
+    const ext = safeName.includes(".") ? safeName.slice(safeName.lastIndexOf(".") + 1) : "bin";
+    const key = `bookings/staging/${user.id}/${crypto.randomUUID()}.${ext}`;
     const { uploadUrl, viewUrl } = await getUploadUrl(key, body.contentType);
 
     return NextResponse.json({ uploadUrl, key, viewUrl });

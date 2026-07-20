@@ -6,7 +6,6 @@ import { getRequestIp, rateLimit } from "@/lib/rate-limit";
 import {
   UploadValidationError,
   assertPdfUpload,
-  sanitizeUploadFilename,
 } from "@/lib/upload-validation";
 
 const MAX_RESUME_BYTES = 5 * 1024 * 1024;
@@ -44,8 +43,8 @@ export async function POST(request: Request) {
     const buffer = Buffer.from(await file.arrayBuffer());
     assertPdfUpload(buffer, file.type, file.name);
 
-    const safeName = sanitizeUploadFilename(file.name || "resume.pdf");
-    const key = `applications/${crypto.randomUUID()}/${safeName.endsWith(".pdf") ? safeName : `${safeName}.pdf`}`;
+    // Flat key — older nested applications/{uuid}/{name}.pdf still resolve via DB.
+    const key = `applications/${crypto.randomUUID()}.pdf`;
 
     await putObject(key, buffer, "application/pdf");
     const viewUrl = await getViewUrl(key, 3600);
